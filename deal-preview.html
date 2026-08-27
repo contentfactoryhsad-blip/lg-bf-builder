@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Deal Page preview harness</title>
+<style>body{margin:0;background:#7a7a7a}#root{width:2280px}</style>
+</head><body><div id="root"></div>
+<script type="module">
+import '/src/styles/fonts.css';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { DealModuleRenderer } from '/src/app/components/dealpage/DealModuleRenderer.tsx';
+import { createDealDefaultState } from '/src/app/components/dealpage/dealEditStates.ts';
+import { DEAL_MODULE_DEFS } from '/src/app/components/dealpage/dealModuleRegistry.ts';
+import { getBrandFont } from '/src/app/fonts/brandFonts.ts';
+
+const lg = getBrandFont('lg');
+document.documentElement.style.setProperty('--obs-font', lg.render);
+document.documentElement.style.setProperty('--obs-font-text', lg.renderText);
+document.documentElement.style.setProperty('--obs-tracking', '0em');
+document.documentElement.style.setProperty('--obs-tracking-head', '0em');
+
+createRoot(document.getElementById('root')).render(
+  React.createElement('div', null,
+    DEAL_MODULE_DEFS.map(d =>
+      React.createElement('div', { key: d.type },
+        React.createElement(DealModuleRenderer, { editState: createDealDefaultState(d.type) })))));
+
+await document.fonts.ready;
+window.__fontsLoaded = document.fonts.size;
+document.title = 'ready fonts=' + document.fonts.size;
+</script></body></html>

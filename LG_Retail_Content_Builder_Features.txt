@@ -1,0 +1,126 @@
+==============================================
+ LG Retail OBS Content Builder — Feature Overview
+==============================================
+
+A web app that automatically generates product images and banners for
+LG retail marketplaces (Lazada / Shopee, etc.).
+Workflow: paste URL -> crawl images -> edit template -> download PNG.
+
+
+----------------------------------------------
+ Cross-cutting Capabilities
+----------------------------------------------
+
+- Image crawling : Paste a product page URL and the server parses the
+  HTML to extract candidate product images (og:image / JSON-LD /
+  gallery selectors / <img> / <picture> / background-image). Promotion
+  banners, GNB, and tracking pixels are filtered out (up to 80 images).
+- CORS proxy : Loads external images safely around CORS restrictions.
+- Image crop : Per-template aspect-ratio lock + zoom slider, re-crop after upload.
+- Asset library : Shared asset picker backed by a separate assets repo + CDN.
+- Background removal / brush mask : Auto background removal + brush editor.
+- PNG export : 1:1 pixel render with font/image load guarantees.
+  Filenames carry a date stamp (YYMMDD).
+- i18n : 10 locales (English, Thai, Vietnamese, Indonesian, Malay,
+  Filipino, Traditional/Simplified Chinese, Portuguese, Spanish).
+  Per-language independent state (locked while editing).
+- Text constraint rulers : Measures font metrics at input time to block
+  text that exceeds the max line count / width.
+
+
+==============================================
+ 1. Product Card Builder (Product Thumbnail)
+==============================================
+Output : 1200 x 1200 px PNG
+
+[ 3 Templates ]
+
+  - Default
+    - Background : Warm gray (#F0ECE4)
+    - Layout : Product image + 0-5 Feature & Benefit blocks
+
+  - Promotion Ver.1
+    - Background : Gradient (Lazada Pink / Shopee Orange presets + custom)
+    - Layout : Product + KV image (1:1) + period text + 1-3 vouchers
+
+  - Promotion Ver.2
+    - Background : Gradient
+    - Layout : Product + 0-5 Feature & Benefit blocks + logo (fixed 64px height) + discount text
+
+[ Editing Features ]
+  - Product image : Pick from URL-fetched gallery or upload directly -> crop.
+  - Feature & Benefit blocks : Image/icon toggle, icon picker (42 icons),
+    text up to 3 lines (live measurement), auto-fill label on icon select.
+  - Promo1 vouchers : Count (1-3), title / discount value / sub-copy,
+    sub-copy position (left/right), overflow blocking.
+  - Gradient presets + custom color pickers.
+
+
+==============================================
+ 2. Bulk Generator
+==============================================
+Output : ZIP (multiple 1200 x 1200 PNGs)
+
+  Step 1  URL input   : Enter multiple product page URLs (add/remove rows)
+  Step 2  Edit        : Parallel image fetch per URL -> auto-inject first
+                        image, edit each card individually (same as single editor)
+  Step 3  Select      : Thumbnail grid, per-card template assignment,
+                        select/deselect, click to re-edit
+  Step 4  ZIP download : Batch render then download as a ZIP
+
+
+==============================================
+ 3. Brand Shop Page Builder
+==============================================
+Splits the brand shop page into 5 sections, each edited separately.
+Per-section PNG/ZIP output.
+
+[ 3-1. Brand Trust Section ] — Credibility / brand value banners, 4 variants
+  - BT01 (1200x320) : Single head-copy banner (max 2 lines)
+  - BT02 (1200x320) : Head copy + sub copy (divider toggle)
+  - BT03 (1200x320) : Icon + text blocks, choose 3-7, per-slot icon
+                      dropdown (7 icons), duplicate-icon blocking, center aligned
+  - BT04 (1200x262) : Multi-clickable product buttons, 3-5 (image fetch + crop + label)
+
+[ 3-2. Membership Section ] — Membership benefit banners, 2 types
+  - Default (1200x628)
+  - Square  (1200x1200)
+
+[ 3-3. Big Promotion Section ] — Major promotion campaign banners
+  - 5 banners x 9 color themes (red, green, purple, brown, Shopee Orange,
+    Lazada Pink, 3 warm grays). Theme auto-propagation.
+  - Per-banner editing of product/KV image, head/sub copy, logo, CTA, vouchers.
+
+[ 3-4. Other Promotions Section ] — Additional promotion banners
+  - Output : 1200 x 628 PNG (multiple instances -> ZIP)
+  - Promotion Theme Version : Product image + theme objects + plus sign,
+    in-banner drag/resize/rotate, smart-guide snapping, 6 presets.
+  - Lifestyle Image Version : Lifestyle-image based.
+  - Images can grow past the section bounds but are visually clipped within the section.
+
+[ 3-5. Must Have LG Section ] — Flagship product spotlight
+  - Fixed 1200px width, up to 6 product cards (2 per row), height varies by card count.
+  - Per-card image position adjustment via drag/scroll.
+
+
+==============================================
+ 4. ID Banner Builder (Lazada Indonesia banner)
+==============================================
+Generates PC + MO sizes simultaneously, ZIP download.
+
+  - Default
+    - PC 1200x300 / MO 702x320
+    - Warm gray background, static layout
+
+  - Promotion
+    - PC 1200x300 / MO 702x320
+    - 9 color themes, single-panel editing -> shared across PC/MO
+
+
+==============================================
+ Run / Deploy
+==============================================
+  npm run dev     # Dev server (localhost:5173)
+  npm run build   # Production build
+
+  Deployed : Railway — https://lg-retail-obs.ax4squad.dev

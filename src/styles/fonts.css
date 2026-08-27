@@ -1,0 +1,390 @@
+/*
+ * unicode-range restricts LGEI Headline to Latin + ASCII/Latin punctuation +
+ * general/currency/superscript ranges. Browsers will prefer LGEI for these
+ * glyphs (including symbols like $, %, &, !, ", -) and fall through to the
+ * CJK/Thai fallback fonts in the stack ONLY for chars outside this range.
+ * Without this, browsers may "stick" with a CJK fallback font for ASCII
+ * punctuation when surrounded by Chinese text, causing inconsistent metrics.
+ */
+
+/*
+ * Output font for content templates, swapped per builder by BrandFontProvider.
+ * Declared here as a global default so templates rendered outside a builder
+ * (selector previews) and inside a second React root (Brand Shop export) both
+ * resolve it. App chrome never reads this — it stays on --font-lgei, which
+ * carries LINE Seed for Thai the same way but never swaps with the brand.
+ */
+:root {
+  --obs-font: "LGEI Headline", "LINE Seed Sans TH", "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans Thai", "Leelawadee UI", Thonburi, Tahoma, sans-serif;
+  /* Extra tracking on top of each template's own letter-spacing. Only Shopee
+     needs it (-2%); the others resolve to 0 so their output is unchanged. */
+  --obs-tracking: 0em;
+  --obs-font-text: "LGEI Text", "LINE Seed Sans TH", "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans Thai", "Leelawadee UI", Thonburi, Tahoma, sans-serif;
+}
+
+@font-face {
+  font-family: "LGEI Headline";
+  src: url("/fonts/LGEIHeadlineTTF-Thin.ttf") format("truetype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-024F, U+1E00-1EFF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
+}
+
+@font-face {
+  font-family: "LGEI Headline";
+  src: url("/fonts/LGEIHeadlineTTF-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-024F, U+1E00-1EFF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
+}
+
+@font-face {
+  font-family: "LGEI Headline";
+  src: url("/fonts/LGEIHeadlineTTF-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-024F, U+1E00-1EFF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
+}
+
+@font-face {
+  font-family: "LGEI Headline";
+  src: url("/fonts/LGEIHeadlineTTF-Semibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-024F, U+1E00-1EFF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
+}
+
+@font-face {
+  font-family: "LGEI Headline";
+  src: url("/fonts/LGEIHeadlineTTF-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-024F, U+1E00-1EFF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
+}
+
+@font-face {
+  font-family: "LGEI Text";
+  src: url("/fonts/LGEIText-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "LGEI Text";
+  src: url("/fonts/LGEIText-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "LGEI Text";
+  src: url("/fonts/LGEIText-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+ * Line-box parity with LG.
+ *
+ * Every brand face below overrides its vertical metrics to LGEI Headline's
+ * (ascent 95%, descent 22%, line-gap 17% — measured at 100px), so switching
+ * fonts never moves a layout vertically. Only the glyphs change; width still
+ * hugs naturally.
+ *
+ * ⚠️ The override values are DIVIDED BY that face's size-adjust, because
+ * size-adjust scales overridden metrics too (verified: 134px box × 0.95 =
+ * 127px without the compensation). If you change a size-adjust, recompute:
+ *
+ *     ascent-override   = 95 / size-adjust
+ *     descent-override  = 22 / size-adjust
+ *     line-gap-override = 17 / size-adjust
+ *
+ * Body copy is the one accepted mismatch: LG's --obs-font-text resolves to
+ * LGEI Text (128px box), while the brand fonts have no separate text face and
+ * keep the 134px Headline box.
+ * ------------------------------------------------------------------------ */
+
+/* --- LG's Thai face: LINE Seed Sans TH ---
+ * LGEI Headline and LGEI Text have no Thai glyphs at all, so before this the LG
+ * stack fell through to whatever Thai the OS had (Thonburi on macOS, Leelawadee
+ * on Windows) — a different face per machine, and never the one LG specified.
+ * LINE Seed pairs with LGEI the way DB Helvethaica pairs with Euclid on the
+ * Lazada side: Latin stays on the brand face, Thai gets a matched partner.
+ *
+ * The unicode-range is what makes mixed runs work. Font selection is per
+ * CODEPOINT, not per UI language, so "ซื้อ LG OLED evo ลด 50%" takes LGEI for
+ * the Latin and digits and LINE Seed for the Thai inside one text node — in
+ * either language of the editor, with no per-language branching.
+ *
+ * size-adjust is 100%: solving each Figma Thai frame against its English twin
+ * for "what scale lets one CSS size serve both scripts" landed on 100.0% every
+ * time, so LINE Seed is left at its natural size and the overrides below are
+ * undivided.
+ *
+ * ⚠️ The overrides put the BASELINE where LGEI's is — they do NOT bound the
+ * ink. Measured with real shaping (canvas, which shapes through HarfBuzz as the
+ * DOM does), LINE Seed's Thai reaches 107.4% above the baseline once tone marks
+ * stack, and 29.6% below it, against LGEI Latin's 85.7% / 19.4%. Glyph bounding
+ * boxes alone report only 89% and miss this, because the stacking is GPOS mark
+ * positioning. So Thai overflows a Latin-tuned line box top and bottom by
+ * design, and the templates — not this file — have to leave it headroom; see
+ * the `clamp()` helper in OffSiteBannerTemplate. */
+
+@font-face {
+  font-family: "LINE Seed Sans TH";
+  src: url("/fonts/lineseed/LINESeedSansTH-Regular.otf") format("opentype");
+  font-weight: 100 400;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 22%;
+  line-gap-override: 17%;
+  unicode-range: U+0E00-0E7F;
+}
+
+@font-face {
+  font-family: "LINE Seed Sans TH";
+  src: url("/fonts/lineseed/LINESeedSansTH-Bold.otf") format("opentype");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 22%;
+  line-gap-override: 17%;
+  unicode-range: U+0E00-0E7F;
+}
+
+@font-face {
+  font-family: "LINE Seed Sans TH";
+  src: url("/fonts/lineseed/LINESeedSansTH-ExtraBold.otf") format("opentype");
+  font-weight: 800 900;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 22%;
+  line-gap-override: 17%;
+  unicode-range: U+0E00-0E7F;
+}
+
+/* ---------------------------------------------------------------------------
+ * Marketplace brand fonts (Shopee / Lazada) — content output only.
+ *
+ * Weight mapping comes from the design team's substitution table, so the
+ * weight values already in the templates need no changes:
+ *
+ *   LGEI Headline / Text  →  ShopeeFont Rounded  |  DB Helvethaica X  |  Euclid
+ *   regular  (400)        →  Regular             |  Regular (55)     |  Regular
+ *   semibold (600)        →  SemiBold            |  Medium (65)      |  Medium
+ *   bold     (700)        →  Bold                |  Bold (75)        |  Semibold
+ *
+ * Euclid therefore runs a step lighter than its face name suggests. Shopee's
+ * whole ladder used to: Medium at 600 and SemiBold at 700. Both read light
+ * beside LG, measured by ink area against the LGEI face each one stands in for,
+ * so both moved up a step. Rounded Medium is now unused. Faces outside this
+ * table are deliberately
+ * NOT declared: html-to-image embeds every declared face of a family it finds
+ * in use, so an unused weight would be base64'd into every exported PNG.
+ * Weight 300 maps to each family's lightest available face.
+ *
+ * ONE exception, at weight 800: the off-site discount row (Figma 4139:304),
+ * where the designer names each brand's face directly rather than going
+ * through the table, and asks for Shopee's and Euclid's true Bold. Euclid still
+ * needs a separate 800 face for that; Shopee no longer does, since its 700 is
+ * already Bold, so the two share one declaration.
+ *
+ * Must stay same-origin under /fonts/: html-to-image inlines @font-face
+ * resources into the export, and a cross-origin file fails that step.
+ * ------------------------------------------------------------------------ */
+
+/* --- Shopee: one family, covers Latin + Thai.
+ * cap-height/em is 0.711, matching LGEI Headline, but Shopee's rounded forms
+ * read optically larger at the same measure, so 95% is metric parity minus a
+ * -5% trim, settled by eye against LG. Euclid runs at 93% — deliberately a touch
+ * smaller than what would sit optically level with DB Helvethaica's 143%,
+ * because Lazada's Latin read large next to its Thai. Tune here — never in the templates. */
+
+@font-face {
+  font-family: "ShopeeFont Rounded";
+  src: url("/fonts/shopee/ShopeeFontRounded-Regular.ttf") format("truetype");
+  font-weight: 100 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 95%;
+  ascent-override: 100%;
+  descent-override: 23.2%;
+  line-gap-override: 17.9%;
+}
+
+/* 600 is head copy, which must read like LGEI Headline Semibold. Rounded Medium
+ * came out 8.6% lighter than that by ink area; SemiBold lands +2.7%, and Bold
+ * overshoots to +11.6%. Rounded Medium is now unused and undeclared. */
+@font-face {
+  font-family: "ShopeeFont Rounded";
+  src: url("/fonts/shopee/ShopeeFontRounded-SemiBold.ttf") format("truetype");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 95%;
+  ascent-override: 100%;
+  descent-override: 23.2%;
+  line-gap-override: 17.9%;
+}
+
+/* 700 sat on SemiBold until Shopee's bold copy was judged too light against
+ * LG's; it now shares Bold with the discount row's 800. To put it back, split
+ * this into a 700 → SemiBold face and an 800 900 → Bold face again. */
+@font-face {
+  font-family: "ShopeeFont Rounded";
+  src: url("/fonts/shopee/ShopeeFontRounded-Bold.ttf") format("truetype");
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 95%;
+  ascent-override: 100%;
+  descent-override: 23.2%;
+  line-gap-override: 17.9%;
+}
+
+/* --- Lazada text: DB Helvethaica X (Latin + Thai, no accented Latin).
+ *
+ * size-adjust implements the design table's "+10pt" note. This face draws at
+ * cap-height/em 0.488 against LGEI Headline's 0.711, so it renders visibly
+ * small at the same nominal size. 143% is straight cap-height parity with LGEI.
+ * It ran at 137% — parity minus a -4% optical trim — until the trim was judged
+ * to leave Lazada's Thai reading small next to LG's, so the trim is gone and
+ * this is now the plain metric value. A ratio rather than a flat offset because
+ * template sizes span 18-180px, where a fixed px adjustment would overshoot
+ * small text and barely register on head copy. */
+
+@font-face {
+  font-family: "DB Helvethaica X";
+  src: url("/fonts/lazada/DBHelvethaicaX-Light.ttf") format("truetype");
+  font-weight: 100 300;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 143%;
+  ascent-override: 66.4%;
+  descent-override: 15.4%;
+  line-gap-override: 11.9%;
+  unicode-range: U+0E00-0E7F;
+}
+
+@font-face {
+  font-family: "DB Helvethaica X";
+  src: url("/fonts/lazada/DBHelvethaicaX-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 143%;
+  ascent-override: 66.4%;
+  descent-override: 15.4%;
+  line-gap-override: 11.9%;
+  unicode-range: U+0E00-0E7F;
+}
+
+@font-face {
+  font-family: "DB Helvethaica X";
+  src: url("/fonts/lazada/DBHelvethaicaX-Medium.ttf") format("truetype");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 143%;
+  ascent-override: 66.4%;
+  descent-override: 15.4%;
+  line-gap-override: 11.9%;
+  unicode-range: U+0E00-0E7F;
+}
+
+@font-face {
+  font-family: "DB Helvethaica X";
+  src: url("/fonts/lazada/DBHelvethaicaX-Bold.ttf") format("truetype");
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 143%;
+  ascent-override: 66.4%;
+  descent-override: 15.4%;
+  line-gap-override: 11.9%;
+  unicode-range: U+0E00-0E7F;
+}
+
+/* --- Lazada numerals: Euclid Circular A ---
+ * Per the Lazada brand guideline the number set is a separate family. The
+ * unicode-range confines it to digits and numeric punctuation, so listing it
+ * ahead of DB Helvethaica in the stack swaps only the numerals.
+ * cap-height/em is 0.710 against LGEI Headline's 0.711, so it needs no metric
+ * correction — the 93% here is only the shared trim, matching Shopee and
+ * keeping the numerals optically level with the DB Helvethaica text they sit
+ * next to. Drop it and digits render visibly larger than the Thai around them.
+ * Covers: 0-9  $ %  + , - . /  :  x
+ * ฿ (U+0E3F) is deliberately excluded — Euclid has no glyph for it, so the
+ * currency mark renders from DB Helvethaica and matches the Thai text. */
+
+@font-face {
+  font-family: "Euclid Circular A";
+  src: url("/fonts/lazada/EuclidCircularA-Light.otf") format("opentype");
+  font-weight: 100 300;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 93%;
+  ascent-override: 102.2%;
+  descent-override: 23.7%;
+  line-gap-override: 18.3%;
+}
+
+@font-face {
+  font-family: "Euclid Circular A";
+  src: url("/fonts/lazada/EuclidCircularA-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 93%;
+  ascent-override: 102.2%;
+  descent-override: 23.7%;
+  line-gap-override: 18.3%;
+}
+
+@font-face {
+  font-family: "Euclid Circular A";
+  src: url("/fonts/lazada/EuclidCircularA-Medium.otf") format("opentype");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 93%;
+  ascent-override: 102.2%;
+  descent-override: 23.7%;
+  line-gap-override: 18.3%;
+}
+
+@font-face {
+  font-family: "Euclid Circular A";
+  src: url("/fonts/lazada/EuclidCircularA-Semibold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 93%;
+  ascent-override: 102.2%;
+  descent-override: 23.7%;
+  line-gap-override: 18.3%;
+}
+
+/* Discount row only — see the weight-800 note above. */
+@font-face {
+  font-family: "Euclid Circular A";
+  src: url("/fonts/lazada/EuclidCircularA-Bold.otf") format("opentype");
+  font-weight: 800 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 93%;
+  ascent-override: 102.2%;
+  descent-override: 23.7%;
+  line-gap-override: 18.3%;
+}

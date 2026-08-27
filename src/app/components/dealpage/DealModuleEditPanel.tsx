@@ -1,0 +1,716 @@
+/**
+ * Deal Page edit panels — the www.lg.com counterpart to
+ * brandshop/modules/ModuleEditPanel.tsx.
+ *
+ * The field atoms are re-declared here rather than imported: the Shop in Shop
+ * panel file keeps them private and is 3.5k lines of marketplace-specific
+ * editors, so importing from it would drag that whole chunk into this
+ * builder's lazy bundle. `ShowToggle` and `ImageCropModal` are already shared
+ * components, so those are reused directly.
+ */
+
+import React, { useRef, useState } from 'react';
+import { useT } from '../../i18n/LanguageContext';
+import { ShowToggle } from '../brandshop/bigPromoCommon';
+import { ImageCropModal } from '../ImageCropModal';
+import {
+  type DealEditState,
+  type DealSiteHeaderState,
+  type DealSiteFooterState,
+  type DealFooterColumn,
+  type DealHeroState,
+  type DealCardsState,
+  type DealCardItem,
+  type DealTabNavState,
+  type DealPromoBannerState,
+  type DealBannerLayout,
+  type DealBannerSize,
+  type DealTimeSaleState,
+  type DealProductListState,
+  type DealProductItem,
+  type DealCategoryNavState,
+  type DealCategoryNavItem,
+  dealCardDefaults,
+  dealProductDefaultItem,
+  dealCategoryNavDefaults,
+  dealFooterColumnDefaults,
+  DEAL_FOOTER_COLUMN_MIN,
+  DEAL_FOOTER_COLUMN_MAX,
+  DEAL_CARD_MIN,
+  DEAL_CARD_MAX,
+  DEAL_PRODUCT_MIN,
+  DEAL_PRODUCT_MAX,
+  DEAL_CATEGORY_NAV_MIN,
+  DEAL_CATEGORY_NAV_MAX,
+} from './dealEditStates';
+
+// ── Shared UI atoms ───────────────────────────────────────────────────────────
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] font-medium text-gray-500 mb-1 uppercase tracking-wide">{children}</p>;
+}
+
+function SectionDivider({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 mt-4 mb-2">
+      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+        {children}
+      </span>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
+
+const INPUT_CLASS =
+  'w-full text-sm border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#FD312E] bg-white';
+
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  hint?: string;
+}) {
+  return (
+    <div className="mb-3">
+      <FieldLabel>{label}</FieldLabel>
+      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={INPUT_CLASS} />
+      {hint && <p className="text-[10px] text-gray-400 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  rows = 2,
+  placeholder,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  rows?: number;
+  placeholder?: string;
+  hint?: string;
+}) {
+  return (
+    <div className="mb-3">
+      <FieldLabel>{label}</FieldLabel>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder}
+        className={`${INPUT_CLASS} resize-none`}
+      />
+      {hint && <p className="text-[10px] text-gray-400 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
+/** A field whose whole row can be switched off — label left, toggle right. */
+function ToggleField({
+  label,
+  shown,
+  onShownChange,
+  children,
+}: {
+  label: string;
+  shown: boolean;
+  onShownChange: (v: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-center mb-1.5">
+        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+        <div className="ml-auto">
+          <ShowToggle checked={shown} onChange={onShownChange} />
+        </div>
+      </div>
+      {shown && children}
+    </div>
+  );
+}
+
+function ImageField({
+  label,
+  value,
+  onChange,
+  aspectRatio,
+  objectFit = 'cover',
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+  aspectRatio?: number;
+  objectFit?: 'cover' | 'contain';
+}) {
+  const t = useT();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => onChange(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  return (
+    <div className="mb-3">
+      <FieldLabel>{label}</FieldLabel>
+      <div className="flex items-center gap-2">
+        {value ? (
+          <div className="relative w-12 h-12 rounded border border-gray-200 overflow-hidden shrink-0 bg-gray-50 group">
+            <img
+              src={value}
+              alt=""
+              className={`w-full h-full ${objectFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+              style={{ maxWidth: 'none' }}
+            />
+            <button
+              onClick={() => setCropSrc(value)}
+              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <span className="text-white text-[9px] font-medium leading-tight text-center">
+                {t('Edit')}
+                <br />
+                {t('Crop')}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <div className="w-12 h-12 rounded border-2 border-dashed border-gray-200 flex items-center justify-center shrink-0 bg-gray-50">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8h10" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="flex-1 text-xs text-[#FD312E] border border-[#FD312E]/30 rounded-md py-1.5 hover:bg-[#FD312E]/5 transition-colors"
+        >
+          {value ? t('Replace') : t('Upload')}
+        </button>
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      </div>
+
+      {cropSrc && (
+        <ImageCropModal
+          imageSrc={cropSrc}
+          aspectRatio={aspectRatio}
+          title={label}
+          onConfirm={cropped => {
+            onChange(cropped);
+            setCropSrc(null);
+          }}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function CountSelector({
+  label,
+  min,
+  max,
+  value,
+  onChange,
+}: {
+  label: string;
+  min: number;
+  max: number;
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="mb-3">
+      <FieldLabel>{label}</FieldLabel>
+      <div className="flex gap-1">
+        {Array.from({ length: max - min + 1 }, (_, k) => min + k).map(n => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            className={`flex-1 h-8 rounded-md border text-sm font-medium transition-colors ${
+              value === n ? 'bg-[#FD312E] border-[#FD312E] text-white' : 'border-gray-200 text-gray-500 hover:border-gray-400'
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Grow/shrink a list of editable items, restoring the curated defaults by
+ * position on the way back up — same behaviour as the Shop in Shop panels'
+ * count controls.
+ */
+function resizeList<T>(list: T[], count: number, defaultAt: (i: number) => T): T[] {
+  if (count === list.length) return list;
+  if (count < list.length) return list.slice(0, count);
+  const next = [...list];
+  for (let i = list.length; i < count; i++) next.push(defaultAt(i));
+  return next;
+}
+
+// ── 1. Hero ───────────────────────────────────────────────────────────────────
+
+function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: DealHeroState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealHeroState>) => onUpdate({ ...data, ...p });
+  return (
+    <div>
+      <ImageField label={t('Key visual')} value={data.kvImage} onChange={v => set({ kvImage: v })} aspectRatio={1509 / 750} />
+      <ToggleField label={t('Eyebrow')} shown={data.showEyebrow} onShownChange={v => set({ showEyebrow: v })}>
+        <input type="text" value={data.eyebrow} onChange={e => set({ eyebrow: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+      <TextAreaField
+        label={t('Headline')}
+        value={data.headline}
+        onChange={v => set({ headline: v })}
+        rows={2}
+        hint={t('Line break splits the headline.')}
+      />
+      <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
+        <textarea
+          value={data.subCopy}
+          onChange={e => set({ subCopy: e.target.value })}
+          rows={2}
+          className={`${INPUT_CLASS} resize-none`}
+        />
+      </ToggleField>
+    </div>
+  );
+}
+
+// ── 2. Deal cards ─────────────────────────────────────────────────────────────
+
+function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d: DealCardsState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealCardsState>) => onUpdate({ ...data, ...p });
+  const updateCard = (idx: number, card: DealCardItem) => {
+    const cards = [...data.cards];
+    cards[idx] = card;
+    set({ cards });
+  };
+
+  return (
+    <div>
+      <ToggleField label={t('Section title')} shown={data.showSectionTitle} onShownChange={v => set({ showSectionTitle: v })}>
+        <input type="text" value={data.sectionTitle} onChange={e => set({ sectionTitle: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+      <CountSelector
+        label={t('Number of cards')}
+        min={DEAL_CARD_MIN}
+        max={DEAL_CARD_MAX}
+        value={data.cards.length}
+        onChange={n => set({ cards: resizeList(data.cards, n, i => dealCardDefaults(t)[i] ?? { image: null, title: t('New deal'), ctaText: t('Shop now') }) })}
+      />
+      <div className="flex items-center mb-3">
+        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{t('Card button')}</p>
+        <div className="ml-auto">
+          <ShowToggle checked={data.showCta} onChange={v => set({ showCta: v })} tone="group" />
+        </div>
+      </div>
+      <SectionDivider>{t('Cards')}</SectionDivider>
+      {data.cards.map((card, i) => (
+        <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
+          <p className="text-[11px] font-semibold text-gray-500 mb-2">
+            {t('Card')} {i + 1}
+          </p>
+          <ImageField label={t('Card image')} value={card.image} onChange={v => updateCard(i, { ...card, image: v })} objectFit="contain" />
+          <TextField label={t('Title')} value={card.title} onChange={v => updateCard(i, { ...card, title: v })} />
+          {data.showCta && (
+            <TextField label={t('Button text')} value={card.ctaText} onChange={v => updateCard(i, { ...card, ctaText: v })} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+// ── 3. Deal tab nav ───────────────────────────────────────────────────────────
+
+function DealTabNavPanel({ data, onUpdate }: { data: DealTabNavState; onUpdate: (d: DealTabNavState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealTabNavState>) => onUpdate({ ...data, ...p });
+  const labels = data.tabs.split('\n').map(x => x.trim()).filter(Boolean);
+  return (
+    <div>
+      <TextAreaField
+        label={t('Tabs')}
+        value={data.tabs}
+        onChange={v => set({ tabs: v })}
+        rows={5}
+        hint={t('One tab per line.')}
+      />
+      <div className="mb-3">
+        <FieldLabel>{t('Active tab')}</FieldLabel>
+        <div className="flex flex-col gap-1">
+          {labels.map((label, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => set({ activeIndex: i })}
+              className={`h-8 rounded-md border text-xs font-medium px-3 text-left transition-colors ${
+                data.activeIndex === i
+                  ? 'bg-[#FD312E] border-[#FD312E] text-white'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-400'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 4. Promotion banner ───────────────────────────────────────────────────────
+
+const BANNER_LAYOUTS: DealBannerLayout[] = ['Art right', 'Art left'];
+const BANNER_SIZES: DealBannerSize[] = ['Large', 'Standard'];
+
+function DealPromoBannerPanel({ data, onUpdate }: { data: DealPromoBannerState; onUpdate: (d: DealPromoBannerState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealPromoBannerState>) => onUpdate({ ...data, ...p });
+  return (
+    <div>
+      <div className="mb-3">
+        <FieldLabel>{t('Layout')}</FieldLabel>
+        <div className="flex gap-1">
+          {BANNER_LAYOUTS.map(l => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => set({ layout: l })}
+              className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                data.layout === l ? 'bg-[#FD312E] border-[#FD312E] text-white' : 'border-gray-200 text-gray-500 hover:border-gray-400'
+              }`}
+            >
+              {t(l)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mb-3">
+        <FieldLabel>{t('Banner height')}</FieldLabel>
+        <div className="flex gap-1">
+          {BANNER_SIZES.map(sz => (
+            <button
+              key={sz}
+              type="button"
+              onClick={() => set({ size: sz })}
+              className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                data.size === sz ? 'bg-[#FD312E] border-[#FD312E] text-white' : 'border-gray-200 text-gray-500 hover:border-gray-400'
+              }`}
+            >
+              {t(sz)} · {sz === 'Large' ? 400 : 320}
+            </button>
+          ))}
+        </div>
+      </div>
+      <ImageField label={t('Banner art')} value={data.image} onChange={v => set({ image: v })} aspectRatio={1600 / (data.size === 'Large' ? 400 : 320)} />
+      <TextAreaField label={t('Headline')} value={data.headline} onChange={v => set({ headline: v })} rows={2} />
+      <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
+        <textarea value={data.subCopy} onChange={e => set({ subCopy: e.target.value })} rows={2} className={`${INPUT_CLASS} resize-none`} />
+      </ToggleField>
+      <ToggleField label={t('Legal links')} shown={data.showLinks} onShownChange={v => set({ showLinks: v })}>
+        <input type="text" value={data.linkPrimary} onChange={e => set({ linkPrimary: e.target.value })} className={`${INPUT_CLASS} mb-1.5`} />
+        <input type="text" value={data.linkSecondary} onChange={e => set({ linkSecondary: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+      <ToggleField label={t('Button')} shown={data.showCta} onShownChange={v => set({ showCta: v })}>
+        <input type="text" value={data.ctaText} onChange={e => set({ ctaText: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+    </div>
+  );
+}
+
+// ── 4. Time Sale ──────────────────────────────────────────────────────────────
+
+function DealTimeSalePanel({ data, onUpdate }: { data: DealTimeSaleState; onUpdate: (d: DealTimeSaleState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealTimeSaleState>) => onUpdate({ ...data, ...p });
+  const units: Array<{ v: keyof DealTimeSaleState; l: keyof DealTimeSaleState; label: string }> = [
+    { v: 'days', l: 'dayLabel', label: t('Day') },
+    { v: 'hours', l: 'hourLabel', label: t('Hour') },
+    { v: 'minutes', l: 'minuteLabel', label: t('Minute') },
+    { v: 'seconds', l: 'secondLabel', label: t('Second') },
+  ];
+  return (
+    <div>
+      <ImageField label={t('Banner art')} value={data.image} onChange={v => set({ image: v })} objectFit="contain" />
+      <TextField label={t('Headline')} value={data.headline} onChange={v => set({ headline: v })} />
+      <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
+        <textarea value={data.subCopy} onChange={e => set({ subCopy: e.target.value })} rows={2} className={`${INPUT_CLASS} resize-none`} />
+      </ToggleField>
+      <SectionDivider>{t('Countdown')}</SectionDivider>
+      {units.map(u => (
+        <div key={u.v} className="mb-3">
+          <FieldLabel>{u.label}</FieldLabel>
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              value={data[u.v] as string}
+              onChange={e => set({ [u.v]: e.target.value } as Partial<DealTimeSaleState>)}
+              className={`${INPUT_CLASS} w-16 shrink-0 text-center`}
+            />
+            <input
+              type="text"
+              value={data[u.l] as string}
+              onChange={e => set({ [u.l]: e.target.value } as Partial<DealTimeSaleState>)}
+              className={INPUT_CLASS}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── 5. Product list ───────────────────────────────────────────────────────────
+
+function DealProductListPanel({ data, onUpdate }: { data: DealProductListState; onUpdate: (d: DealProductListState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealProductListState>) => onUpdate({ ...data, ...p });
+  const updateProduct = (idx: number, p: DealProductItem) => {
+    const products = [...data.products];
+    products[idx] = p;
+    set({ products });
+  };
+
+  return (
+    <div>
+      <ToggleField label={t('Section title')} shown={data.showSectionTitle} onShownChange={v => set({ showSectionTitle: v })}>
+        <input type="text" value={data.sectionTitle} onChange={e => set({ sectionTitle: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+      <ToggleField label={t('Tabs')} shown={data.showTabs} onShownChange={v => set({ showTabs: v })}>
+        <textarea value={data.tabs} onChange={e => set({ tabs: e.target.value })} rows={3} className={`${INPUT_CLASS} resize-none`} />
+        <p className="text-[10px] text-gray-400 mt-0.5">{t('One tab per line — the first one renders as active.')}</p>
+      </ToggleField>
+      <CountSelector
+        label={t('Number of products')}
+        min={DEAL_PRODUCT_MIN}
+        max={DEAL_PRODUCT_MAX}
+        value={data.products.length}
+        onChange={n => set({ products: resizeList(data.products, n, i => dealProductDefaultItem(t, i)) })}
+      />
+      <SectionDivider>{t('Products')}</SectionDivider>
+      {data.products.map((p, i) => (
+        <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
+          <p className="text-[11px] font-semibold text-gray-500 mb-2">
+            {t('Product')} {i + 1}
+          </p>
+          <ImageField label={t('Product image')} value={p.image} onChange={v => updateProduct(i, { ...p, image: v })} objectFit="contain" />
+          <ToggleField label={t('Badge')} shown={p.showBadge} onShownChange={v => updateProduct(i, { ...p, showBadge: v })}>
+            <input type="text" value={p.badge} onChange={e => updateProduct(i, { ...p, badge: e.target.value })} className={INPUT_CLASS} />
+          </ToggleField>
+          <TextAreaField label={t('Product name')} value={p.name} onChange={v => updateProduct(i, { ...p, name: v })} rows={2} hint={t('2 lines max on the card.')} />
+          <TextField label={t('Model code')} value={p.sku} onChange={v => updateProduct(i, { ...p, sku: v })} />
+          <ToggleField label={t('Rating')} shown={p.showRating} onShownChange={v => updateProduct(i, { ...p, showRating: v })}>
+            <div className="flex gap-1.5">
+              <input type="text" value={p.rating} onChange={e => updateProduct(i, { ...p, rating: e.target.value })} className={`${INPUT_CLASS} w-16 shrink-0 text-center`} />
+              <input type="text" value={p.reviewCount} onChange={e => updateProduct(i, { ...p, reviewCount: e.target.value })} className={INPUT_CLASS} />
+            </div>
+          </ToggleField>
+          <TextField label={t('Sale price')} value={p.salePrice} onChange={v => updateProduct(i, { ...p, salePrice: v })} />
+          <ToggleField label={t('Discount %')} shown={p.showDiscountPercent} onShownChange={v => updateProduct(i, { ...p, showDiscountPercent: v })}>
+            <input type="text" value={p.discountPercent} onChange={e => updateProduct(i, { ...p, discountPercent: e.target.value })} className={INPUT_CLASS} />
+          </ToggleField>
+          <ToggleField label={t('Original price')} shown={p.showOriginalPrice} onShownChange={v => updateProduct(i, { ...p, showOriginalPrice: v })}>
+            <input type="text" value={p.originalPrice} onChange={e => updateProduct(i, { ...p, originalPrice: e.target.value })} className={INPUT_CLASS} />
+          </ToggleField>
+          <ToggleField label={t('Shipping note')} shown={p.showShippingNote} onShownChange={v => updateProduct(i, { ...p, showShippingNote: v })}>
+            <input type="text" value={p.shippingNote} onChange={e => updateProduct(i, { ...p, shippingNote: e.target.value })} className={INPUT_CLASS} />
+          </ToggleField>
+          <TextField label={t('Secondary button')} value={p.secondaryCta} onChange={v => updateProduct(i, { ...p, secondaryCta: v })} />
+          <TextField label={t('Primary button')} value={p.primaryCta} onChange={v => updateProduct(i, { ...p, primaryCta: v })} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── 6. Category nav ───────────────────────────────────────────────────────────
+
+function DealCategoryNavPanel({ data, onUpdate }: { data: DealCategoryNavState; onUpdate: (d: DealCategoryNavState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealCategoryNavState>) => onUpdate({ ...data, ...p });
+  const updateItem = (idx: number, item: DealCategoryNavItem) => {
+    const items = [...data.items];
+    items[idx] = item;
+    set({ items });
+  };
+
+  return (
+    <div>
+      <CountSelector
+        label={t('Number of categories')}
+        min={DEAL_CATEGORY_NAV_MIN}
+        max={DEAL_CATEGORY_NAV_MAX}
+        value={data.items.length}
+        onChange={n => set({ items: resizeList(data.items, n, i => dealCategoryNavDefaults(t)[i] ?? { icon: null, name: t('New category') }) })}
+      />
+      <ToggleField label={t('Results bar')} shown={data.showResultsBar} onShownChange={v => set({ showResultsBar: v })}>
+        <input type="text" value={data.resultsText} onChange={e => set({ resultsText: e.target.value })} className={`${INPUT_CLASS} mb-1.5`} />
+        <input type="text" value={data.sortLabel} onChange={e => set({ sortLabel: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+      <SectionDivider>{t('Categories')}</SectionDivider>
+      {data.items.map((item, i) => (
+        <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
+          <p className="text-[11px] font-semibold text-gray-500 mb-2">
+            {t('Category')} {i + 1}
+          </p>
+          <ImageField label={t('Icon')} value={item.icon} onChange={v => updateItem(i, { ...item, icon: v })} objectFit="contain" />
+          <TextField label={t('Name')} value={item.name} onChange={v => updateItem(i, { ...item, name: v })} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+// ── 0. Site header ────────────────────────────────────────────────────────────
+
+function DealSiteHeaderPanel({ data, onUpdate }: { data: DealSiteHeaderState; onUpdate: (d: DealSiteHeaderState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealSiteHeaderState>) => onUpdate({ ...data, ...p });
+  return (
+    <div>
+      <p className="text-[11px] text-gray-400 leading-snug mb-3">
+        {t('The LG logo and the search / account / cart cluster are fixed site chrome.')}
+      </p>
+      <ToggleField label={t('Business link')} shown={data.showBusinessLabel} onShownChange={v => set({ showBusinessLabel: v })}>
+        <input type="text" value={data.businessLabel} onChange={e => set({ businessLabel: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+      <TextAreaField
+        label={t('Global nav')}
+        value={data.navItems}
+        onChange={v => set({ navItems: v })}
+        rows={8}
+        hint={t('One nav item per line.')}
+      />
+      <ToggleField label={t('Breadcrumb')} shown={data.showBreadcrumb} onShownChange={v => set({ showBreadcrumb: v })}>
+        <textarea value={data.breadcrumb} onChange={e => set({ breadcrumb: e.target.value })} rows={3} className={`${INPUT_CLASS} resize-none`} />
+        <p className="text-[10px] text-gray-400 mt-0.5">{t('One crumb per line.')}</p>
+      </ToggleField>
+    </div>
+  );
+}
+
+// ── 7. Site footer ────────────────────────────────────────────────────────────
+
+function DealSiteFooterPanel({ data, onUpdate }: { data: DealSiteFooterState; onUpdate: (d: DealSiteFooterState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealSiteFooterState>) => onUpdate({ ...data, ...p });
+  const updateColumn = (idx: number, col: DealFooterColumn) => {
+    const columns = [...data.columns];
+    columns[idx] = col;
+    set({ columns });
+  };
+
+  return (
+    <div>
+      <ToggleField label={t('Disclaimers')} shown={data.showDisclaimers} onShownChange={v => set({ showDisclaimers: v })}>
+        <textarea value={data.disclaimers} onChange={e => set({ disclaimers: e.target.value })} rows={5} className={`${INPUT_CLASS} resize-none`} />
+        <p className="text-[10px] text-gray-400 mt-0.5">{t('One paragraph per line — the footer shows the first two.')}</p>
+      </ToggleField>
+      <TextField label={t('"More" label')} value={data.moreLabel} onChange={v => set({ moreLabel: v })} />
+      <CountSelector
+        label={t('Number of link columns')}
+        min={DEAL_FOOTER_COLUMN_MIN}
+        max={DEAL_FOOTER_COLUMN_MAX}
+        value={data.columns.length}
+        onChange={n => set({ columns: resizeList(data.columns, n, i => dealFooterColumnDefaults(t)[i] ?? { title: t('New column'), links: '' }) })}
+      />
+      <TextField label={t('Locale')} value={data.localeLabel} onChange={v => set({ localeLabel: v })} />
+      <div className="flex items-center mb-3">
+        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{t('Social links')}</p>
+        <div className="ml-auto">
+          <ShowToggle checked={data.showSocial} onChange={v => set({ showSocial: v })} tone="group" />
+        </div>
+      </div>
+      <div className="flex items-center mb-3">
+        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{t('Footer badges')}</p>
+        <div className="ml-auto">
+          <ShowToggle checked={data.showBadges} onChange={v => set({ showBadges: v })} tone="group" />
+        </div>
+      </div>
+      <SectionDivider>{t('Legal bar')}</SectionDivider>
+      <TextAreaField
+        label={t('Legal links')}
+        value={data.legalLinks}
+        onChange={v => set({ legalLinks: v })}
+        rows={6}
+        hint={t('One link per line — rendered pipe-separated.')}
+      />
+      <TextAreaField label={t('Copyright')} value={data.copyright} onChange={v => set({ copyright: v })} rows={2} />
+      <TextAreaField label={t('Official site notice')} value={data.officialNotice} onChange={v => set({ officialNotice: v })} rows={2} />
+      <SectionDivider>{t('Link columns')}</SectionDivider>
+      {data.columns.map((col, i) => (
+        <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
+          <p className="text-[11px] font-semibold text-gray-500 mb-2">
+            {t('Column')} {i + 1}
+          </p>
+          <TextField label={t('Title')} value={col.title} onChange={v => updateColumn(i, { ...col, title: v })} />
+          <TextAreaField
+            label={t('Links')}
+            value={col.links}
+            onChange={v => updateColumn(i, { ...col, links: v })}
+            rows={5}
+            hint={t('One link per line.')}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Router ────────────────────────────────────────────────────────────────────
+
+export function DealModuleEditPanel({
+  editState,
+  onUpdate,
+}: {
+  editState: DealEditState;
+  onUpdate: (s: DealEditState) => void;
+}) {
+  switch (editState.type) {
+    case 'deal-site-header':
+      return <DealSiteHeaderPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-site-header', data: d })} />;
+    case 'deal-site-footer':
+      return <DealSiteFooterPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-site-footer', data: d })} />;
+    case 'deal-hero':
+      return <DealHeroPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-hero', data: d })} />;
+    case 'deal-cards':
+      return <DealCardsPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-cards', data: d })} />;
+    case 'deal-tab-nav':
+      return <DealTabNavPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-tab-nav', data: d })} />;
+    case 'deal-promo-banner':
+      return <DealPromoBannerPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-promo-banner', data: d })} />;
+    case 'deal-time-sale':
+      return <DealTimeSalePanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-time-sale', data: d })} />;
+    case 'deal-product-list':
+      return <DealProductListPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-product-list', data: d })} />;
+    case 'deal-category-nav':
+      return <DealCategoryNavPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-category-nav', data: d })} />;
+  }
+}

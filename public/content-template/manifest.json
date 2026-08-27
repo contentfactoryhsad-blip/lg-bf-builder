@@ -1,0 +1,71 @@
+{
+  "generatedFrom": "content template builder source",
+  "stamp": 1787813861607,
+  "assets": {
+    "ad-creative-a-1": {
+      "width": 3000,
+      "height": 3000
+    },
+    "ad-creative-a-2": {
+      "width": 3000,
+      "height": 3000
+    },
+    "ad-creative-b-1": {
+      "width": 3000,
+      "height": 3000
+    },
+    "ad-creative-b-2": {
+      "width": 3000,
+      "height": 3000
+    },
+    "deal-type-bundle": {
+      "width": 3000,
+      "height": 3000
+    },
+    "deal-type-gift": {
+      "width": 3000,
+      "height": 3000
+    },
+    "deal-type-hot-deal": {
+      "width": 3000,
+      "height": 3000
+    },
+    "deal-type-time-sale": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-main": {
+      "width": 3000,
+      "height": 3000,
+      "motion": "/content-template/motion/kv-main-motion.mp4"
+    },
+    "kv-main-character": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-product-centric-1": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-product-centric-2": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-product-slot": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-product-slot-character": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-product-slot2": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-product-slot2-character": {
+      "width": 3000,
+      "height": 3000
+    }
+  }
+}

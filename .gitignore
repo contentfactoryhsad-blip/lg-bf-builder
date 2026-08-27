@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vercel/
+.env
+.env.local
+.DS_Store
+.claude/
+
+# Asset library: PNGs/thumbs live in the separate assets repo
+# (contentfactoryhsad-blip/lg-retail-obs-assets) and are served via jsDelivr.
+# Only manifest.json is committed — its URLs point to the CDN.
+public/asset-library/*/
