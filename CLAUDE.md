@@ -64,9 +64,15 @@ GitHub: `https://github.com/contentfactoryhsad-blip/lg-retail-obs-content-builde
   56개 중 **15개는 아직 카피가 없다**(`text: []`) — Figma의 레이아웃 컴포넌트가 비어 있는 상태 그대로다. 지어내지 말 것.
   그라데이션은 Figma가 흰색 그라데이션 **마스크**로 그리므로 CSS `mask-image`로 옮겼다(`PaidMask.angle`은 `gradientTransform` 환산값).
 - **LG.com 히어로 2사이즈(1920×720·720×960)만 추가 레이어를 갖는다** — `indicator`(캐러셀 표시)와
-  `iconRow`(혜택 아이콘, variant 4종). 오른쪽 바의 라벨 앞 체크박스로 카피·CTA·디스클레이머까지 켜고 끄는데,
-  **적용도 이 2사이즈뿐이다** — 실출고는 배경+아이콘이고 나머지 4사이즈는 확인용 목업이라 항상 전부 그린다.
-  체크박스 UI 자체도 LG.com 채널에서만 나온다(`showLayers`); 유료매체는 완성본 출고라 필요 없다. 파일은 `public/content-template/overlay/`. 아이콘 로우 PNG 2장은 MCP export가
+  `iconRow`(혜택 아이콘, variant 4종). 🔴 **끌 수 있는 건 아이콘 로우 하나뿐이다**(`showIconRow`, 기본 off) —
+  카피·CTA·디스클레이머·indicator는 레이아웃의 일부라 전 사이즈에서 항상 그린다.
+  🔴 **PD Slot 자산 4종은 아이콘 로우 자체가 없다** — 제품 플레이트가 그 자리를 쓴다. 판정은 `productSlotCount > 0`
+  (`SLOT_BOXES`를 가진 자산이 정확히 PD Slot 4종)이고, 체크박스가 숨는 것뿐 아니라 미리보기도 안 그린다.
+  이에 맞춰 Figma의 `LG.com — PD Slot` / `PD Slot (Character)` 보드는 **720×960에서만** KV와 슬롯을 40px 내렸다
+  (KV y −107 → −67). `SLOT_BOXES`는 아트 기준 비율이라 둘이 같이 내려가 값이 그대로고, `ART`의 y만 바뀐다. 오른쪽 바는 카피를 쓰는 곳이지
+  레이아웃을 조립하는 곳이 아니다. 구버전의 `SlotLayers`/`DEFAULT_LAYERS`(요소별 on/off 7개)는 2026-08-28에
+  불린 하나로 접었으니 되살리지 말 것. 아이콘 로우 체크박스 UI 자체도 LG.com 채널에서만 나온다
+  (`showIconRowToggle`); 유료매체는 완성본 출고라 필요 없다. 파일은 `public/content-template/overlay/`. 아이콘 로우 PNG 2장은 MCP export가
   캔버스 회색(107)을 합성해버려서 **역합성으로 알파를 복원한 것**이다(흰색은 `a=(v-107)/148`, 검정 글리프는
   `a=(107-v)/107`) — 글리프 경계 1px은 근사값이니 완벽 원본이 필요하면 Figma에서 손으로 export해 교체할 것.
 - 🔴 **Figma 보드의 박스는 읽기만 한다.** 사용자가 직접 그리는 것이라 스크립트로 지우거나 다시 그리지 말 것(두 번 사고 났다).
@@ -355,6 +361,30 @@ import 여부와 무관하게 전부 훑어 클래스를 수집하므로, 번들
 ## Export 메커니즘
 - 공통: `html-to-image`로 **워밍업 패스 2회**(폰트/리소스 캐시) 후 3번째에 `cacheBust: true`로 최종 export. export 직전 `preloadImagesToDataUrls`로 이미지 인라인.
 - Product Card는 `toBlob` 1200×1200 / 파일명 `product-card-{templateType}-{size}-{YYMMDD}.png`. Brand Shop·ID Banner는 `toPng`, 사이즈는 에디터별 가변.
+
+### Content Template Builder의 Download ZIP — 이미지와 영상이 방식이 다르다
+
+**이미지(PNG) = 다운로드 시점에 실시간 렌더.** 카피(headline/subcopy/CTA/disclaimer), PD Slot 제품 누끼,
+슬롯 컬러가 들어가 조합이 무한하므로 미리 만들 수 없다. 숨김 호스트(`.ctb-export-host`)에 캔버스와 같은
+컴포넌트를 사이즈당 하나씩 `scale=1`로 마운트해 촬영한다(`exportSlots.ts`, `[data-export-box]`가 촬영 대상,
+호스트 안에서만 `border-radius:0`). LG.com 6칸 ≈ 3초.
+
+- 🔴 **bare 규칙**: LG.com의 `ST0001-pc-1920x720`·`ST0001-mo-720x960` 두 히어로는 **아트 + 아이콘 로우만**
+  담아 내보낸다(eyebrow/headline/subcopy/CTA/disclaimer/indicator 제외 — LG.com이 카피를 라이브로 얹는다).
+  판정은 `lgcomSlots.ts`의 `bareOnExport(slotId)`. 나머지 4칸과 유료매체는 캔버스에 보이는 그대로.
+
+**영상(mp4) = 다운로드 시점에 브라우저에서 실시간 컷.** `renderMotionCutLive`(`exportMotion.ts`)가
+**WebCodecs**(mediabunny)로 하드웨어 디코드 → 캔버스 합성(아트 배치 + 아이콘 로우) → 하드웨어 H.264 인코드.
+현재 `lgcomSlots.ts`의 배치값을 그대로 읽으므로 사이즈·배치가 바뀌어도 재생성할 것이 없다. 7초 마스터 기준
+1920×720 ≈ 8.5초(초기화 포함) + 720×960 ≈ 1.3초, ZIP 전체 ≈ 12초. 모션 자산(현재 `ad-teasing`뿐)의
+두 히어로 칸만 mp4, 나머지는 PNG. 새 사이즈를 영상으로 켜려면 `bareOnExport` 판정에 추가(짝수 픽셀이어야 함
+— H.264 제약, 예: 125×125는 불가).
+
+- 🔴 **사전 렌더 폴백은 만들었다가 걷어냈다** — 배치값을 스크립트에 손으로 복사해야 해서 낡은 영상이 조용히
+  담기는 사고 경로였고, 대상 브라우저는 전부 WebCodecs를 지원한다. 컷 실패는 파일을 빼고 **alert로 알린다**;
+  낡은 파일로 덮지 말 것.
+- 🔴 **ffmpeg.wasm은 시도했다 폐기했다** — 단일스레드 소프트웨어 인코딩이라 한 편에 8분+. 실시간 컷이 필요하면
+  WebCodecs(mediabunny)를 쓸 것; wasm은 다시 검토하지 말 것.
 
 ## Crawling 세부
 - 추출: og:image, JSON-LD, gallery 셀렉터, 모든 `<img>`, data-large-d/m, data-srcset, `<picture>`, `<a href="*.jpg">`, background-image

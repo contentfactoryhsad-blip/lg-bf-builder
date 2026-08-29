@@ -5,41 +5,50 @@
  * Same architecture as Shop in Shop (registry → default state → renderer →
  * edit panel → drag canvas → ZIP export), but the output target is different:
  * lg.com's own page grid, not a marketplace upload slot. So there is no
- * `uploadModule` here, and every module renders at the page container width
- * instead of 1200.
+ * `uploadModule` here, and every module renders at the page width.
  *
- * Geometry is taken from Figma `fUup3vSq71f6eUIRpmzz8s`, frame 1:1212
- * ("ExporttoFigma | www.lg.com | Deal Page").
+ * Geometry is read off Figma `miJcDQgz0yJMskLE5a5HHj`, page "ExporttoFigma |
+ * www.lg.com | Deal Page" (body 6080:50977, main content 6080:51043). The
+ * module set below is exactly the ten sections that page carries today — no
+ * more, no fewer. Each entry notes the node it was measured from so a future
+ * change can be re-measured against the same node.
  */
 
 export type DealModuleType =
   | 'deal-site-header'
   | 'deal-hero'
   | 'deal-cards'
-  | 'deal-tab-nav'
   | 'deal-promo-banner'
+  | 'deal-tab-nav'
   | 'deal-time-sale'
   | 'deal-product-list'
   | 'deal-category-nav'
+  | 'deal-membership'
   | 'deal-site-footer';
 
 /**
- * The page's own width (Figma 1:1213 "Body" and every section container).
+ * The page's own width (Figma "Body" 6080:50977 and every section container).
  *
  * Everything on the Deal Page is a 2280-wide band with a narrower rail centred
- * inside it — the warm page background either side of the rails is part of the
- * design, not empty space, so modules render at 2280 and NOT at the 1713
- * container width. Four rails sit inside it, each with its own inset:
+ * inside it — the warm background either side of the rails is part of the
+ * design, not empty space, so modules render at 2280 and NOT at a rail width.
+ * Four rails sit inside it, each with its own inset:
  */
 export const DEAL_PAGE_WIDTH = 2280;
-/** Content container — the hero band, deal-card row and banners hang off this (Figma 1:1280). */
-export const DEAL_CONTAINER_WIDTH = 1713;
-/** Banner rail (Figma 1:1388, 1:1501, 1:2460). */
+/** Hero video plate (Figma 6130:67434, x=180). */
+export const DEAL_HERO_WIDTH = 1920;
+/** Banner rail — every promo/time-sale/membership banner (x=340). */
 export const DEAL_BANNER_WIDTH = 1600;
-/** Product-list grid + header/footer content (Figma 1:1528, 1:1218, 1:3121). */
-export const DEAL_GRID_WIDTH = 1488;
-/** Innermost rail — the deal-type tab bar (Figma 1:1487). */
-export const DEAL_CHROME_WIDTH = 1440;
+/** Section rail — header, product grid, category nav, footer (x=396). */
+export const DEAL_RAIL_WIDTH = 1488;
+/** Copy rail — the 24 gutter inside every section rail lands here (x=420). */
+export const DEAL_CONTENT_WIDTH = 1440;
+
+/** Distance from the page edge to each rail. */
+export const HERO_INSET = (DEAL_PAGE_WIDTH - DEAL_HERO_WIDTH) / 2;      // 180
+export const BANNER_INSET = (DEAL_PAGE_WIDTH - DEAL_BANNER_WIDTH) / 2;  // 340
+export const RAIL_INSET = (DEAL_PAGE_WIDTH - DEAL_RAIL_WIDTH) / 2;      // 396
+export const CONTENT_INSET = (DEAL_PAGE_WIDTH - DEAL_CONTENT_WIDTH) / 2; // 420
 
 export interface DealModuleDef {
   type: DealModuleType;
@@ -51,20 +60,35 @@ export interface DealModuleDef {
   placeholderHeight: number;
   maxCount: number;
   zipName: string;
+  /**
+   * The artwork box the operator has to supply, NOT the module's own band. The
+   * band is always 2280 and telling someone to prepare a 2280-wide image is
+   * wrong — what goes in is the plate inside it.
+   *
+   * Only modules that take a piece of banner artwork carry one. Chrome (header,
+   * tabs, footer) and modules whose images are per-item thumbnails rather than a
+   * banner (product list, category nav) deliberately have none, and show no size.
+   */
+  artSize?: { w: number; h: number };
 }
 
 export const DEAL_MODULE_DEFS: DealModuleDef[] = [
-  { type: 'deal-site-header',  label: 'Site header',      section: 'LG.com global header',   width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 134, maxCount: 1, zipName: 'site-header'   },
-  { type: 'deal-hero',         label: 'Hero KV',          section: 'Page hero',              width: DEAL_PAGE_WIDTH, height: 642,    placeholderHeight: 642, maxCount: 1, zipName: 'hero'          },
-  { type: 'deal-cards',        label: 'Deal cards',       section: 'Discover exclusive deals', width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 561, maxCount: 2, zipName: 'deal-cards'    },
-  { type: 'deal-tab-nav',      label: 'Deal tabs',        section: 'Deal-type tab bar',      width: DEAL_PAGE_WIDTH, height: 98,     placeholderHeight: 98,  maxCount: 2, zipName: 'tab-nav'       },
-  { type: 'deal-promo-banner', label: 'Promotion banner', section: 'Hot Deals / Bundles / Gifts', width: DEAL_PAGE_WIDTH, height: 496, placeholderHeight: 496, maxCount: 6, zipName: 'promo-banner'  },
-  { type: 'deal-time-sale',    label: 'Time Sale',        section: 'Time Sale ends in',      width: DEAL_PAGE_WIDTH, height: 398,    placeholderHeight: 398, maxCount: 1, zipName: 'time-sale'     },
-  { type: 'deal-product-list', label: 'Product list',     section: 'Deal product grid',      width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 796, maxCount: 8, zipName: 'product-list'  },
-  { type: 'deal-category-nav', label: 'Category nav',     section: 'Category filter bar',    width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 200, maxCount: 1, zipName: 'category-nav'  },
-  { type: 'deal-site-footer',  label: 'Site footer',      section: 'LG.com global footer',   width: DEAL_PAGE_WIDTH, height: 848,    placeholderHeight: 848, maxCount: 1, zipName: 'site-footer'   },
+  { type: 'deal-site-header',  label: 'Site header',      section: 'LG.com global header',        width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 134,  maxCount: 1, zipName: 'site-header'   },
+  { type: 'deal-hero',         label: 'Hero KV',          section: 'Page hero',                   width: DEAL_PAGE_WIDTH, height: 720,    placeholderHeight: 720,  maxCount: 1, zipName: 'hero',         artSize: { w: DEAL_HERO_WIDTH, h: 720 } },
+  { type: 'deal-cards',        label: 'Deal cards',       section: 'Discover exclusive deals',    width: DEAL_PAGE_WIDTH, height: 561,    placeholderHeight: 561,  maxCount: 2, zipName: 'deal-cards',   artSize: { w: 464, h: 368 } },
+  { type: 'deal-promo-banner', label: 'Promotion banner', section: 'Exclusive offer / Hot Deals / Bundles / Gifts', width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 496, maxCount: 6, zipName: 'promo-banner', artSize: { w: DEAL_BANNER_WIDTH, h: 400 } },
+  { type: 'deal-tab-nav',      label: 'Deal tabs',        section: 'Deal-type tab bar',           width: DEAL_PAGE_WIDTH, height: 98,     placeholderHeight: 98,   maxCount: 2, zipName: 'tab-nav'       },
+  { type: 'deal-time-sale',    label: 'Time Sale',        section: 'Time Sale ends in',           width: DEAL_PAGE_WIDTH, height: 398,    placeholderHeight: 398,  maxCount: 1, zipName: 'time-sale',    artSize: { w: DEAL_BANNER_WIDTH, h: 350 } },
+  { type: 'deal-product-list', label: 'Product list',     section: 'Deal product grid',           width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 796,  maxCount: 8, zipName: 'product-list'  },
+  { type: 'deal-category-nav', label: 'Category nav',     section: 'Category filter + results',   width: DEAL_PAGE_WIDTH, height: 353,    placeholderHeight: 353,  maxCount: 1, zipName: 'category-nav'  },
+  { type: 'deal-membership',   label: 'Membership CTA',   section: 'Become an LG Member',         width: DEAL_PAGE_WIDTH, height: 476,    placeholderHeight: 476,  maxCount: 1, zipName: 'membership',   artSize: { w: DEAL_BANNER_WIDTH, h: 380 } },
+  { type: 'deal-site-footer',  label: 'Site footer',      section: 'LG.com global footer',        width: DEAL_PAGE_WIDTH, height: 848,    placeholderHeight: 848,  maxCount: 1, zipName: 'site-footer'   },
 ];
 
 export function getDealModuleDef(type: DealModuleType): DealModuleDef {
   return DEAL_MODULE_DEFS.find(d => d.type === type)!;
 }
+
+/** `1600 × 400`, or null for the modules that take no banner artwork. */
+export const artSizeLabel = (def: DealModuleDef, height?: number): string | null =>
+  def.artSize ? `${def.artSize.w} × ${height ?? def.artSize.h}` : null;

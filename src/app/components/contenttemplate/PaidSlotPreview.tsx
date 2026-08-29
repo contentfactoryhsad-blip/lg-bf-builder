@@ -4,13 +4,16 @@
  * so every number in `paidSlots.ts` stays exactly as Figma reports it.
  *
  * The layer order matches the Figma frame: black plate → artwork (soft-masked)
- * → LG logo → copy → CTA.
+ * → LG logo → copy → CTA → product plates. The plates sit on top because that is
+ * where the `slot` frame sits on the PD Slot boards.
  */
 import React from 'react';
 import { artUrl, type ContentAsset } from './contentTemplateAssets';
 import { type SlotCopy } from './SlotCopyEditor';
 import { CTA_COLOR, SLOT_BG } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
+import { PD_PLATE_FILL, paidPlacementFor } from './paidBoards';
+import { type ProductSlots } from './ProductSlotsEditor';
 
 /** Figma reports tracking as a % of font size; CSS wants an em value. */
 const tracking = (pct: number) => `${pct / 100}em`;
@@ -54,14 +57,30 @@ export function PaidSlotPreview({
   asset,
   scale,
   copy,
+  products,
+  plateColor = PD_PLATE_FILL,
 }: {
   slot: PaidSlot;
-  /** Which of the two Key Visual _Main artworks this tile stands for. */
+  /** Which artwork this tile stands for. */
   asset: ContentAsset;
   scale: number;
   copy: SlotCopy;
+  /** One product per plate on the PD Slot key visuals; empty plates stay bare. */
+  products?: ProductSlots;
+  /** Fill behind the plates — the Figma value unless the operator changes it. */
+  plateColor?: string;
 }) {
-  const art = slot.art;
+  /**
+   * Key visuals with a board of their own bring their own artwork framing, their
+   * own soft edge and — on the PD Slot boards — their own plates. Everything else
+   * uses the Key Visual _Main placement recorded on the slot itself.
+   */
+  const pd = paidPlacementFor(asset.id, slot.key);
+  const art = pd ? pd.art : slot.art;
+  // those boards switch the soft edge off at most sizes, so the mask travels
+  // with the placement rather than with the size
+  const mask = pd ? pd.mask : slot.mask;
+  const artSrc = pd?.artId ?? asset.src ?? asset.id;
   const ctaLabel = copy.cta.trim() || PAID_PLACEHOLDER.cta;
   const ctaSpec = slot.text.find(s => s.role === 'cta');
 
@@ -71,6 +90,7 @@ export function PaidSlotPreview({
 
       {/* Outer box reserves the scaled footprint; the inner box is full size. */}
       <div
+        data-export-box
         className="relative overflow-hidden rounded"
         style={{ width: slot.w * scale, height: slot.h * scale, background: SLOT_BG }}
       >
@@ -91,13 +111,13 @@ export function PaidSlotPreview({
             style={{
               position: 'absolute',
               inset: 0,
-              ...(slot.mask
-                ? { maskImage: maskCss(slot.mask), WebkitMaskImage: maskCss(slot.mask) }
+              ...(mask
+                ? { maskImage: maskCss(mask), WebkitMaskImage: maskCss(mask) }
                 : null),
             }}
           >
             <img
-              src={artUrl(asset.src ?? asset.id)}
+              src={artUrl(artSrc)}
               alt={asset.label}
               style={{
                 position: 'absolute',
@@ -161,6 +181,34 @@ export function PaidSlotPreview({
               {ctaLabel}
             </div>
           )}
+
+          {pd?.plates?.map((plate, i) => {
+              const product = products?.[i]?.image ?? null;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    left: plate.x,
+                    top: plate.y,
+                    width: plate.w,
+                    height: plate.h,
+                    borderRadius: plate.r,
+                    background: plateColor,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {product && (
+                    <img
+                      src={product}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', maxWidth: 'none' }}
+                      draggable={false}
+                    />
+                  )}
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>

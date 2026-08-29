@@ -2,8 +2,9 @@
  * Deal Page module edit states + default factory — mirrors
  * brandshop/modules/editStates.ts for the www.lg.com Deal Page module set.
  *
- * Defaults reproduce the shipped Figma page (1:1212) so a freshly dropped
- * module already looks like the real section instead of an empty frame.
+ * Defaults reproduce the shipped Figma page (`miJcDQgz0yJMskLE5a5HHj`, body
+ * 6080:50977) so a freshly dropped module already looks like the real section
+ * instead of an empty frame.
  */
 
 import type { DealModuleType } from './dealModuleRegistry';
@@ -13,7 +14,7 @@ import type { TFunction } from '../../i18n/LanguageContext';
 // built outside the language context, so they render the English source copy.
 const identityT = ((s: string) => s) as TFunction;
 
-// ── Hero (Figma 1:1279) ───────────────────────────────────────────────────────
+// ── Hero (Figma 6080:51044 — 2280×720) ────────────────────────────────────────
 
 export interface DealHeroState {
   eyebrow: string;
@@ -21,10 +22,27 @@ export interface DealHeroState {
   headline: string;
   subCopy: string;
   showSubCopy: boolean;
-  kvImage: string | null;
+  /**
+   * Content Template key-visual id, picked from the same tile rows the Content
+   * Template Builder shows in its left rail. The 3000² artwork is placed into
+   * the 1920×720 plate at the position the board gives that key visual (see
+   * dealHeroArt.ts) — never stretched to fit.
+   */
+  kvAsset: string | null;
+  /** Nudge on top of that placement, in plate pixels. */
+  kvNudgeX: number;
+  kvNudgeY: number;
+  /** Multiplier on the board's size, applied about the artwork's centre. */
+  kvScale: number;
+  /**
+   * One product per plate, for the PD Slot key visuals — those artworks ship
+   * with empty plates baked in and this fills them. Same shape and same flow as
+   * the Content Template Builder's product slots.
+   */
+  products: { url: string; image: string | null }[];
 }
 
-// ── Deal cards (Figma 1:1298 — "Discover exclusive deals") ────────────────────
+// ── Deal cards (Figma 6149:67786 — "Discover exclusive deals") ────────────────
 
 export interface DealCardItem {
   image: string | null;
@@ -36,6 +54,14 @@ export interface DealCardsState {
   sectionTitle: string;
   showSectionTitle: boolean;
   showCta: boolean;
+  /**
+   * The row is a carousel on lg.com: the counter and the two round arrows sit
+   * on the title line (Figma "Indigator" 6149:67794). They are chrome, not
+   * content, so they are one switch rather than four editable fields.
+   */
+  showCarousel: boolean;
+  /** Right-hand number in the "1 / 2" counter. */
+  slideCount: string;
   cards: DealCardItem[];
 }
 
@@ -43,18 +69,27 @@ export interface DealCardsState {
 export const DEAL_CARD_MIN = 2;
 export const DEAL_CARD_MAX = 4;
 
+/**
+ * Card art is the flattened 464×368 render of each Figma card, so the object,
+ * its lighting and the scrim under the copy arrive as one baked image — the
+ * same way the banners do.
+ *
+ * ⚠️ Two strings here are deliberately NOT what Figma shows: card 3's CTA is
+ * "Show now" (a typo) and card 4 is still Spanish. Fixed here; fix the board
+ * too and these will match again.
+ */
 export const DEAL_CARD_DEFAULTS: DealCardItem[] = [
-  { image: '/deal-page/obj-clock.png',  title: 'Time Sale, hourly',      ctaText: 'Shop now' },
-  { image: '/deal-page/obj-cube.png',   title: 'Hot Deals, 60% off',     ctaText: 'Shop now' },
-  { image: '/deal-page/obj-puzzle.png', title: 'Bundles, save even more', ctaText: 'Shop now' },
-  { image: '/deal-page/obj-gift.png',   title: 'Gifts with purchase',    ctaText: 'Shop now' },
+  { image: '/deal-page/card-1.png', title: 'Time Sale, hourly',        ctaText: 'Shop now' },
+  { image: '/deal-page/card-2.png', title: 'Hot Deals, 60% off',       ctaText: 'Shop now' },
+  { image: '/deal-page/card-3.png', title: 'Bundles, save even more',  ctaText: 'Shop now' },
+  { image: '/deal-page/card-4.png', title: 'More benefits in a combo!', ctaText: 'Shop now' },
 ];
 
 export function dealCardDefaults(t: TFunction): DealCardItem[] {
   return DEAL_CARD_DEFAULTS.map(c => ({ ...c, title: t(c.title), ctaText: t(c.ctaText) }));
 }
 
-// ── Deal tab nav (Figma 1:1486) ───────────────────────────────────────────────
+// ── Deal tab nav (Figma 6080:51251 — 2280×98) ─────────────────────────────────
 
 export interface DealTabNavState {
   /** One tab label per line. */
@@ -65,15 +100,16 @@ export interface DealTabNavState {
 
 export const DEAL_TAB_MAX = 6;
 
-// ── Promotion banner (Figma 1:1383 / 1:2457 / 1:2670 / 1:2874) ────────────────
+// ── Promotion banner (Figma 6080:51148 / 6080:52223 / 52436 / 52640) ──────────
 
 /** Where the art sits relative to the copy — every shipped banner is right-art. */
 export type DealBannerLayout = 'Art right' | 'Art left';
 
 /**
  * The page runs two banner heights: the hero-adjacent exclusive-offer banner is
- * 400 tall (Figma 1:1388), and the Hot Deals / Bundles / Gifts banners further
- * down are 320 (Figma 1:2460, 1:2673, 1:2877). Same frame, different rhythm.
+ * 400 tall (Figma 6080:51204), and the Hot Deals / Bundles / Gifts banners
+ * further down are 320 (6080:52226, 52439, 52643). Same rail, different rhythm
+ * — and a different band height, since only the 400 one is padded below.
  */
 export type DealBannerSize = 'Large' | 'Standard';
 
@@ -94,7 +130,7 @@ export interface DealPromoBannerState {
   image: string | null;
 }
 
-// ── Time Sale (Figma 1:1499) ──────────────────────────────────────────────────
+// ── Time Sale (Figma 6080:51264 — 2280×398) ───────────────────────────────────
 
 export interface DealTimeSaleState {
   headline: string;
@@ -111,7 +147,7 @@ export interface DealTimeSaleState {
   image: string | null;
 }
 
-// ── Product list (Figma 1:1526 / 1:1727) ──────────────────────────────────────
+// ── Product list (Figma 6080:51291 — 2280×796) ────────────────────────────────
 
 export interface DealProductItem {
   badge: string;
@@ -142,22 +178,26 @@ export interface DealProductListState {
   products: DealProductItem[];
 }
 
-/** The grid is 3-up at 1488 (Figma 1:1540) or 4-up (Figma 1:1745). */
+/**
+ * The rail fits four 342 cards at a 366 pitch (Figma "Slider Label Title"
+ * 6080:51305). Cards are FIXED width — a shorter row is left-aligned and simply
+ * leaves the rest of the rail empty, exactly as the board does.
+ */
 export const DEAL_PRODUCT_MIN = 2;
 export const DEAL_PRODUCT_MAX = 4;
 
 const DEAL_PRODUCT_IMAGES = [
-  '/deal-page/product-fridge-1.png',
-  '/deal-page/product-fridge-2.png',
-  '/deal-page/product-fridge-3.png',
-  '/deal-page/product-fridge-1.png',
+  '/deal-page/product-1.png',
+  '/deal-page/product-2.png',
+  '/deal-page/product-3.png',
+  '/deal-page/product-1.png',
 ];
 
 const DEAL_PRODUCT_SEED = [
   { name: 'LG Side by Side Refrigerator 617L Door-in-Door, Silver', sku: 'GS66SDP', rating: '4.9', reviewCount: '(10)',  discountPercent: '29%', salePrice: '$1,135', originalPrice: '$1,608' },
-  { name: 'LG Side by Side Refrigerator 625L, no water line required, Total No', sku: 'GS66SPY', rating: '4.6', reviewCount: '(517)', discountPercent: '36%', salePrice: '$1,000', originalPrice: '$1,567' },
-  { name: 'LG Side by Side Refrigerator 658L with Smart Diagnosis, Total No',    sku: 'GS66BPM', rating: '4.7', reviewCount: '(45)',  discountPercent: '19%', salePrice: '$729',   originalPrice: '$965'   },
-  { name: 'LG Washer Dryer 12kg Wash / 7kg Dry, AI DD and ThinQ',                sku: 'WD12VC2S6C', rating: '4.2', reviewCount: '(35)', discountPercent: '54%', salePrice: '$513', originalPrice: '$1,121' },
+  { name: 'LG Side by Side Refrigerator 625L, no water line required, Total No Frost', sku: 'GS66SPY', rating: '4.6', reviewCount: '(517)', discountPercent: '36%', salePrice: '$1,000', originalPrice: '$1,567' },
+  { name: 'LG Side by Side Refrigerator 658L with Smart Diagnosis, Total No Frost',    sku: 'GS66BPM', rating: '4.7', reviewCount: '(45)',  discountPercent: '19%', salePrice: '$729',   originalPrice: '$965'   },
+  { name: 'LG Washer Dryer 12kg Wash / 7kg Dry, AI DD\u2122 and ThinQ',               sku: 'WD12BVC2S6C', rating: '4.2', reviewCount: '(55)', discountPercent: '54%', salePrice: '$513', originalPrice: '$1,121' },
 ];
 
 export function dealProductDefaultItem(t: TFunction, i: number): DealProductItem {
@@ -183,7 +223,7 @@ export function dealProductDefaultItem(t: TFunction, i: number): DealProductItem
   };
 }
 
-// ── Category nav (Figma 1:2365) ───────────────────────────────────────────────
+// ── Category nav (Figma 6080:52130 — 2280×353) ────────────────────────────────
 
 export interface DealCategoryNavItem {
   icon: string | null;
@@ -195,6 +235,9 @@ export interface DealCategoryNavState {
   showResultsBar: boolean;
   resultsText: string;
   sortLabel: string;
+  /** Centred line below the results bar while the filter returns nothing. */
+  emptyText: string;
+  showEmptyText: boolean;
 }
 
 export const DEAL_CATEGORY_NAV_MIN = 3;
@@ -215,20 +258,37 @@ export function dealCategoryNavDefaults(t: TFunction): DealCategoryNavItem[] {
 }
 
 
-// ── Site header (Figma 1:1214 + breadcrumb 1:1267) ────────────────────────────
+// ── Site header (Figma 6080:50979 — 2280×96) ──────────────────────────────────
 
 export interface DealSiteHeaderState {
-  /** Top-right utility link next to the logo. */
-  businessLabel: string;
-  showBusinessLabel: boolean;
   /** Global nav labels — one per line. */
   navItems: string;
-  /** Breadcrumb trail — one crumb per line, last one renders as the current page. */
+  /** Placeholder inside the search pill. */
+  searchLabel: string;
+  /**
+   * Breadcrumb trail — one crumb per line.
+   *
+   * On the board this band is NOT part of the 96-tall header: it is the first
+   * child of the main container (6080:51032), sitting between the header and
+   * the hero. It rides along with the header module because that is where it
+   * belongs on the page, and nothing else can be dropped between them.
+   */
   breadcrumb: string;
   showBreadcrumb: boolean;
 }
 
-// ── Site footer (Figma 1:3102) ────────────────────────────────────────────────
+// ── Membership CTA (Figma 6080:52852 — 2280×476) ──────────────────────────────
+
+export interface DealMembershipState {
+  headline: string;
+  subCopy: string;
+  showSubCopy: boolean;
+  ctaText: string;
+  showCta: boolean;
+  image: string | null;
+}
+
+// ── Site footer (Figma 6080:52867 — 2280×848) ─────────────────────────────────
 
 export interface DealFooterColumn {
   title: string;
@@ -270,7 +330,7 @@ export function dealFooterColumnDefaults(t: TFunction): DealFooterColumn[] {
   }));
 }
 
-/** The five social links in the footer's locale bar (Figma 1:3226). */
+/** The five social links in the footer's locale bar. */
 export const DEAL_SOCIAL_ICONS = [
   '/deal-page/icons/social-facebook.svg',
   '/deal-page/icons/social-instagram.svg',
@@ -290,6 +350,7 @@ export type DealEditState =
   | { type: 'deal-time-sale';    data: DealTimeSaleState }
   | { type: 'deal-product-list'; data: DealProductListState }
   | { type: 'deal-category-nav'; data: DealCategoryNavState }
+  | { type: 'deal-membership';   data: DealMembershipState }
   | { type: 'deal-site-footer';  data: DealSiteFooterState };
 
 // ── Default state factory ─────────────────────────────────────────────────────
@@ -300,12 +361,11 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
       return {
         type,
         data: {
-          businessLabel: t('Business'),
-          showBusinessLabel: true,
           navItems: [
             'Online Store', 'TV/Audio/Video', 'Home Appliances', 'Computing',
             'Air Conditioning', 'Accessories', 'Support', 'LG AI',
           ].map(x => t(x)).join('\n'),
+          searchLabel: t('Search'),
           breadcrumb: [t('Home'), t('main')].join('\n'),
           showBreadcrumb: true,
         },
@@ -341,7 +401,11 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           headline: t('Every Black Friday deal,\nin one place'),
           subCopy: t('Time Sale · Hot Deals · Bundles   |   November 20 – 30, 2026'),
           showSubCopy: true,
-          kvImage: '/deal-page/hero-kv.png',
+          kvAsset: 'kv-main',
+          kvNudgeX: 0,
+          kvNudgeY: 0,
+          kvScale: 1,
+          products: [],
         },
       };
     case 'deal-cards':
@@ -351,6 +415,8 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           sectionTitle: t('Discover exclusive deals'),
           showSectionTitle: true,
           showCta: true,
+          showCarousel: true,
+          slideCount: '2',
           cards: dealCardDefaults(t),
         },
       };
@@ -369,7 +435,7 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           layout: 'Art right',
           size: 'Large',
           headline: t('LG Black Friday Exclusive offer\nup to 60% off'),
-          subCopy: t('Extra 8% coupon, 24 interest-free installments and free shipping.'),
+          subCopy: t('Extra 8% coupon, 24 interest-free installments'),
           showSubCopy: true,
           linkPrimary: t('Terms and Conditions'),
           linkSecondary: t('Privacy Policy'),
@@ -416,6 +482,20 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           showResultsBar: true,
           resultsText: t('0 Results'),
           sortLabel: t('Sort by'),
+          emptyText: t('There is no available product.'),
+          showEmptyText: true,
+        },
+      };
+    case 'deal-membership':
+      return {
+        type,
+        data: {
+          headline: t('Become an LG Member today and enjoy exclusive Black Friday benefits instantly.'),
+          subCopy: t('Sign up now to unlock your Black Friday member rewards.'),
+          showSubCopy: true,
+          ctaText: t('Join us'),
+          showCta: true,
+          image: '/deal-page/banner-membership.png',
         },
       };
   }

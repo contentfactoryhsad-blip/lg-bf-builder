@@ -4,8 +4,9 @@
  *
  * Same three-column shell as Shop in Shop (palette → drag canvas → edit panel)
  * and the same draft/unsaved-guard/ZIP-export plumbing, retargeted from the
- * 1200px marketplace upload slot to lg.com's own 1713px page container.
- * Reproduces Figma `fUup3vSq71f6eUIRpmzz8s` frame 1:1212.
+ * 1200px marketplace upload slot to lg.com's own 2280px page.
+ * Reproduces Figma `miJcDQgz0yJMskLE5a5HHj`, page "ExporttoFigma | www.lg.com |
+ * Deal Page" (body 6080:50977).
  */
 
 import React, { useState, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
@@ -30,13 +31,14 @@ import { CSS } from '@dnd-kit/utilities';
 import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import {
+  artSizeLabel,
   DEAL_MODULE_DEFS,
   DEAL_PAGE_WIDTH,
   getDealModuleDef,
   type DealModuleDef,
   type DealModuleType,
 } from './dealModuleRegistry';
-import { createDealDefaultState, type DealEditState } from './dealEditStates';
+import { createDealDefaultState, dealProductDefaultItem, DEAL_BANNER_HEIGHT, type DealEditState } from './dealEditStates';
 import { DealModuleRenderer } from './DealModuleRenderer';
 import { DealModuleEditPanel } from './DealModuleEditPanel';
 import { saveBlob } from '../../utils/fileSaver';
@@ -61,50 +63,40 @@ export interface DealCanvasItem {
 
 const DRAFT_TITLE = 'Deal Page';
 
-// ── Quick-start presets ───────────────────────────────────────────────────────
-
-/** The shipped lg.com Deal Page, section for section (Figma 1:1212). */
-const FULL_DEAL_PAGE_PRESET: DealModuleType[] = [
-  'deal-site-header',
-  'deal-hero',
-  'deal-cards',
-  'deal-promo-banner',
-  'deal-tab-nav',
-  'deal-time-sale',
-  'deal-product-list',
-  'deal-product-list',
-  'deal-category-nav',
-  'deal-promo-banner',
-  'deal-product-list',
-  'deal-promo-banner',
-  'deal-product-list',
-  'deal-site-footer',
-];
-
-/** A short landing variant — hero, the deal grid, one banner, one product row. */
-const SHORT_DEAL_PAGE_PRESET: DealModuleType[] = [
-  'deal-site-header',
-  'deal-hero',
-  'deal-cards',
-  'deal-promo-banner',
-  'deal-product-list',
-  'deal-site-footer',
-];
-
-type DealPresetKey = 'full' | 'short';
+// ── Quick start ───────────────────────────────────────────────────────────────
 
 /**
- * Per-position overrides so a preset lands looking like the real page rather
- * than N copies of the same default: the repeated banner/product pairs down
- * the page are Hot Deals, Bundles and Gifts, not three Exclusive-offer banners.
+ * ONE preset: the Black Friday Deal Page exactly as the Figma board carries it
+ * today, section for section (main content 6080:51043). Order and per-position
+ * copy both come from that board — the repeated banner/grid pairs down the page
+ * are Time Sale, Hot Deals, Bundles and Gifts, not four copies of one default.
  */
+const BLACK_FRIDAY_PAGE_PRESET: DealModuleType[] = [
+  'deal-site-header',    // 0
+  'deal-hero',           // 1
+  'deal-cards',          // 2
+  'deal-promo-banner',   // 3  exclusive offer, 400
+  'deal-tab-nav',        // 4
+  'deal-time-sale',      // 5
+  'deal-product-list',   // 6
+  'deal-product-list',   // 7
+  'deal-category-nav',   // 8
+  'deal-promo-banner',   // 9  hot deals, 320
+  'deal-product-list',   // 10
+  'deal-promo-banner',   // 11 bundles, 320
+  'deal-product-list',   // 12
+  'deal-promo-banner',   // 13 gifts, 320
+  'deal-product-list',   // 14
+  'deal-membership',     // 15
+  'deal-site-footer',    // 16
+];
+
 type PresetOverride = (t: TFunction, state: DealEditState) => DealEditState;
 
+/** The three lower banners: 320 tall, 20px sub copy, no legal links. */
 function bannerOverride(headline: string, subCopy: string, image: string): PresetOverride {
   return (t, state) => {
     if (state.type !== 'deal-promo-banner') return state;
-    // Everything below the hero runs on the 320 banner (Figma 1:2460 etc.);
-    // only the exclusive-offer banner at the top is the 400 one.
     return {
       type: 'deal-promo-banner',
       data: { ...state.data, size: 'Standard', headline: t(headline), subCopy: t(subCopy), showLinks: false, image },
@@ -112,7 +104,7 @@ function bannerOverride(headline: string, subCopy: string, image: string): Prese
   };
 }
 
-function productListOverride(sectionTitle: string, tabs: string[], seedFrom: number): PresetOverride {
+function productListOverride(sectionTitle: string, tabs: string[], seedFrom: number, count = 3): PresetOverride {
   return (t, state) => {
     if (state.type !== 'deal-product-list') return state;
     return {
@@ -121,28 +113,21 @@ function productListOverride(sectionTitle: string, tabs: string[], seedFrom: num
         ...state.data,
         sectionTitle: t(sectionTitle),
         tabs: tabs.map(x => t(x)).join('\n'),
-        products: state.data.products.map((_, i) => {
-          const base = createDealDefaultState('deal-product-list', t);
-          const src = base.type === 'deal-product-list' ? base.data.products : [];
-          return src[(seedFrom + i) % src.length] ?? state.data.products[i];
-        }),
+        showTabs: tabs.length > 0,
+        products: Array.from({ length: count }, (_, i) => dealProductDefaultItem(t, seedFrom + i)),
       },
     };
   };
 }
 
-const PRESETS: Record<DealPresetKey, { modules: DealModuleType[]; overrides?: Record<number, PresetOverride> }> = {
-  full: {
-    modules: FULL_DEAL_PAGE_PRESET,
-    overrides: {
-      7: productListOverride('Black Friday prices… Don’t miss out!', ['Washers', 'Refrigerators', 'Monitors', 'Speakers'], 1),
-      9: bannerOverride('Hot Deals, online only', 'The season’s deepest markdowns, on LG.com only.', '/deal-page/banner-hot-deals.png'),
-      10: productListOverride('Hot Deals you won’t find anywhere else', ['Washers', 'Refrigerators', 'Soundbars'], 2),
-      11: bannerOverride('Bundles on sale', 'Add two or more and the discount grows with the basket.', '/deal-page/banner-bundles.png'),
-      12: productListOverride('Laundry Bundles', ['Bundles'], 0),
-    },
-  },
-  short: { modules: SHORT_DEAL_PAGE_PRESET },
+const PRESET_OVERRIDES: Record<number, PresetOverride> = {
+  7:  productListOverride('Black Friday prices… Don’t miss out! 🎁', ['Washers', 'Refrigerators', 'Monitors', 'Speakers'], 3),
+  9:  bannerOverride('Hot Deals, online only', 'The season’s deepest markdowns, on LG.com only.', '/deal-page/banner-hot-deals.png'),
+  10: productListOverride('Hot Deals you won’t find anywhere else', ['Washers', 'Refrigerators', 'Soundbars'], 1),
+  11: bannerOverride('Bundles on sale', 'Add more to the set and the discount grows with it.', '/deal-page/banner-bundles.png'),
+  12: productListOverride('Laundry Bundles', [], 2),
+  13: bannerOverride('Gifts on sale', 'Get a free gift with select Black Friday purchases.', '/deal-page/banner-gifts.png'),
+  14: productListOverride('Free gifts with your purchase', ['Refrigerators', 'Washers'], 0),
 };
 
 // Palette → canvas drops use closestCenter (registers as soon as the dragged
@@ -226,9 +211,7 @@ function PaletteCard({ def, disabled, count }: { def: DealModuleDef; disabled: b
           </span>
         </div>
         <p className="text-[11px] text-gray-500 leading-tight">{t(def.section)}</p>
-        <p className="text-[9px] text-gray-400 mt-0.5">
-          {DEAL_PAGE_WIDTH} × {def.height === 'free' ? 'free' : def.height}
-        </p>
+        {artSizeLabel(def) && <p className="text-[9px] text-gray-400 mt-0.5">{artSizeLabel(def)}</p>}
       </div>
     </div>
   );
@@ -422,7 +405,8 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [pendingPreset, setPendingPreset] = useState<DealPresetKey | null>(null);
+  const [pendingPreset, setPendingPreset] = useState(false);
+  const [pendingReset, setPendingReset] = useState(false);
 
   // lg.com pages are always set in the LG brand face — no picker here.
   useApplyBrandFont('lg');
@@ -520,28 +504,27 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
     setSelectedId(prev => (prev === id ? null : prev));
   }, []);
 
-  const applyPreset = useCallback(
-    (key: DealPresetKey) => {
-      const { modules, overrides } = PRESETS[key];
-      setCanvasItems(
-        modules.map((type, idx) => {
-          const base = createDealDefaultState(type, t);
-          const override = overrides?.[idx];
-          return { id: crypto.randomUUID(), type, editState: override ? override(t, base) : base };
-        }),
-      );
-      setSelectedId(null);
-    },
-    [t],
-  );
+  const applyPreset = useCallback(() => {
+    setCanvasItems(
+      BLACK_FRIDAY_PAGE_PRESET.map((type, idx) => {
+        const base = createDealDefaultState(type, t);
+        const override = PRESET_OVERRIDES[idx];
+        return { id: crypto.randomUUID(), type, editState: override ? override(t, base) : base };
+      }),
+    );
+    setSelectedId(null);
+  }, [t]);
 
-  const handlePresetClick = useCallback(
-    (key: DealPresetKey) => {
-      if (canvasItems.length > 0) setPendingPreset(key);
-      else applyPreset(key);
-    },
-    [canvasItems.length, applyPreset],
-  );
+  const handlePresetClick = useCallback(() => {
+    if (canvasItems.length > 0) setPendingPreset(true);
+    else applyPreset();
+  }, [canvasItems.length, applyPreset]);
+
+  /** Back to an empty canvas — the way out of a session of poking at modules. */
+  const clearCanvas = useCallback(() => {
+    setCanvasItems([]);
+    setSelectedId(null);
+  }, []);
 
   const duplicateModule = useCallback(
     (id: string) => {
@@ -656,20 +639,23 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
             <div className="flex flex-col gap-1.5 pb-3 mb-2 border-b border-gray-100">
               <button
                 type="button"
-                onClick={() => handlePresetClick('full')}
+                onClick={handlePresetClick}
                 className="text-left text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-[#FD312E] border border-gray-200 rounded-lg px-3 py-2 transition-colors"
               >
-                {t('Template for Deal Page')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePresetClick('short')}
-                className="text-left text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-[#FD312E] border border-gray-200 rounded-lg px-3 py-2 transition-colors"
-              >
-                {t('Template for Short Deal Page')}
+                {t('Template for Black Friday Page')}
               </button>
             </div>
-            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide px-1 pb-1">{t('Modules')}</p>
+            <div className="flex items-center px-1 pb-1">
+              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">{t('Modules')}</p>
+              <button
+                type="button"
+                onClick={() => setPendingReset(true)}
+                disabled={canvasItems.length === 0}
+                className="ml-auto text-[11px] font-medium text-gray-400 hover:text-[#FD312E] disabled:text-gray-300 disabled:cursor-default transition-colors"
+              >
+                {t('Reset')}
+              </button>
+            </div>
             {DEAL_MODULE_DEFS.map(def => {
               const count = countOnCanvas(def.type);
               return <PaletteCard key={def.type} def={def} count={count} disabled={count >= def.maxCount} />;
@@ -712,12 +698,20 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
             {selectedItem ? (
               (() => {
                 const def = getDealModuleDef(selectedItem.type);
+                // The promotion banner runs at two heights, so the panel reports
+                // the one this instance is actually set to rather than the
+                // nominal 400 the palette shows.
+                const bannerH =
+                  selectedItem.editState.type === 'deal-promo-banner'
+                    ? DEAL_BANNER_HEIGHT[selectedItem.editState.data.size]
+                    : undefined;
+                const size = artSizeLabel(def, bannerH);
                 return (
                   <div className="p-5">
-                    <p className="font-lgei font-bold text-[15px] text-gray-900 mb-0.5">{t(def.label)}</p>
-                    <p className="text-xs text-gray-400 mb-5">
-                      {DEAL_PAGE_WIDTH} × {def.height === 'free' ? 'free' : def.height}
+                    <p className={`font-lgei font-bold text-[15px] text-gray-900 ${size ? 'mb-0.5' : 'mb-5'}`}>
+                      {t(def.label)}
                     </p>
+                    {size && <p className="text-xs text-gray-400 mb-5">{size}</p>}
                     <DealModuleEditPanel
                       editState={selectedItem.editState}
                       onUpdate={newState => updateEditState(selectedItem.id, newState)}
@@ -788,10 +782,23 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           confirmLabel={t('Replace')}
           cancelLabel={t('Cancel')}
           onConfirm={() => {
-            applyPreset(pendingPreset);
-            setPendingPreset(null);
+            applyPreset();
+            setPendingPreset(false);
           }}
-          onCancel={() => setPendingPreset(null)}
+          onCancel={() => setPendingPreset(false)}
+        />
+      )}
+      {pendingReset && (
+        <ConfirmModal
+          title={t('Clear the canvas?')}
+          message={t('This removes every module on the canvas. Saved versions are not affected.')}
+          confirmLabel={t('Clear')}
+          cancelLabel={t('Cancel')}
+          onConfirm={() => {
+            clearCanvas();
+            setPendingReset(false);
+          }}
+          onCancel={() => setPendingReset(false)}
         />
       )}
     </div>

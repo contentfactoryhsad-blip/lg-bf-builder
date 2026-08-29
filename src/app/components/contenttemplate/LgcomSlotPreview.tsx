@@ -22,7 +22,6 @@ import {
   iconRowStyle,
   overlayUrl,
   type IconRowStyle,
-  type SlotLayers,
   SLOT_BG,
   artFor,
   gradCss,
@@ -81,8 +80,9 @@ export function LgcomSlotPreview({
   scale,
   copy,
   products,
-  layers,
+  showIconRow,
   iconStyle,
+  bare = false,
 }: {
   slot: LgcomSlot;
   asset: ContentAsset | undefined;
@@ -92,18 +92,21 @@ export function LgcomSlotPreview({
   /** One product per plate on the PD Slot key visuals; empty plates stay bare. */
   products?: ProductSlots;
   /**
-   * Which optional elements to draw. Only the two hero sizes honour this —
-   * they are the ones actually shipped as background + icons, so they are the
-   * ones the operator strips down. The other four sizes are confirmation
-   * mock-ups and always render everything.
+   * Whether to draw the benefit icons. Only the two hero sizes carry an
+   * `iconRow` box, so the other four ignore this. Every other element is part
+   * of the layout and always renders.
    */
-  layers: SlotLayers;
+  showIconRow: boolean;
   iconStyle: IconRowStyle;
+  /**
+   * Artwork and benefit icons only — no eyebrow, headline, subcopy, CTA,
+   * disclaimer or carousel indicator. The two ST0001 hero placements ship this
+   * way: the copy is set live on LG.com, so baking it into the delivered image
+   * would double it up. Every other size ships exactly as it previews.
+   */
+  bare?: boolean;
 }) {
   const t = useT();
-  // the hero sizes are exactly the ones carrying an indicator
-  const toggleable = !!slot.indicator;
-  const on = (k: keyof SlotLayers) => !toggleable || layers[k];
   // placement is per asset per size — the 15 key visuals are framed differently
   const art = asset ? artFor(asset.id, slot.id) : null;
   // the motion cut is the same square frame as the still, so it takes the same box
@@ -124,6 +127,7 @@ export function LgcomSlotPreview({
 
       {/* Outer box reserves the scaled footprint; the inner box is full size. */}
       <div
+        data-export-box
         className="relative overflow-hidden rounded-lg"
         style={{ width: slot.w * scale, height: slot.h * scale, background: SLOT_BG }}
       >
@@ -219,7 +223,7 @@ export function LgcomSlotPreview({
             />
           )}
 
-          {on('iconRow') && slot.iconRow && (
+          {showIconRow && slot.iconRow && (
             <img
               src={overlayUrl(iconRowStyle(iconStyle).file)}
               alt=""
@@ -235,35 +239,35 @@ export function LgcomSlotPreview({
             />
           )}
 
-          {slot.text.filter(spec => on(spec.role)).map(spec => {
+          {!bare && slot.text.map(spec => {
             const typed = copy[spec.role].trim();
             return <SlotLine key={spec.role} spec={spec} text={typed || COPY_PLACEHOLDER[spec.role]} />;
           })}
 
-          {on('cta') && (
-          <div
-            style={{
-              position: 'absolute',
-              left: slot.cta.x,
-              top: slot.cta.y,
-              width: slot.cta.w,
-              height: slot.cta.h,
-              borderRadius: slot.cta.radius,
-              background: CTA_COLOR,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: 'var(--obs-font-text)',
-              fontSize: slot.cta.size,
-              color: '#fff',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {copy.cta.trim() || t(slot.cta.label)}
-          </div>
+          {!bare && (
+            <div
+              style={{
+                position: 'absolute',
+                left: slot.cta.x,
+                top: slot.cta.y,
+                width: slot.cta.w,
+                height: slot.cta.h,
+                borderRadius: slot.cta.radius,
+                background: CTA_COLOR,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--obs-font-text)',
+                fontSize: slot.cta.size,
+                color: '#fff',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {copy.cta.trim() || t(slot.cta.label)}
+            </div>
           )}
 
-          {on('indicator') && slot.indicator && (
+          {!bare && slot.indicator && (
             <img
               // topmost, matching Figma: the indicator is the layout's last child
               src={overlayUrl(slot.indicator)}

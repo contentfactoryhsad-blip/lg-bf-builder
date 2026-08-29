@@ -2,28 +2,33 @@
  * Deal Page module templates — the www.lg.com counterpart to
  * brandshop/modules/ModuleRenderer.tsx.
  *
- * Every template renders at DEAL_PAGE_WIDTH (1713). Sizes, spacing, radii and
- * type are the Figma frame's own values, pulled with `get_design_context` off
- * `fUup3vSq71f6eUIRpmzz8s` frame 1:1212 — the node id each block came from is
- * noted inline so a future change can be re-measured against the same node.
+ * Every template renders at DEAL_PAGE_WIDTH (2280) and reproduces one section
+ * of Figma `miJcDQgz0yJMskLE5a5HHj`, page "ExporttoFigma | www.lg.com | Deal
+ * Page". Sizes, spacing, radii and type are that board's own numbers — the node
+ * id each block came from is noted inline so a future change can be re-measured
+ * against the same node.
  *
- * Copy renders through `--obs-font` (the shared brand-font variable) for the
- * same reason the Shop in Shop templates do: the ZIP export mounts a second
- * React root that no context can reach.
+ * The page is built out of four nested rails, and the type is the same in all
+ * of them: LG EI Headline for the 56/60 section heads, LG EI Text for
+ * everything else. Copy renders through `--obs-font` / `--obs-font-text` (the
+ * shared brand-font variables) for the same reason the Shop in Shop templates
+ * do: the ZIP export mounts a second React root that no context can reach.
  */
 
 import React from 'react';
 import {
   DEAL_PAGE_WIDTH,
-  DEAL_CONTAINER_WIDTH,
+  DEAL_HERO_WIDTH,
   DEAL_BANNER_WIDTH,
-  DEAL_GRID_WIDTH,
-  DEAL_CHROME_WIDTH,
+  DEAL_CONTENT_WIDTH,
+  HERO_INSET,
+  BANNER_INSET,
+  CONTENT_INSET,
 } from './dealModuleRegistry';
 import {
-  T_HEAD, T_BODY, T_SMALL, T_MICRO, T_DIGIT, W_SEMIBOLD,
+  T_HEAD, T_BODY, T_SMALL, T_MICRO, T_DIGIT, T_CARD_TITLE, T_COUNTER, T_PRICE, W_SEMIBOLD,
   PAGE_BG, CHROME_BG, DEAL_RED, TEXT_DARK, TEXT_SKU, TEXT_STRIKE,
-  BTN_BORDER, HAIRLINE, CARD_BASE, SHIP_BG, SHIP_TEXT, LEGAL_BG, BLACK, WHITE,
+  HAIRLINE, WARM_RULE, SEARCH_INK, SHIP_BG, SHIP_TEXT, LEGAL_BG, BLACK, WHITE,
   BADGE_GRADIENT, R_LG, R_MD, R_SM, R_XS,
 } from './dealTokens';
 import type {
@@ -38,25 +43,16 @@ import type {
   DealProductListState,
   DealProductItem,
   DealCategoryNavState,
+  DealMembershipState,
 } from './dealEditStates';
 import { DEAL_SOCIAL_ICONS, DEAL_BANNER_HEIGHT } from './dealEditStates';
+import { artOf, artUrl, getAsset } from '../contenttemplate/contentTemplateAssets';
+import { slotBoxesFor } from '../contenttemplate/lgcomSlots';
+import { heroArtFor, HERO_SCRIM, HERO_SCRIM_X, HERO_SLOT_ID } from './dealHeroArt';
 
 const FONT = 'var(--obs-font)';
 const FONT_TEXT = 'var(--obs-font-text, var(--obs-font))';
 const STAR = '/deal-page/icons/star-full.svg';
-
-// Rail insets, all measured from the 2280 page edge — these are the x values
-// the Figma frames actually sit at (283.5 / 340 / 396 / 420).
-/** Content container (Figma 1:1280 at x=283.5). */
-const CONTAINER_INSET = (DEAL_PAGE_WIDTH - DEAL_CONTAINER_WIDTH) / 2;
-/** Banner rail (Figma 1:1501 at x=340). */
-const BANNER_INSET = (DEAL_PAGE_WIDTH - DEAL_BANNER_WIDTH) / 2;
-/** Product grid + header/footer content (Figma 1:1528 at x=396). */
-const GRID_INSET = (DEAL_PAGE_WIDTH - DEAL_GRID_WIDTH) / 2;
-/** Tab-bar rail (Figma 1:1487 at x=420). */
-const CHROME_INSET = (DEAL_PAGE_WIDTH - DEAL_CHROME_WIDTH) / 2;
-/** Section content gutter: most rails indent a further 24 for their copy. */
-const GUTTER = 24;
 
 /**
  * Descender headroom, same trick as the Shop in Shop templates: LG's brand
@@ -78,11 +74,37 @@ function lines(v: string): string[] {
   return v.split('\n').map(s => s.trim()).filter(Boolean);
 }
 
+/** Outer band: full page width, warm background, no horizontal overflow. */
+function Band({
+  height,
+  children,
+  background = PAGE_BG,
+}: {
+  height?: number;
+  children: React.ReactNode;
+  background?: string;
+}) {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: DEAL_PAGE_WIDTH,
+        height,
+        background,
+        fontFamily: FONT,
+        flexShrink: 0,
+        overflow: 'hidden',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /**
  * Full-bleed banner artwork. The Figma banners are ONE baked KV that already
- * contains the lockup, the objects and (on the exclusive-offer banner) the
- * product thumbnails — not a composited object dropped on a black box. So the
- * art simply covers its frame.
+ * contains the lockup and the objects — not a composited object dropped on a
+ * black box. So the art simply covers its frame.
  */
 function BannerArt({ src, width, height }: { src: string | null; width: number; height: number }) {
   if (!src) return <div style={{ width, height, background: '#161616' }} />;
@@ -96,29 +118,57 @@ function BannerArt({ src, width, height }: { src: string | null; width: number; 
   );
 }
 
-// ── 0. Site header (Figma 1:1214 header + 1:1267 breadcrumb) ──────────────────
+/** Absolutely-placed text, the way every measurement on the board is expressed. */
+function At({
+  x,
+  y,
+  w,
+  style,
+  children,
+}: {
+  x: number;
+  y: number;
+  w?: number;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  return (
+    <p style={{ position: 'absolute', left: x, top: y, width: w, margin: 0, whiteSpace: 'pre-wrap', ...DESCENDER, ...style }}>
+      {children}
+    </p>
+  );
+}
 
-const CHROME_INNER = GRID_INSET + GUTTER; // = 420, same rail as the tab bar
+// ── 0. Site header (Figma 6080:50979 — 2280×96) ───────────────────────────────
+
+/** The breadcrumb strip that follows the header (Figma 6080:51032). */
+const BREADCRUMB_H = 38;
+/** Empty 10×10 separator frame with 4 pad either side. */
+const BREADCRUMB_SEP = 18;
 
 function DealSiteHeaderTemplate({ data }: { data: DealSiteHeaderState }) {
   const nav = lines(data.navItems);
   const crumbs = lines(data.breadcrumb);
+  const showCrumbs = data.showBreadcrumb && crumbs.length > 0;
   return (
-    <div style={{ width: DEAL_PAGE_WIDTH, background: PAGE_BG, fontFamily: FONT, flexShrink: 0 }}>
-      {/* Logo + utility row (frame 1:1219, h=44). */}
-      <div style={{ paddingLeft: CHROME_INNER, paddingRight: CHROME_INNER, boxSizing: 'border-box' }}>
-        <div style={{ height: 44, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <img src="/lg-logo.svg" alt="LG" draggable={false} style={{ height: 32, width: 'auto', display: 'block' }} />
-          {data.showBusinessLabel && (
-            <span style={{ fontFamily: FONT_TEXT, ...T_SMALL, color: BLACK, marginBottom: 13, ...DESCENDER }}>
-              {data.businessLabel}
-            </span>
-          )}
+    <Band height={96 + (showCrumbs ? BREADCRUMB_H : 0)}>
+      <div style={{ paddingLeft: CONTENT_INSET, paddingRight: CONTENT_INSET, boxSizing: 'border-box' }}>
+        {/* Row 1 (h=44): the logo, bottom-aligned at y=12. The board also puts a
+            "Business" link on the right of this row; it is deliberately not
+            carried into the builder. */}
+        <div style={{ height: 44, display: 'flex', alignItems: 'flex-end' }}>
+          <img
+            src="/lg-logo.svg"
+            alt="LG"
+            draggable={false}
+            style={{ width: 73, height: 32, objectFit: 'contain', display: 'block' }}
+          />
         </div>
 
-        {/* Global nav + utility cluster (frame 1:1234, h=52). */}
+        {/* Row 2 (h=52): global nav, then the search pill + account + cart. The
+            nav list is pulled 12 left so the first label's ink lands on 420. */}
         <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ display: 'flex', marginLeft: -12 }}>
             {nav.map((label, i) => (
               <span
                 key={i}
@@ -137,176 +187,249 @@ function DealSiteHeaderTemplate({ data }: { data: DealSiteHeaderState }) {
               </span>
             ))}
           </div>
-          {/* Search pill + account + cart, exported whole from frame 1:1253 —
-              site chrome icons, not authored content. */}
-          <img
-            src="/deal-page/header-utility.png"
-            alt=""
-            draggable={false}
-            style={{ width: 264, height: 36, display: 'block', maxWidth: 'none' }}
-          />
+
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span
+              style={{
+                width: 160,
+                height: 36,
+                marginRight: 20, // 8 list-item pad + 12 gap
+                borderRadius: 999,
+                background: WHITE,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '0 12px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <span style={{ width: 24, height: 24, flexShrink: 0 }} />
+              <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, lineHeight: '24px', color: SEARCH_INK, ...DESCENDER }}>
+                {data.searchLabel}
+              </span>
+            </span>
+            {/* Account and cart: the board carries these as empty 36×36 link
+                frames — the icon glyphs never made it into the file, so nothing
+                is drawn here either. */}
+            <span style={{ width: 36, height: 36, marginRight: 12 }} />
+            <span style={{ width: 36, height: 36 }} />
+          </div>
         </div>
       </div>
 
-      {/* Breadcrumb band (frame 1:1268, h=38). */}
-      {data.showBreadcrumb && crumbs.length > 0 && (
+      {/* Breadcrumb band (6080:51032) — its own 38-tall strip on the darker
+          chrome, ruled off from the hero below. The board leaves the separator
+          between crumbs as an empty 10×10 frame, so it renders as pure gap. */}
+      {showCrumbs && (
         <div
           style={{
-            marginLeft: CONTAINER_INSET,
-            width: DEAL_CONTAINER_WIDTH,
-            height: 38,
+            position: 'absolute',
+            left: 0,
+            top: 96,
+            width: DEAL_PAGE_WIDTH,
+            height: BREADCRUMB_H,
             background: CHROME_BG,
-            display: 'flex',
-            alignItems: 'center',
-            paddingLeft: CHROME_INNER - CONTAINER_INSET,
+            borderBottom: `1px solid ${WARM_RULE}`,
             boxSizing: 'border-box',
           }}
         >
-          {crumbs.map((c, i) => (
-            <span key={i} style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, lineHeight: '18px', color: BLACK, ...DESCENDER }}>{c}</span>
-              {i < crumbs.length - 1 && (
-                <img
-                  src="/deal-page/icons/chevron-right.png"
-                  alt=""
-                  draggable={false}
-                  style={{ width: 10, height: 10, display: 'block', margin: '0 8px' }}
-                />
-              )}
-            </span>
-          ))}
+          <div style={{ position: 'absolute', left: CONTENT_INSET, top: 10, display: 'flex' }}>
+            {crumbs.map((c, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span style={{ width: BREADCRUMB_SEP }} />}
+                <span
+                  style={{
+                    fontFamily: FONT_TEXT,
+                    ...T_MICRO,
+                    lineHeight: '18px',
+                    color: BLACK,
+                    whiteSpace: 'nowrap',
+                    ...DESCENDER,
+                  }}
+                >
+                  {c}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       )}
-    </div>
+    </Band>
   );
 }
 
-// ── 1. Hero KV (Figma 1:1279 — 1713×642) ──────────────────────────────────────
+// ── 1. Hero KV (Figma 6080:51044 — 2280×720) ──────────────────────────────────
 
 function DealHeroTemplate({ data }: { data: DealHeroState }) {
+  const kv = getAsset(data.kvAsset);
+  // Every key visual has its own framing on the board; the nudge rides on top.
+  // Scale is about the artwork's centre, so zooming does not also shift it.
+  const base = heroArtFor(data.kvAsset);
+  const scale = data.kvScale || 1;
+  const size = base.size * scale;
+  const art = {
+    x: base.x + data.kvNudgeX - (size - base.size) / 2,
+    y: base.y + data.kvNudgeY - (size - base.size) / 2,
+    size,
+  };
+  // The PD Slot artworks bake empty plates into the square. Their positions are
+  // fractions of that square, so they follow the art wherever it is placed.
+  const plates = kv ? slotBoxesFor(kv.id, HERO_SLOT_ID) : [];
+
   return (
-    <div
-      style={{
-        width: DEAL_PAGE_WIDTH,
-        height: 642,
-        background: PAGE_BG,
-        position: 'relative',
-        fontFamily: FONT,
-        flexShrink: 0,
-      }}
-    >
-      {/* The black band is the 1713 container (frame 1:1280), not the page. */}
-      <div
-        style={{
-          position: 'absolute',
-          left: CONTAINER_INSET,
-          top: 0,
-          width: DEAL_CONTAINER_WIDTH,
-          height: 642,
-          background: BLACK,
-          overflow: 'hidden',
-        }}
-      >
-      {/* Art bleeds past the top and right edges exactly as frame 1:1288 does. */}
-      <div style={{ position: 'absolute', left: 536.5, top: -50, width: 1509, height: 750 }}>
-        {data.kvImage ? (
+    <Band height={720}>
+      {/* The plate is the 1920 video rail (6130:67434), not the full page. */}
+      <div style={{ position: 'absolute', left: HERO_INSET, top: 0, width: DEAL_HERO_WIDTH, height: 720, background: BLACK, overflow: 'hidden' }}>
+        {kv && (
           <img
-            src={data.kvImage}
-            alt=""
+            src={artUrl(artOf(kv))}
+            alt={kv.label}
             draggable={false}
-            style={{ width: 1509, height: 750, objectFit: 'cover', display: 'block', maxWidth: 'none' }}
+            style={{
+              position: 'absolute',
+              left: art.x,
+              top: art.y,
+              width: art.size,
+              height: art.size,
+              display: 'block',
+              maxWidth: 'none',
+            }}
           />
-        ) : (
-          <div style={{ width: 1509, height: 750, background: '#161616' }} />
         )}
+
+        {plates.map((box, i) => {
+          const product = data.products[i]?.image ?? null;
+          if (!product) return null;
+          return (
+            <img
+              key={i}
+              src={product}
+              alt=""
+              draggable={false}
+              style={{
+                position: 'absolute',
+                left: art.x + box.x * art.size,
+                top: art.y + box.y * art.size,
+                width: box.w * art.size,
+                height: box.h * art.size,
+                borderRadius: box.r * art.size,
+                objectFit: 'contain',
+                maxWidth: 'none',
+              }}
+            />
+          );
+        })}
+
+        {/* Scrim over the left of the plate, so the copy reads against black
+            rather than against whatever the artwork happens to put there. It is
+            fixed to the plate, so moving or scaling the art does not drag it. */}
+        <div
+          style={{
+            position: 'absolute',
+            left: HERO_SCRIM_X,
+            top: 0,
+            width: base.scrimW,
+            height: 720,
+            background: HERO_SCRIM,
+          }}
+        />
       </div>
 
-      {/* Copy block — frame 1:1292 sits at 56.5 + 80 from the container edge. */}
-      <div style={{ position: 'absolute', left: 136.5, top: 80, width: 900 }}>
-        {data.showEyebrow && (
-          <p style={{ margin: 0, fontFamily: FONT_TEXT, ...T_BODY, color: WHITE, ...DESCENDER }}>{data.eyebrow}</p>
-        )}
-        <p
-          style={{
-            margin: 0,
-            marginTop: 8,
-            ...T_HEAD,
-            letterSpacing: 'var(--obs-tracking-head)',
-            color: WHITE,
-            whiteSpace: 'pre-line',
-            ...DESCENDER,
-          }}
-        >
-          {data.headline}
-        </p>
-        {data.showSubCopy && (
-          <p style={{ margin: 0, marginTop: 8, fontFamily: FONT_TEXT, ...T_BODY, color: WHITE, whiteSpace: 'pre-line', ...DESCENDER }}>
-            {data.subCopy}
-          </p>
-        )}
-      </div>
-      </div>
-    </div>
+      {/* Copy hangs off the 420 content rail, not off the plate. */}
+      {data.showEyebrow && (
+        <At x={CONTENT_INSET} y={80} style={{ fontFamily: FONT_TEXT, ...T_BODY, color: WHITE }}>
+          {data.eyebrow}
+        </At>
+      )}
+      <At
+        x={CONTENT_INSET}
+        y={112}
+        w={640}
+        style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: WHITE }}
+      >
+        {data.headline}
+      </At>
+      {data.showSubCopy && (
+        <At x={CONTENT_INSET} y={240} w={860} style={{ fontFamily: FONT_TEXT, ...T_BODY, color: WHITE }}>
+          {data.subCopy}
+        </At>
+      )}
+    </Band>
   );
 }
 
-// ── 2. Deal cards (Figma 1:1298 — "Discover exclusive deals") ─────────────────
+// ── 2. Deal cards (Figma 6149:67786 — 2280×561) ───────────────────────────────
 
-const DEAL_CARD_W = 398;
+const DEAL_CARD_W = 464;
 const DEAL_CARD_H = 368;
-const DEAL_CARD_GUTTER = 24;
+/** 488 pitch − 464 card. */
+const DEAL_CARD_GAP = 24;
+
 /**
- * The card art is an OVERSIZED square placed behind the copy, not a contained
- * thumbnail: frame 1:1311 draws it at 179.27% × 193.89% of the card, offset
- * −39.82% / −61.05%. Those percentages are what make the object sit high in
- * the frame and read as a lit backdrop instead of a pasted-on icon.
+ * The two round carousel arrows (6149:68180 / 6149:68181).
+ *
+ * ⚠️ The board carries TWO overlapping pairs — this one, and the slider
+ * component's own prev/next 3px right and 10px down. Only this pair paints, and
+ * it is centred on the 60-tall title box (49 + (60 − 64) / 2 = 47), so both
+ * arrows and the "1 / 2" counter sit on the title's centre line.
+ *
+ * Exported whole rather than redrawn: the two rings carry different greys
+ * (#CBC8C2 disabled, #646464 active) and different glyphs (chevron vs arrow).
  */
-const DEAL_CARD_ART = {
-  width: DEAL_CARD_W * 1.7927,
-  height: DEAL_CARD_H * 1.9389,
-  left: DEAL_CARD_W * -0.3982,
-  top: DEAL_CARD_H * -0.6105,
-};
+function CarouselArrow({ x, dir }: { x: number; dir: 'prev' | 'next' }) {
+  return (
+    <img
+      src={`/deal-page/icons/carousel-${dir}.png`}
+      alt=""
+      draggable={false}
+      style={{ position: 'absolute', left: x, top: 47, width: 64, height: 64, display: 'block', maxWidth: 'none' }}
+    />
+  );
+}
 
 function DealCardsTemplate({ data }: { data: DealCardsState }) {
   return (
-    <div
-      style={{
-        width: DEAL_PAGE_WIDTH,
-        background: PAGE_BG,
-        // Frame 1:1299 starts 49 down; 1:1382 leaves 56 below the row.
-        padding: `49px ${CONTAINER_INSET + GUTTER}px 56px`,
-        boxSizing: 'border-box',
-        fontFamily: FONT,
-        flexShrink: 0,
-      }}
-    >
+    <Band height={561}>
       {data.showSectionTitle && (
-        <p
-          style={{
-            margin: 0,
-            paddingBottom: 8,
-            ...T_HEAD,
-            letterSpacing: 'var(--obs-tracking-head)',
-            color: BLACK,
-            whiteSpace: 'nowrap',
-            ...DESCENDER,
-          }}
-        >
+        <At x={CONTENT_INSET} y={49} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: BLACK }}>
           {data.sectionTitle}
-        </p>
+        </At>
       )}
-      <div style={{ marginTop: 19.6, display: 'flex', gap: DEAL_CARD_GUTTER }}>
+
+      {data.showCarousel && (
+        <>
+          <At x={1670} y={65} style={{ fontFamily: FONT, ...T_COUNTER, color: TEXT_STRIKE }}>
+            {`1 / ${data.slideCount}`}
+          </At>
+          <CarouselArrow x={1723} dir="prev" />
+          <CarouselArrow x={1795} dir="next" />
+        </>
+      )}
+
+      {/* Card row — 464×368 at a 488 pitch. The rail is a 1440-wide window that
+          CLIPS (Figma "Slider Label Title" 6149:67807): three cards show and a
+          fourth waits off-stage as the carousel's next slide. */}
+      <div
+        style={{
+          position: 'absolute',
+          left: CONTENT_INSET,
+          top: 137,
+          width: DEAL_CONTENT_WIDTH,
+          height: DEAL_CARD_H,
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ display: 'flex', gap: DEAL_CARD_GAP }}>
         {data.cards.map((card, i) => (
           <div
             key={i}
             style={{
+              position: 'relative',
               width: DEAL_CARD_W,
               height: DEAL_CARD_H,
               borderRadius: R_LG,
               overflow: 'hidden',
-              position: 'relative',
-              background: CARD_BASE,
+              background: BLACK,
               flexShrink: 0,
             }}
           >
@@ -315,243 +438,227 @@ function DealCardsTemplate({ data }: { data: DealCardsState }) {
                 src={card.image}
                 alt=""
                 draggable={false}
-                style={{ position: 'absolute', ...DEAL_CARD_ART, objectFit: 'cover', display: 'block', maxWidth: 'none' }}
+                style={{ width: DEAL_CARD_W, height: DEAL_CARD_H, objectFit: 'cover', display: 'block', maxWidth: 'none' }}
               />
             )}
-            {/* Copy sits bottom-aligned inside a 32 pad (frame 1:1311). */}
-            <div
+            {/* Copy sits inside a 32 pad, bottom-aligned and CENTRED across the
+                card — the 400-wide box is the 464 card minus its 32 pads. */}
+            <p
               style={{
                 position: 'absolute',
-                inset: 0,
-                padding: 32,
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-end',
+                left: 32,
+                top: 232,
+                width: 400,
+                margin: 0,
+                fontFamily: FONT_TEXT,
+                ...T_CARD_TITLE,
+                color: WHITE,
+                textAlign: 'center',
+                ...DESCENDER,
               }}
             >
-              <p
+              {card.title}
+            </p>
+            {data.showCta && (
+              <span
                 style={{
-                  margin: 0,
-                  fontFamily: FONT_TEXT,
-                  ...T_BODY,
-                  lineHeight: '36px',
-                  color: WHITE,
-                  textAlign: 'center',
-                  ...DESCENDER,
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: 292,
+                  height: 44,
+                  display: 'flex',
+                  justifyContent: 'center',
                 }}
               >
-                {card.title}
-              </p>
-              {data.showCta && (
-                <div style={{ height: 68, paddingTop: 24, boxSizing: 'border-box', display: 'flex', justifyContent: 'center' }}>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: 100,
-                      minHeight: 44,
-                      padding: '0 20px',
-                      borderRadius: R_SM,
-                      background: WHITE,
-                      border: `1px solid ${BTN_BORDER}`,
-                      boxSizing: 'border-box',
-                      color: BLACK,
-                      fontFamily: FONT_TEXT,
-                      ...T_SMALL,
-                      lineHeight: '16px',
-                      fontWeight: W_SEMIBOLD,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {card.ctaText}
-                  </span>
-                </div>
-              )}
-            </div>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 111,
+                    height: 44,
+                    padding: '0 20px',
+                    borderRadius: R_SM,
+                    background: WHITE,
+                    boxSizing: 'border-box',
+                    color: BLACK,
+                    fontFamily: FONT_TEXT,
+                    ...T_SMALL,
+                    lineHeight: '16px',
+                    fontWeight: W_SEMIBOLD,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {card.ctaText}
+                </span>
+              </span>
+            )}
           </div>
         ))}
+        </div>
       </div>
-    </div>
+    </Band>
   );
 }
 
-// ── 3. Deal tab nav (Figma 1:1486 — 1713×98) ──────────────────────────────────
-
-/** The rail is 1440 wide at x=420 of the 2280 page (frame 1:1487). */
-const TAB_NAV_INSET = CHROME_INSET;
+// ── 3. Deal tab nav (Figma 6080:51251 — 2280×98) ──────────────────────────────
 
 function DealTabNavTemplate({ data }: { data: DealTabNavState }) {
   const tabs = lines(data.tabs);
   const activeIdx = Math.min(Math.max(0, data.activeIndex), Math.max(0, tabs.length - 1));
   return (
-    <div style={{ width: DEAL_PAGE_WIDTH, background: PAGE_BG, fontFamily: FONT, flexShrink: 0 }}>
+    <Band height={98}>
+      {/* 1440 rail with a 1px warm rule top and bottom, split into equal cells.
+          The active cell carries a 4px red rule the full width of the cell. */}
       <div
         style={{
-          marginLeft: TAB_NAV_INSET,
-          width: DEAL_CHROME_WIDTH,
-          borderTop: `1px solid ${HAIRLINE}`,
-          borderBottom: `1px solid ${HAIRLINE}`,
-          display: 'flex',
+          position: 'absolute',
+          left: CONTENT_INSET,
+          top: 0,
+          width: DEAL_CONTENT_WIDTH,
+          height: 98,
+          borderTop: `1px solid ${WARM_RULE}`,
+          borderBottom: `1px solid ${WARM_RULE}`,
           boxSizing: 'border-box',
+          display: 'flex',
         }}
       >
         {tabs.map((label, i) => (
           <div
             key={i}
-            style={{
-              flex: 1,
-              height: 96,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              padding: '0 10px',
-              boxSizing: 'border-box',
-            }}
+            style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <span
               style={{
                 fontFamily: FONT_TEXT,
                 ...T_BODY,
                 color: i === activeIdx ? BLACK : TEXT_DARK,
-                textAlign: 'center',
                 whiteSpace: 'nowrap',
                 ...DESCENDER,
               }}
             >
               {label}
             </span>
-            {/* Frame 1:1491 — a 4px rule the full width of the active tab. */}
             {i === activeIdx && (
-              <div style={{ position: 'absolute', left: 0, right: 0, top: 92, height: 4, background: DEAL_RED }} />
+              <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, background: DEAL_RED }} />
             )}
           </div>
         ))}
       </div>
-    </div>
+    </Band>
   );
 }
 
-// ── 4. Promotion banner (Figma 1:1383 / 1:2457 / 1:2670 / 1:2874) ─────────────
+// ── 4. Promotion banner (Figma 6080:51148 / 52223 / 52436 / 52640) ────────────
+
+/**
+ * The two banner sizes are not one frame scaled — they run a different copy
+ * rhythm. The 400 banner carries the legal links and sets its sub copy at 16px;
+ * the 320 banner drops the links and sets it at 20px.
+ */
+const BANNER_COPY = {
+  Large:    { headTop: 90, subTop: 218, subSize: T_SMALL, linkTop: 262, padBottom: 48 },
+  Standard: { headTop: 88, subTop: 156, subSize: T_BODY,  linkTop: null, padBottom: 0 },
+} as const;
+
+/** Both legal links sit on a fixed 204 pitch, whatever the first one measures. */
+const BANNER_LINK_PITCH = 204;
 
 function DealPromoBannerTemplate({ data }: { data: DealPromoBannerState }) {
-  const artLeft = data.layout === 'Art left';
   const bannerH = DEAL_BANNER_HEIGHT[data.size] ?? 400;
+  const m = BANNER_COPY[data.size] ?? BANNER_COPY.Large;
+  const dark = data.size === 'Large';
+  const ink = dark ? WHITE : WHITE;
+
   return (
-    <div
-      style={{
-        width: DEAL_PAGE_WIDTH,
-        height: bannerH + 96,
-        background: PAGE_BG,
-        padding: `48px ${BANNER_INSET}px`,
-        boxSizing: 'border-box',
-        fontFamily: FONT,
-        flexShrink: 0,
-      }}
-    >
+    <Band height={48 + bannerH + m.padBottom}>
       <div
         style={{
+          position: 'absolute',
+          left: BANNER_INSET,
+          top: 48,
           width: DEAL_BANNER_WIDTH,
           height: bannerH,
           borderRadius: R_LG,
           background: BLACK,
-          position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Frame 1:1446 — one baked KV covering the whole banner. "Art left"
-            mirrors it rather than re-cropping, so the copy has a clean side. */}
-        <div style={{ position: 'absolute', inset: 0, transform: artLeft ? 'scaleX(-1)' : undefined }}>
+        <div style={{ position: 'absolute', inset: 0, transform: data.layout === 'Art left' ? 'scaleX(-1)' : undefined }}>
           <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={bannerH} />
         </div>
 
-        {/* Copy — 80 pad, vertically centred (frames 1:1450 / 1:1451). */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            padding: '0 80px',
-            boxSizing: 'border-box',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: artLeft ? 'flex-end' : 'flex-start',
-          }}
-        >
-          <div style={{ width: 860, textAlign: artLeft ? 'right' : 'left' }}>
-            <p
-              style={{
-                margin: 0,
-                ...T_HEAD,
-                letterSpacing: 'var(--obs-tracking-head)',
-                color: WHITE,
-                whiteSpace: 'pre-line',
-                ...DESCENDER,
-              }}
-            >
-              {data.headline}
-            </p>
-            {data.showSubCopy && (
-              <p style={{ margin: 0, marginTop: 8, fontFamily: FONT_TEXT, ...T_SMALL, color: WHITE, whiteSpace: 'pre-line', ...DESCENDER }}>
-                {data.subCopy}
-              </p>
-            )}
-            {data.showLinks && (
-              <div style={{ marginTop: 24, display: 'flex', gap: 24, justifyContent: artLeft ? 'flex-end' : 'flex-start' }}>
-                {[data.linkPrimary, data.linkSecondary].filter(Boolean).map((l, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      fontFamily: FONT_TEXT,
-                      ...T_SMALL,
-                      lineHeight: '16px',
-                      fontWeight: W_SEMIBOLD,
-                      color: WHITE,
-                      ...DESCENDER,
-                    }}
-                  >
-                    {l}
-                  </span>
-                ))}
-              </div>
-            )}
-            {data.showCta && (
-              <div style={{ marginTop: 24, display: 'flex', justifyContent: artLeft ? 'flex-end' : 'flex-start' }}>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: 162,
-                    height: 44,
-                    padding: '0 12px',
-                    borderRadius: R_SM,
-                    background: DEAL_RED,
-                    color: WHITE,
-                    fontFamily: FONT_TEXT,
-                    ...T_SMALL,
-                    lineHeight: '18px',
-                    fontWeight: W_SEMIBOLD,
-                  }}
-                >
-                  {data.ctaText}
-                </span>
-              </div>
-            )}
+        {/* Copy — 80 in from the banner edge, which is the 420 content rail. */}
+        <At x={80} y={m.headTop} w={860} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: ink }}>
+          {data.headline}
+        </At>
+        {data.showSubCopy && (
+          <At x={80} y={m.subTop} w={860} style={{ fontFamily: FONT_TEXT, ...m.subSize, color: ink }}>
+            {data.subCopy}
+          </At>
+        )}
+        {data.showLinks && m.linkTop !== null && (
+          <div style={{ position: 'absolute', left: 80, top: m.linkTop, display: 'flex' }}>
+            {[data.linkPrimary, data.linkSecondary].filter(Boolean).map((l, i) => (
+              <span
+                key={i}
+                style={{
+                  width: i === 0 ? BANNER_LINK_PITCH : undefined,
+                  fontFamily: FONT_TEXT,
+                  ...T_SMALL,
+                  lineHeight: '16px',
+                  fontWeight: W_SEMIBOLD,
+                  color: ink,
+                  whiteSpace: 'nowrap',
+                  ...DESCENDER,
+                }}
+              >
+                {l}
+              </span>
+            ))}
           </div>
-        </div>
+        )}
+        {data.showCta && (
+          <span
+            style={{
+              position: 'absolute',
+              left: 80,
+              top: (m.linkTop ?? m.subTop + 44) + 40,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: 162,
+              height: 44,
+              padding: '0 12px',
+              borderRadius: R_SM,
+              background: DEAL_RED,
+              color: WHITE,
+              fontFamily: FONT_TEXT,
+              ...T_SMALL,
+              lineHeight: '18px',
+              fontWeight: W_SEMIBOLD,
+              boxSizing: 'border-box',
+            }}
+          >
+            {data.ctaText}
+          </span>
+        )}
       </div>
-    </div>
+    </Band>
   );
 }
 
-// ── 5. Time Sale (Figma 1:1499 — 1600×350 banner) ─────────────────────────────
+// ── 5. Time Sale (Figma 6080:51264 — 2280×398) ────────────────────────────────
 
-/** Unit pitch inside the 511-wide countdown (frame 1:1510). */
-const TS_UNIT_LEFT = [0, 127.66, 255.34, 383.03];
-/** The separator hangs off the right of each unit (frame 1:1513). */
-const TS_SEP_LEFT = 112.34;
+/** Digit-box left edges inside the banner, measured from the 80 copy rail. */
+const TS_UNIT_LEFT = [0, 128, 256, 383];
+/** Each separator hangs off the right of its own digit box, centred in it. */
+const TS_SEP = [
+  { left: 96, w: 32 },
+  { left: 103, w: 18 },
+  { left: 102, w: 18 },
+];
 
 function DealTimeSaleTemplate({ data }: { data: DealTimeSaleState }) {
   const units = [
@@ -561,24 +668,16 @@ function DealTimeSaleTemplate({ data }: { data: DealTimeSaleState }) {
     { value: data.seconds, label: data.secondLabel, sep: null },
   ];
   return (
-    <div
-      style={{
-        width: DEAL_PAGE_WIDTH,
-        height: 398,
-        background: PAGE_BG,
-        padding: `48px ${BANNER_INSET}px 0`,
-        boxSizing: 'border-box',
-        fontFamily: FONT,
-        flexShrink: 0,
-      }}
-    >
+    <Band height={398}>
       <div
         style={{
+          position: 'absolute',
+          left: BANNER_INSET,
+          top: 48,
           width: DEAL_BANNER_WIDTH,
           height: 350,
           borderRadius: R_LG,
           background: BLACK,
-          position: 'relative',
           overflow: 'hidden',
         }}
       >
@@ -586,154 +685,179 @@ function DealTimeSaleTemplate({ data }: { data: DealTimeSaleState }) {
           <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={350} />
         </div>
 
-        {/* Copy — 80 pad, vertically centred (frames 1:1503 / 1:1504). */}
-        <div style={{ position: 'absolute', inset: 0, padding: '0 80px', boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 860 }}>
-            <p style={{ margin: 0, ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: WHITE, ...DESCENDER }}>
-              {data.headline}
-            </p>
-            {data.showSubCopy && (
-              <p style={{ margin: 0, marginTop: 8, fontFamily: FONT_TEXT, ...T_BODY, color: WHITE, ...DESCENDER }}>{data.subCopy}</p>
-            )}
-            <div style={{ marginTop: 24, position: 'relative', width: 511, height: 110 }}>
-              {units.map((u, i) => (
-                <div key={i} style={{ position: 'absolute', left: TS_UNIT_LEFT[i], top: 0, width: 96, height: 80 }}>
-                  <p
-                    style={{
-                      margin: 0,
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      fontFamily: FONT_TEXT,
-                      ...T_DIGIT,
-                      color: WHITE,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {u.value}
-                  </p>
-                  {u.sep && (
-                    <p
-                      style={{
-                        margin: 0,
-                        position: 'absolute',
-                        left: TS_SEP_LEFT,
-                        top: 0,
-                        transform: 'translateX(-50%)',
-                        fontFamily: FONT_TEXT,
-                        ...T_DIGIT,
-                        color: WHITE,
-                      }}
-                    >
-                      {u.sep}
-                    </p>
-                  )}
-                  <p
-                    style={{
-                      margin: 0,
-                      position: 'absolute',
-                      left: 0,
-                      top: 84,
-                      width: 96,
-                      textAlign: 'center',
-                      fontFamily: FONT_TEXT,
-                      fontSize: 24,
-                      lineHeight: '28px',
-                      color: WHITE,
-                      ...DESCENDER,
-                    }}
-                  >
-                    {u.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+        <At x={80} y={66} w={860} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: WHITE }}>
+          {data.headline}
+        </At>
+        {data.showSubCopy && (
+          <At x={80} y={134} w={860} style={{ fontFamily: FONT_TEXT, ...T_BODY, color: WHITE }}>
+            {data.subCopy}
+          </At>
+        )}
+
+        {/* Countdown — four 96-wide digit boxes with the label centred under
+            each, and the separator hanging off the box's right edge. */}
+        <div style={{ position: 'absolute', left: 80, top: 182, width: 511, height: 112 }}>
+          {units.map((u, i) => (
+            <React.Fragment key={i}>
+              <p
+                style={{
+                  position: 'absolute',
+                  left: TS_UNIT_LEFT[i],
+                  top: 0,
+                  width: 96,
+                  margin: 0,
+                  fontFamily: FONT_TEXT,
+                  ...T_DIGIT,
+                  fontWeight: W_SEMIBOLD,
+                  color: WHITE,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {u.value}
+              </p>
+              {u.sep && (
+                <p
+                  style={{
+                    position: 'absolute',
+                    left: TS_UNIT_LEFT[i] + TS_SEP[i].left,
+                    top: 0,
+                    width: TS_SEP[i].w,
+                    margin: 0,
+                    textAlign: 'center',
+                    fontFamily: FONT_TEXT,
+                    ...T_DIGIT,
+                    fontWeight: W_SEMIBOLD,
+                    color: WHITE,
+                  }}
+                >
+                  {u.sep}
+                </p>
+              )}
+              <p
+                style={{
+                  position: 'absolute',
+                  left: TS_UNIT_LEFT[i],
+                  top: 84,
+                  width: 96,
+                  margin: 0,
+                  textAlign: 'center',
+                  fontFamily: FONT_TEXT,
+                  ...T_COUNTER,
+                  color: WHITE,
+                  ...DESCENDER,
+                }}
+              >
+                {u.label}
+              </p>
+            </React.Fragment>
+          ))}
         </div>
       </div>
-    </div>
+    </Band>
   );
 }
 
-// ── 6. Product list (Figma 1:1526 / 1:1727) ───────────────────────────────────
+// ── 6. Product list (Figma 6080:51291 — 2280×796) ─────────────────────────────
 
 /**
- * Card width is FIXED (frames 1:1541 / 1:1745) — the row is left-aligned and
- * simply leaves space when there are fewer than four. Stretching the cards to
- * fill the rail is what made the 3-up row look wrong.
+ * Card width is FIXED (6080:51306) — the row is left-aligned on the content
+ * rail and simply leaves space when there are fewer than four. Stretching the
+ * cards to fill the rail is what made the 3-up row look wrong.
  */
 const PRODUCT_CARD_W = 342;
+const PRODUCT_CARD_H = 540;
+/** 366 pitch − 342 card. */
 const PRODUCT_GUTTER = 24;
 
 function DealProductCard({ data }: { data: DealProductItem }) {
   return (
     <div
       style={{
+        position: 'relative',
         width: PRODUCT_CARD_W,
+        height: PRODUCT_CARD_H,
         background: WHITE,
         borderRadius: R_MD,
-        padding: 20,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
         flexShrink: 0,
+        overflow: 'hidden',
       }}
     >
-      {/* Badge (frame 1:1546) — a three-stop diagonal gradient. */}
-      <div style={{ minHeight: 24, display: 'flex', alignItems: 'flex-start' }}>
-        {data.showBadge && data.badge && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              height: 24,
-              padding: '3px 8px',
-              boxSizing: 'border-box',
-              borderRadius: R_XS,
-              background: BADGE_GRADIENT,
-              color: WHITE,
-              fontFamily: FONT_TEXT,
-              ...T_MICRO,
-              lineHeight: '16px',
-              fontWeight: W_SEMIBOLD,
-              letterSpacing: '-0.24px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {data.badge}
-          </span>
-        )}
-      </div>
+      {/* Badge (6080:51311) — a three-stop diagonal, not a flat red. */}
+      {data.showBadge && data.badge && (
+        <span
+          style={{
+            position: 'absolute',
+            left: 20,
+            top: 20,
+            height: 24,
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '3px 8px',
+            boxSizing: 'border-box',
+            borderRadius: R_XS,
+            background: BADGE_GRADIENT,
+            color: WHITE,
+            fontFamily: FONT_TEXT,
+            ...T_MICRO,
+            lineHeight: '16px',
+            fontWeight: W_SEMIBOLD,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {data.badge}
+        </span>
+      )}
 
-      {/* Name — clamped to two lines at 20/24 (frame 1:1549). */}
-      <p style={{ margin: 0, marginTop: 8, height: 48, overflow: 'hidden', fontFamily: FONT_TEXT, ...T_BODY, color: TEXT_DARK }}>
+      {/* Name — the slot is two lines at 20/24 (6080:51317). Figma lets a long
+          name spill over the model-code row; clipping keeps the row readable. */}
+      <p
+        style={{
+          position: 'absolute',
+          left: 20,
+          top: 52,
+          width: 302,
+          height: 48,
+          margin: 0,
+          overflow: 'hidden',
+          fontFamily: FONT_TEXT,
+          ...T_BODY,
+          color: TEXT_DARK,
+        }}
+      >
         {data.name}
       </p>
 
-      {/* Model code + rating (frame 1:1551). */}
-      <div style={{ marginTop: 8, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, lineHeight: '14px', color: TEXT_SKU }}>{data.sku}</span>
-          <img src="/deal-page/icons/external.png" alt="" draggable={false} style={{ width: 12, height: 12, display: 'block' }} />
-        </span>
-        {data.showRating && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ display: 'inline-flex' }}>
-              {[0, 1, 2, 3, 4].map(i => (
-                <img key={i} src={STAR} alt="" draggable={false} style={{ width: 15, height: 14, display: 'block' }} />
-              ))}
-            </span>
-            <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, color: TEXT_DARK }}>
-              {data.rating} {data.reviewCount}
-            </span>
+      {/* Model code + rating (6080:51319). */}
+      <span style={{ position: 'absolute', left: 20, top: 108, display: 'inline-flex', alignItems: 'center', gap: 4, height: 24 }}>
+        <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, lineHeight: '14px', color: TEXT_SKU }}>{data.sku}</span>
+        <img src="/deal-page/icons/external.png" alt="" draggable={false} style={{ width: 12, height: 12, display: 'block' }} />
+      </span>
+      {data.showRating && (
+        <span
+          style={{
+            position: 'absolute',
+            right: 20,
+            top: 108,
+            height: 24,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+          }}
+        >
+          <span style={{ display: 'inline-flex' }}>
+            {[0, 1, 2, 3, 4].map(i => (
+              <img key={i} src={STAR} alt="" draggable={false} style={{ width: 15, height: 14, display: 'block' }} />
+            ))}
           </span>
-        )}
-      </div>
+          <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, color: TEXT_DARK }}>
+            {data.rating} {data.reviewCount}
+          </span>
+        </span>
+      )}
 
-      {/* Product shot — 180×180 in a 192 box, with the 48 spacer above
-          (frames 1:1575 / 1:1578). */}
-      <div style={{ height: 48 }} />
-      <div style={{ height: 192, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Product shot — 180×180 centred at y=192 (6080:51345). The 48-tall gap
+          above it is where lg.com draws its stock bar. */}
+      <div style={{ position: 'absolute', left: 81, top: 192, width: 180, height: 180 }}>
         {data.image ? (
           <img
             src={data.image}
@@ -746,16 +870,14 @@ function DealProductCard({ data }: { data: DealProductItem }) {
         )}
       </div>
 
-      {/* Price row (frame 1:1583). */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {/* Price row (6080:51350) — 20/24/16 on one baseline-ish line. */}
+      <div style={{ position: 'absolute', left: 20, top: 388, height: 24, display: 'flex', alignItems: 'baseline', gap: 4 }}>
         {data.showDiscountPercent && data.discountPercent && (
           <span style={{ fontFamily: FONT_TEXT, ...T_BODY, lineHeight: '20px', fontWeight: W_SEMIBOLD, color: DEAL_RED }}>
             {data.discountPercent}
           </span>
         )}
-        <span style={{ fontFamily: FONT_TEXT, fontSize: 24, lineHeight: '24px', fontWeight: W_SEMIBOLD, color: BLACK }}>
-          {data.salePrice}
-        </span>
+        <span style={{ fontFamily: FONT_TEXT, ...T_PRICE, color: BLACK }}>{data.salePrice}</span>
         {data.showOriginalPrice && data.originalPrice && (
           <span style={{ fontFamily: FONT_TEXT, ...T_SMALL, lineHeight: '16px', color: TEXT_STRIKE, textDecoration: 'line-through' }}>
             {data.originalPrice}
@@ -763,18 +885,20 @@ function DealProductCard({ data }: { data: DealProductItem }) {
         )}
       </div>
 
-      {/* Shipping pill (frame 1:1591). */}
+      {/* Shipping pill (6080:51360). */}
       {data.showShippingNote && data.shippingNote && (
         <div
           style={{
-            marginTop: 16,
+            position: 'absolute',
+            left: 20,
+            top: 428,
+            width: 302,
             height: 32,
             borderRadius: R_XS,
             background: SHIP_BG,
             display: 'flex',
             alignItems: 'center',
             paddingLeft: 32,
-            paddingRight: 8,
             boxSizing: 'border-box',
           }}
         >
@@ -784,124 +908,167 @@ function DealProductCard({ data }: { data: DealProductItem }) {
         </div>
       )}
 
-      {/* CTA row — the secondary action is a plain text link, not a second
-          outlined button (frame 1:1596). */}
-      <div style={{ marginTop: 16, display: 'flex', gap: 16, alignItems: 'center' }}>
-        <span
-          style={{
-            maxWidth: 130,
-            flex: 1,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: BLACK,
-            fontFamily: FONT_TEXT,
-            ...T_SMALL,
-            lineHeight: '18px',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {data.secondaryCta}
-        </span>
-        <span
-          style={{
-            width: 162,
-            height: 44,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: R_SM,
-            background: DEAL_RED,
-            color: WHITE,
-            fontFamily: FONT_TEXT,
-            ...T_SMALL,
-            lineHeight: '18px',
-            fontWeight: W_SEMIBOLD,
-            flexShrink: 0,
-          }}
-        >
-          {data.primaryCta}
-        </span>
-      </div>
+      {/* CTA row (6080:51366) — the secondary action is a plain text link. */}
+      <span
+        style={{
+          position: 'absolute',
+          left: 20,
+          top: 476,
+          width: 124,
+          height: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingRight: 11,
+          boxSizing: 'border-box',
+          color: BLACK,
+          fontFamily: FONT_TEXT,
+          ...T_SMALL,
+          lineHeight: '18px',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {data.secondaryCta}
+      </span>
+      <span
+        style={{
+          position: 'absolute',
+          left: 160,
+          top: 476,
+          width: 162,
+          height: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: R_SM,
+          background: DEAL_RED,
+          color: WHITE,
+          fontFamily: FONT_TEXT,
+          ...T_SMALL,
+          lineHeight: '18px',
+          fontWeight: W_SEMIBOLD,
+        }}
+      >
+        {data.primaryCta}
+      </span>
     </div>
   );
 }
 
+/**
+ * Two vertical rhythms, both straight off the board: with the tab strip the
+ * grid starts at 192 in a 796 band (6080:51291), without it at 131 in a 732
+ * band (6080:52447).
+ */
+const GRID_TOP = { tabs: 192, noTabs: 131 };
+const GRID_BOTTOM = { tabs: 64, noTabs: 61 };
+
 function DealProductListTemplate({ data }: { data: DealProductListState }) {
   const tabLabels = lines(data.tabs);
+  const showTabs = data.showTabs && tabLabels.length > 0;
+  const gridTop = showTabs ? GRID_TOP.tabs : GRID_TOP.noTabs;
 
   return (
-    <div
-      style={{
-        width: DEAL_PAGE_WIDTH,
-        background: PAGE_BG,
-        padding: `48px ${GRID_INSET + GUTTER}px 64px`,
-        boxSizing: 'border-box',
-        fontFamily: FONT,
-        flexShrink: 0,
-      }}
-    >
+    <Band height={gridTop + PRODUCT_CARD_H + (showTabs ? GRID_BOTTOM.tabs : GRID_BOTTOM.noTabs)}>
       {data.showSectionTitle && (
-        <p style={{ margin: 0, height: 60, ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: BLACK, ...DESCENDER }}>
+        <At x={CONTENT_INSET} y={48} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: BLACK }}>
           {data.sectionTitle}
-        </p>
+        </At>
       )}
 
-      {/* Tab strip (frame 1:1534) — a 2px red rule under the active label only. */}
-      {data.showTabs && tabLabels.length > 0 && (
-        <div style={{ height: 64, paddingTop: 12, boxSizing: 'border-box', display: 'flex', gap: 36, alignItems: 'flex-start' }}>
+      {/* Tab strip (6080:51296) — 36 gap, and a 2px red rule under the active
+          label sitting 27 below the label's own box top (Figma y130 → y157). */}
+      {showTabs && (
+        <div style={{ position: 'absolute', left: CONTENT_INSET, top: 130, display: 'flex', gap: 36 }}>
           {tabLabels.map((label, i) => (
-            <span
-              key={i}
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                paddingBottom: 10,
-                fontFamily: FONT_TEXT,
-                ...T_BODY,
-                color: i === 0 ? BLACK : TEXT_DARK,
-                whiteSpace: 'nowrap',
-                ...DESCENDER,
-              }}
-            >
-              {label}
-              {i === 0 && <span style={{ position: 'absolute', left: 0, right: 0, top: 27, height: 2, background: DEAL_RED }} />}
-            </span>
+            <div key={i} style={{ position: 'relative', height: 29 }}>
+              <span
+                style={{
+                  display: 'block',
+                  fontFamily: FONT_TEXT,
+                  ...T_BODY,
+                  color: i === 0 ? BLACK : TEXT_DARK,
+                  whiteSpace: 'nowrap',
+                  ...DESCENDER,
+                }}
+              >
+                {label}
+              </span>
+              {i === 0 && (
+                <span style={{ position: 'absolute', left: 0, right: 0, top: 27, height: 2, background: DEAL_RED }} />
+              )}
+            </div>
           ))}
         </div>
       )}
 
-      <div style={{ marginTop: 20, display: 'flex', gap: PRODUCT_GUTTER }}>
+      <div style={{ position: 'absolute', left: CONTENT_INSET, top: gridTop, display: 'flex', gap: PRODUCT_GUTTER }}>
         {data.products.map((p, i) => (
           <DealProductCard key={i} data={p} />
         ))}
       </div>
-    </div>
+    </Band>
   );
 }
 
-// ── 7. Category nav (Figma 1:2365) ────────────────────────────────────────────
+// ── 7. Category nav (Figma 6080:52130 — 2280×353) ─────────────────────────────
+
+/**
+ * Each category is a 140×128 chip (Figma 6080:52142) on a 164 pitch, and the
+ * row is centred inside the 1440 content rail — NOT on the page, which is where
+ * the 2px drift came from. The active chip gets a warm-white r12 plate.
+ */
+const CAT_TAB_W = 140;
+const CAT_TAB_H = 128;
+const CAT_TAB_GAP = 24;
+/** Label box inside the chip's 8 pad. */
+const CAT_LABEL_W = CAT_TAB_W - 16;
+/** The chip row's own band, ruled top and bottom. */
+const CAT_ROW_BAND_H = 176;
+const CAT_ACTIVE_BG = '#FAF9F5';
+/**
+ * This band is the one section built on a 2276 page rather than 2280, so its
+ * own rail lands on 418 instead of the usual 420. Only the chip row and the
+ * results count hang off it — the "Sort by" label and the dropdown are placed
+ * from the page edge and stay on the normal grid.
+ */
+const CAT_RAIL = CONTENT_INSET - 2;
 
 function DealCategoryNavTemplate({ data }: { data: DealCategoryNavState }) {
+  const rowW = data.items.length * CAT_TAB_W + (data.items.length - 1) * CAT_TAB_GAP;
+  const rowLeft = CAT_RAIL + Math.round((DEAL_CONTENT_WIDTH - rowW) / 2);
   return (
-    <div style={{ width: DEAL_PAGE_WIDTH, background: PAGE_BG, fontFamily: FONT, boxSizing: 'border-box', flexShrink: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '16px 24px 24px' }}>
+    <Band height={353}>
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: DEAL_PAGE_WIDTH,
+          height: CAT_ROW_BAND_H + 1,
+          borderTop: `1px solid ${WARM_RULE}`,
+          borderBottom: `1px solid ${WARM_RULE}`,
+          boxSizing: 'border-box',
+        }}
+      />
+
+      <div style={{ position: 'absolute', left: rowLeft, top: 25, display: 'flex', gap: CAT_TAB_GAP }}>
         {data.items.map((item, i) => (
           <div
             key={i}
             style={{
-              width: 132,
-              padding: '12px 8px',
-              borderRadius: R_SM,
-              background: i === 0 ? WHITE : 'transparent',
+              width: CAT_TAB_W,
+              height: CAT_TAB_H,
+              padding: 8,
+              boxSizing: 'border-box',
+              borderRadius: 12,
+              background: i === 0 ? CAT_ACTIVE_BG : 'transparent',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 8,
-              boxSizing: 'border-box',
             }}
           >
-            <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 64, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {item.icon ? (
                 <img
                   src={item.icon}
@@ -910,63 +1077,130 @@ function DealCategoryNavTemplate({ data }: { data: DealCategoryNavState }) {
                   style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxWidth: 'none' }}
                 />
               ) : (
-                <div style={{ width: 44, height: 44, borderRadius: R_XS, background: '#E2DED6' }} />
+                <div style={{ width: 64, height: 64, borderRadius: R_XS, background: '#E2DED6' }} />
               )}
             </div>
-            <span
-              style={{
-                fontFamily: FONT_TEXT,
-                ...T_MICRO,
-                lineHeight: '18px',
-                color: BLACK,
-                textAlign: 'center',
-                fontWeight: i === 0 ? W_SEMIBOLD : 400,
-                ...DESCENDER,
-              }}
-            >
-              {item.name}
-            </span>
+            {/* 8 pad above the label, applied on the wrapper so DESCENDER's own
+                margins (which would overwrite a marginTop) stay intact. */}
+            <div style={{ paddingTop: 8 }}>
+              <span
+                style={{
+                  display: 'block',
+                  width: CAT_LABEL_W,
+                  fontFamily: FONT_TEXT,
+                  ...T_SMALL,
+                  fontWeight: W_SEMIBOLD,
+                  color: i === 0 ? BLACK : TEXT_STRIKE,
+                  textAlign: 'center',
+                  ...DESCENDER,
+                }}
+              >
+                {item.name}
+              </span>
+            </div>
           </div>
         ))}
       </div>
 
       {data.showResultsBar && (
-        <div
+        <>
+          <At x={CAT_RAIL} y={208} style={{ fontFamily: FONT_TEXT, ...T_MICRO, lineHeight: '14px', fontWeight: W_SEMIBOLD, color: BLACK }}>
+            {data.resultsText}
+          </At>
+          <At x={1517} y={208} style={{ fontFamily: FONT_TEXT, ...T_MICRO, lineHeight: '14px', fontWeight: W_SEMIBOLD, color: TEXT_STRIKE }}>
+            {data.sortLabel}
+          </At>
+          <img
+            src="/deal-page/icons/sort-dropdown.png"
+            alt=""
+            draggable={false}
+            style={{ position: 'absolute', left: 1571, top: 193, width: 288, height: 44, display: 'block', maxWidth: 'none' }}
+          />
+        </>
+      )}
+
+      {data.showEmptyText && (
+        <p
           style={{
-            borderTop: `1px solid ${HAIRLINE}`,
-            padding: `20px ${GRID_INSET}px`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxSizing: 'border-box',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 333,
+            margin: 0,
+            textAlign: 'center',
+            fontFamily: FONT_TEXT,
+            ...T_SMALL,
+            color: BLACK,
+            ...DESCENDER,
           }}
         >
-          <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, color: BLACK }}>{data.resultsText}</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontFamily: FONT_TEXT, ...T_MICRO, color: BLACK }}>{data.sortLabel}</span>
-            <span
-              style={{
-                width: 220,
-                height: 34,
-                border: `1px solid ${HAIRLINE}`,
-                borderRadius: 2,
-                background: WHITE,
-                display: 'inline-flex',
-                alignItems: 'center',
-                paddingLeft: 10,
-                boxSizing: 'border-box',
-              }}
-            >
-              <img src="/deal-page/icons/chevron-down.png" alt="" draggable={false} style={{ width: 14, height: 14, display: 'block' }} />
-            </span>
-          </span>
-        </div>
+          {data.emptyText}
+        </p>
       )}
-    </div>
+    </Band>
   );
 }
 
-// ── 8. Site footer (Figma 1:3102 — 1713×848) ──────────────────────────────────
+// ── 8. Membership CTA (Figma 6080:52852 — 2280×476) ───────────────────────────
+
+function DealMembershipTemplate({ data }: { data: DealMembershipState }) {
+  return (
+    <Band height={476}>
+      <div
+        style={{
+          position: 'absolute',
+          left: BANNER_INSET,
+          top: 48,
+          width: DEAL_BANNER_WIDTH,
+          height: 380,
+          borderRadius: R_LG,
+          background: '#EFEAE2',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={380} />
+        </div>
+
+        {/* Dark copy on a light plate — the one banner that does not run white. */}
+        <At x={80} y={88} w={860} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: BLACK }}>
+          {data.headline}
+        </At>
+        {data.showSubCopy && (
+          <At x={80} y={276} w={860} style={{ fontFamily: FONT_TEXT, ...T_SMALL, color: BLACK }}>
+            {data.subCopy}
+          </At>
+        )}
+        {data.showCta && (
+          <span
+            style={{
+              position: 'absolute',
+              left: 80,
+              top: 320,
+              height: 44,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 25px',
+              borderRadius: R_SM,
+              background: DEAL_RED,
+              color: WHITE,
+              fontFamily: FONT_TEXT,
+              ...T_SMALL,
+              lineHeight: '16px',
+              fontWeight: W_SEMIBOLD,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {data.ctaText}
+          </span>
+        )}
+      </div>
+    </Band>
+  );
+}
+
+// ── 9. Site footer (Figma 6080:52867 — 2280×848) ──────────────────────────────
 
 function FooterDisclaimer({ text, moreLabel }: { text: string; moreLabel: string }) {
   return (
@@ -1000,7 +1234,7 @@ function DealSiteFooterTemplate({ data }: { data: DealSiteFooterState }) {
   return (
     <div style={{ width: DEAL_PAGE_WIDTH, height: 848, background: CHROME_BG, fontFamily: FONT, flexShrink: 0, overflow: 'hidden' }}>
       {data.showDisclaimers && (
-        <div style={{ height: 126, paddingLeft: CHROME_INNER, paddingRight: CHROME_INNER, paddingTop: 21, boxSizing: 'border-box' }}>
+        <div style={{ height: 126, paddingLeft: CONTENT_INSET, paddingRight: CONTENT_INSET, paddingTop: 21, boxSizing: 'border-box' }}>
           {disclaimers.slice(0, 2).map((line, i) => (
             <div key={i} style={{ marginTop: i === 0 ? 0 : 41 }}>
               <FooterDisclaimer text={line} moreLabel={data.moreLabel} />
@@ -1009,9 +1243,9 @@ function DealSiteFooterTemplate({ data }: { data: DealSiteFooterState }) {
         </div>
       )}
 
-      {/* Link columns (frame 1:3121 — 220 wide, 244 pitch). */}
-      <div style={{ height: 483, paddingLeft: CHROME_INNER, paddingTop: 41, boxSizing: 'border-box' }}>
-        <div style={{ display: 'flex', gap: 24, width: DEAL_CHROME_WIDTH }}>
+      {/* Link columns — 220 wide on a 244 pitch inside the 1440 rail. */}
+      <div style={{ height: 483, paddingLeft: CONTENT_INSET, paddingTop: 41, boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', gap: 24, width: DEAL_CONTENT_WIDTH }}>
           {data.columns.map((col, i) => (
             <div key={i} style={{ width: 220, flexShrink: 0 }}>
               <p style={{ margin: 0, fontFamily: FONT_TEXT, ...T_SMALL, lineHeight: '24px', fontWeight: 700, color: BLACK, ...DESCENDER }}>
@@ -1029,16 +1263,16 @@ function DealSiteFooterTemplate({ data }: { data: DealSiteFooterState }) {
         </div>
       </div>
 
-      {/* Locale + social (frame 1:3221, h=81). */}
+      {/* Locale + social (h=81). */}
       <div
         style={{
           height: 81,
-          paddingLeft: CHROME_INNER,
-          paddingRight: CHROME_INNER,
+          paddingLeft: CONTENT_INSET,
+          paddingRight: CONTENT_INSET,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderTop: '1px solid rgba(0,0,0,0.10)',
+          borderTop: `1px solid ${HAIRLINE}`,
           boxSizing: 'border-box',
         }}
       >
@@ -1057,9 +1291,9 @@ function DealSiteFooterTemplate({ data }: { data: DealSiteFooterState }) {
         )}
       </div>
 
-      {/* Legal bar (frame 1:3246, h=158). */}
+      {/* Legal bar (h=158). */}
       <div style={{ height: 158, background: LEGAL_BG, position: 'relative', boxSizing: 'border-box' }}>
-        <div style={{ position: 'absolute', left: CHROME_INNER, top: 24, width: 1020 }}>
+        <div style={{ position: 'absolute', left: CONTENT_INSET, top: 24, width: 1021 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: 12 }}>
             {legalLinks.map((l, i) => (
               <span key={i} style={{ display: 'inline-flex', alignItems: 'center' }}>
@@ -1070,17 +1304,19 @@ function DealSiteFooterTemplate({ data }: { data: DealSiteFooterState }) {
               </span>
             ))}
           </div>
-          <p style={{ margin: 0, marginTop: 24, fontFamily: FONT_TEXT, ...T_MICRO, color: WHITE, ...DESCENDER }}>{data.copyright}</p>
-          <p style={{ margin: 0, marginTop: 2, fontFamily: FONT_TEXT, ...T_MICRO, color: WHITE, textDecoration: 'underline', ...DESCENDER }}>
-            {data.officialNotice}
-          </p>
+          <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <p style={{ margin: 0, fontFamily: FONT_TEXT, ...T_MICRO, color: WHITE, ...DESCENDER }}>{data.copyright}</p>
+            <p style={{ margin: 0, fontFamily: FONT_TEXT, ...T_MICRO, color: WHITE, textDecoration: 'underline', ...DESCENDER }}>
+              {data.officialNotice}
+            </p>
+          </div>
         </div>
         {data.showBadges && (
           <img
             src="/deal-page/footer-badges.png"
             alt=""
             draggable={false}
-            style={{ position: 'absolute', left: GRID_INSET + 1068.6, top: 0, width: 395.4, height: 158, display: 'block', maxWidth: 'none' }}
+            style={{ position: 'absolute', left: 1465, top: 0, width: 395, height: 158, display: 'block', maxWidth: 'none' }}
           />
         )}
       </div>
@@ -1100,6 +1336,7 @@ export function DealModuleRenderer({ editState }: { editState: DealEditState }) 
     case 'deal-time-sale':    return <DealTimeSaleTemplate data={editState.data} />;
     case 'deal-product-list': return <DealProductListTemplate data={editState.data} />;
     case 'deal-category-nav': return <DealCategoryNavTemplate data={editState.data} />;
+    case 'deal-membership':   return <DealMembershipTemplate data={editState.data} />;
     case 'deal-site-footer':  return <DealSiteFooterTemplate data={editState.data} />;
   }
 }

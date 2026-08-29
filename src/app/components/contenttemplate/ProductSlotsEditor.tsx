@@ -18,6 +18,8 @@ import { BrushMaskEditor } from '../BrushMaskEditor';
 import { scrapeProductImages, getProxiedImageUrl, type ScrapedImage } from '../../services/imageScraperApi';
 import { removeBackgroundAI } from '../../utils/salesBgRemoval';
 import { useT } from '../../i18n/LanguageContext';
+import { PD_PLATE_FILL } from './paidBoards';
+import { ColorPickerField } from '../offsite/ColorPickerField';
 
 /** What one plate holds. `image` is the finished cut-out. */
 export interface ProductSlot {
@@ -37,10 +39,19 @@ export function ProductSlotsEditor({
   count,
   slots,
   onChange,
+  color,
+  onColorChange,
 }: {
   count: number;
   slots: ProductSlots;
   onChange: (next: ProductSlots) => void;
+  /**
+   * Plate fill. Only the paid boards draw their plates — on LG.com they are
+   * baked into the artwork — so the swatches appear only when a setter is
+   * passed, and the control is absent everywhere it would do nothing.
+   */
+  color?: string;
+  onColorChange?: (next: string) => void;
 }) {
   const t = useT();
   return (
@@ -49,6 +60,10 @@ export function ProductSlotsEditor({
         <p className="font-lgei font-bold text-[15px] text-gray-900 mb-0.5">{t('Products')}</p>
         <p className="text-xs text-gray-400">{t('One product per plate. Applies to every size.')}</p>
       </div>
+
+      {onColorChange && (
+        <PlateColorField color={color ?? PD_PLATE_FILL} onChange={onColorChange} />
+      )}
 
       {Array.from({ length: count }, (_, i) => (
         <ProductRow
@@ -62,6 +77,33 @@ export function ProductSlotsEditor({
           }}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Plate fill. The swatch opens the same picker the Off-site builder uses — a
+ * saturation/value field, a hue slider, an eyedropper and a hex box — so the
+ * plate can be matched to anything in the key visual rather than to a short
+ * list of presets. Reset puts back the value the Figma boards ship with.
+ */
+function PlateColorField({ color, onChange }: { color: string; onChange: (next: string) => void }) {
+  const t = useT();
+  return (
+    <div className="mt-3 mb-1">
+      <div className="flex items-baseline justify-between mb-1.5">
+        <p className="text-xs font-medium text-gray-700">{t('Slot Color')}</p>
+        {color.toLowerCase() !== PD_PLATE_FILL.toLowerCase() && (
+          <button
+            type="button"
+            onClick={() => onChange(PD_PLATE_FILL)}
+            className="text-[11px] text-gray-400 hover:text-gray-700"
+          >
+            {t('Reset')}
+          </button>
+        )}
+      </div>
+      <ColorPickerField value={color} onChange={onChange} />
     </div>
   );
 }

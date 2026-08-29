@@ -69,8 +69,8 @@ export interface LgcomSlot {
   h: number;
   /**
    * The hero placement. When the chosen asset ships a motion file, this slot
-   * plays it instead of the still — the others stay on the still so six 10 MB
-   * videos never decode at once.
+   * plays it instead of the still. The two ST0001 hero sizes carry it; the other
+   * four stay on the still so six 10 MB videos never decode at once.
    */
   hero?: boolean;
   /**
@@ -114,6 +114,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     device: 'MO',
     w: 720,
     h: 960,
+    hero: true,
     text: [
       { role: 'eyebrow',    x: 32, y: 50,  w: 656, size: 32,   lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
       { role: 'headline',   x: 32, y: 101, w: 656, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
@@ -198,17 +199,21 @@ const ART: Record<string, Partial<Record<SlotId, Placement>>> = {
   'kv-main-character':         { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -355, y: -131, size: 1431 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
   'kv-product-centric-1':      { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -342, y: -119, size: 1405 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
   'kv-product-centric-2':      { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -342, y: -119, size: 1405 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
-  'kv-product-slot':           { 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873 }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092 }, 'ST0001-mo-720x960': { x: -349, y: -107, size: 1409 , src: 'kv-product-slot2' }, 'ST0001-mo-720x830': { x: -302, y: -50, size: 1315 , src: 'kv-product-slot2' }, 'ST0044-mo-656x436': { x: -65, y: -266, size: 786 , src: 'kv-product-slot2' }, 'ST0044-pc-342x228': { x: -11, y: -124, size: 365 , src: 'kv-product-slot2' } },
-  'kv-product-slot-character': { 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873 }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092 }, 'ST0001-mo-720x960': { x: -349, y: -107, size: 1409 , src: 'kv-product-slot2-character' }, 'ST0001-mo-720x830': { x: -302, y: -50, size: 1315 , src: 'kv-product-slot2-character' }, 'ST0044-mo-656x436': { x: -65, y: -266, size: 786 , src: 'kv-product-slot2-character' }, 'ST0044-pc-342x228': { x: -11, y: -124, size: 365 , src: 'kv-product-slot2-character' } },
+  'kv-product-slot':           { 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873 }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092 }, 'ST0001-mo-720x960': { x: -349, y: -67, size: 1409 , src: 'kv-product-slot2' }, 'ST0001-mo-720x830': { x: -302, y: -50, size: 1315 , src: 'kv-product-slot2' }, 'ST0044-mo-656x436': { x: -65, y: -266, size: 786 , src: 'kv-product-slot2' }, 'ST0044-pc-342x228': { x: -11, y: -124, size: 365 , src: 'kv-product-slot2' } },
+  'kv-product-slot-character': { 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873 }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092 }, 'ST0001-mo-720x960': { x: -349, y: -67, size: 1409 , src: 'kv-product-slot2-character' }, 'ST0001-mo-720x830': { x: -302, y: -50, size: 1315 , src: 'kv-product-slot2-character' }, 'ST0044-mo-656x436': { x: -65, y: -266, size: 786 , src: 'kv-product-slot2-character' }, 'ST0044-pc-342x228': { x: -11, y: -124, size: 365 , src: 'kv-product-slot2-character' } },
   'kv-product-slot2':          { 'ST0001-pc-1920x720': { x: 300, y: -673, size: 2075 }, 'ST0001-pc-1600x400': { x: 495, y: -441, size: 1298 }, 'ST0001-mo-720x960': { x: -342, y: -45, size: 1396 }, 'ST0001-mo-720x830': { x: -291, y: -51, size: 1296 }, 'ST0044-mo-656x436': { x: -90, y: -284, size: 836 }, 'ST0044-pc-342x228': { x: -18, y: -128, size: 378 } },
   'kv-product-slot2-character': { 'ST0001-pc-1920x720': { x: 300, y: -673, size: 2075 }, 'ST0001-pc-1600x400': { x: 495, y: -441, size: 1298 }, 'ST0001-mo-720x960': { x: -342, y: -45, size: 1396 }, 'ST0001-mo-720x830': { x: -291, y: -51, size: 1296 }, 'ST0044-mo-656x436': { x: -90, y: -284, size: 836 }, 'ST0044-pc-342x228': { x: -18, y: -128, size: 378 } },
-  'deal-type-bundle':          { 'ST0001-pc-1920x720': { x: 409, y: -631, size: 2009 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -434, y: -144, size: 1597 }, 'ST0001-mo-720x830': { x: -262, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -66, y: -270, size: 788 }, 'ST0044-pc-342x228': { x: -18, y: -132, size: 378 } },
-  'deal-type-time-sale':       { 'ST0001-pc-1920x720': { x: 409, y: -631, size: 2009 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -391, y: -93, size: 1511 }, 'ST0001-mo-720x830': { x: -262, y: -30, size: 1250 }, 'ST0044-mo-656x436': { x: -58, y: -257, size: 772 }, 'ST0044-pc-342x228': { x: 0, y: -112, size: 342 } },
-  'deal-type-gift':            { 'ST0001-pc-1920x720': { x: 409, y: -631, size: 2009 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -434, y: -144, size: 1597 }, 'ST0001-mo-720x830': { x: -262, y: -38, size: 1250 }, 'ST0044-mo-656x436': { x: -66, y: -270, size: 788 }, 'ST0044-pc-342x228': { x: -18, y: -132, size: 378 } },
-  'deal-type-hot-deal':        { 'ST0001-pc-1920x720': { x: 409, y: -631, size: 2009 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -434, y: -144, size: 1597 }, 'ST0001-mo-720x830': { x: -262, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -66, y: -270, size: 788 }, 'ST0044-pc-342x228': { x: -18, y: -132, size: 378 } },
-  'ad-teasing':                { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -457, y: -166, size: 1635 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
-  'ad-joy-ryder':              { 'ST0001-pc-1920x720': { x: 317, y: -691, size: 2105 }, 'ST0001-pc-1600x400': { x: 513, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -525, y: -228, size: 1771 }, 'ST0001-mo-720x830': { x: -331, y: -108, size: 1382 }, 'ST0044-mo-656x436': { x: -94, y: -296, size: 844 }, 'ST0044-pc-342x228': { x: -9, y: -125, size: 360 } },
-  'ad-benefit':                { 'ST0001-pc-1920x720': { x: 389, y: -586, size: 1917 }, 'ST0001-pc-1600x400': { x: 513, y: -443, size: 1296 }, 'ST0001-mo-720x960': { x: -438, y: -139, size: 1597 }, 'ST0001-mo-720x830': { x: -265, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -29, y: -239, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -122, size: 360 } },
+  'deal-type-bundle':          { 'ST0001-pc-1920x720': { x: 409, y: -645, size: 2009 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -289, y: -67, size: 1307 }, 'ST0001-mo-720x830': { x: -262, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -66, y: -270, size: 788 }, 'ST0044-pc-342x228': { x: -18, y: -132, size: 378 } },
+  'deal-type-time-sale':       { 'ST0001-pc-1920x720': { x: 454, y: -598, size: 1919 }, 'ST0001-pc-1600x400': { x: 590, y: -376, size: 1174 }, 'ST0001-mo-720x960': { x: -247, y: -33, size: 1223 }, 'ST0001-mo-720x830': { x: -262, y: -30, size: 1250 }, 'ST0044-mo-656x436': { x: -58, y: -257, size: 772 }, 'ST0044-pc-342x228': { x: 0, y: -112, size: 342 } },
+  'deal-type-gift':            { 'ST0001-pc-1920x720': { x: 377, y: -697, size: 2073 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -422, y: -220, size: 1573 }, 'ST0001-mo-720x830': { x: -320, y: -80, size: 1366 }, 'ST0044-mo-656x436': { x: -66, y: -270, size: 788 }, 'ST0044-pc-342x228': { x: -18, y: -132, size: 378 } },
+  'deal-type-hot-deal':        { 'ST0001-pc-1920x720': { x: 409, y: -657, size: 1995 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -350, y: -148, size: 1429 }, 'ST0001-mo-720x830': { x: -262, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -66, y: -270, size: 788 }, 'ST0044-pc-342x228': { x: -18, y: -132, size: 378 } },
+  // Teasing is the Main artwork with a motion cut, so it is framed like Main at
+  // every size. The `LG.com — Teasing Content` board was rebuilt on 2026-08-29
+  // (`6210:73073`, replacing `6018:40892`) and now matches Main at all six sizes,
+  // 720×960 included — so this row is what Figma says, not an override.
+  'ad-teasing':                { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -355, y: -131, size: 1431 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
+  'ad-joy-ryder':              { 'ST0001-pc-1920x720': { x: 317, y: -715, size: 2105 }, 'ST0001-pc-1600x400': { x: 513, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -439, y: -232, size: 1599 }, 'ST0001-mo-720x830': { x: -331, y: -108, size: 1382 }, 'ST0044-mo-656x436': { x: -94, y: -296, size: 844 }, 'ST0044-pc-342x228': { x: -9, y: -125, size: 360 } },
+  'ad-benefit':                { 'ST0001-pc-1920x720': { x: 389, y: -612, size: 1917 }, 'ST0001-pc-1600x400': { x: 513, y: -443, size: 1296 }, 'ST0001-mo-720x960': { x: -313, y: -78, size: 1347 }, 'ST0001-mo-720x830': { x: -265, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -29, y: -239, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -122, size: 360 } },
 };
 
 /** Where this asset's art sits in this slot. Falls back to the Main framing. */
@@ -444,35 +449,32 @@ export const hasProductSlots = (assetId: string) => productSlotCount(assetId) > 
 
 export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device}`;
 
+/**
+ * Sizes delivered as artwork and benefit icons only — no eyebrow, headline,
+ * subcopy, CTA, disclaimer or indicator. LG.com sets the copy live on those two
+ * placements, so baking it into the file would double it up. Same pair as
+ * `hero`, but kept separate: one is about motion, this one about what ships.
+ */
+export const bareOnExport = (slotId: string) =>
+  slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960';
+
 /* ------------------------------------------------------------------ */
-/* Optional layers                                                     */
+/* Icon row                                                            */
 /* ------------------------------------------------------------------ */
 
 /**
- * What the edit panel can switch off. Every LG.com size can be shipped as
- * background only, so each element is independently optional; `iconRow` and
- * `indicator` only exist on the two hero sizes and are ignored elsewhere.
+ * The icon row is the only element the edit panel can switch off. Everything
+ * else a slot carries — eyebrow, headline, subcopy, CTA, disclaimer and the
+ * carousel indicator — is part of the layout and is always drawn, at every
+ * size. Figma ships the icon row hidden, so it starts off and the operator
+ * turns it on per campaign.
+ *
+ * The PD Slot key visuals never get one: their product plates take the room the
+ * icons would need, so the Figma boards for them drop the icon row and move the
+ * artwork down 40px at 720×960 to close the gap. `ContentTemplateBuilder` keys
+ * that off `productSlotCount`, which is non-zero for exactly those assets.
  */
-export interface SlotLayers {
-  eyebrow: boolean;
-  headline: boolean;
-  subcopy: boolean;
-  cta: boolean;
-  disclaimer: boolean;
-  iconRow: boolean;
-  indicator: boolean;
-}
-
-/** Figma's own defaults: the icon row is drawn but hidden, the rest are on. */
-export const DEFAULT_LAYERS: SlotLayers = {
-  eyebrow: true,
-  headline: true,
-  subcopy: true,
-  cta: true,
-  disclaimer: true,
-  iconRow: false,
-  indicator: true,
-};
+export const DEFAULT_ICON_ROW = false;
 
 /**
  * Icon row styles, matching the four variants of Figma's `Icon Row` set.

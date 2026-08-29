@@ -1,6 +1,6 @@
 {
   "generatedFrom": "content template builder source",
-  "stamp": 1787813861607,
+  "stamp": 1787993547918,
   "assets": {
     "ad-creative-a-1": {
       "width": 3000,
@@ -59,11 +59,23 @@
       "width": 3000,
       "height": 3000
     },
+    "kv-product-slot001": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-product-slot001-character": {
+      "width": 3000,
+      "height": 3000
+    },
     "kv-product-slot2": {
       "width": 3000,
       "height": 3000
     },
     "kv-product-slot2-character": {
+      "width": 3000,
+      "height": 3000
+    },
+    "logo": {
       "width": 3000,
       "height": 3000
     }

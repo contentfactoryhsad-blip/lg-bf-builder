@@ -13,6 +13,10 @@ import React, { useRef, useState } from 'react';
 import { useT } from '../../i18n/LanguageContext';
 import { ShowToggle } from '../brandshop/bigPromoCommon';
 import { ImageCropModal } from '../ImageCropModal';
+import { getAsset, thumbUrl, visibleRows } from '../contenttemplate/contentTemplateAssets';
+import { productSlotCount } from '../contenttemplate/lgcomSlots';
+import { ProductSlotsEditor, emptyProductSlots } from '../contenttemplate/ProductSlotsEditor';
+import { HERO_NUDGE_LIMIT, HERO_SCALE_MAX, HERO_SCALE_MIN, HERO_SCALE_STEP } from './dealHeroArt';
 import {
   type DealEditState,
   type DealSiteHeaderState,
@@ -30,6 +34,7 @@ import {
   type DealProductItem,
   type DealCategoryNavState,
   type DealCategoryNavItem,
+  type DealMembershipState,
   dealCardDefaults,
   dealProductDefaultItem,
   dealCategoryNavDefaults,
@@ -271,12 +276,192 @@ function resizeList<T>(list: T[], count: number, defaultAt: (i: number) => T): T
 
 // ── 1. Hero ───────────────────────────────────────────────────────────────────
 
+/**
+ * Key-visual picker — the same tile rows the Content Template Builder puts in
+ * its left rail, reusing that registry so a new key visual shows up in both
+ * builders the moment it is added there.
+ *
+ * The rail here is 280 wide against Figma's 288, so the tiles take equal
+ * fractions of the row rather than their Figma pixel widths, and hold the
+ * 140:64 letterbox with an aspect ratio instead.
+ */
+function KeyVisualField({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (id: string) => void;
+}) {
+  const t = useT();
+  const rows = visibleRows().filter(r => r.key.startsWith('kv-'));
+  return (
+    <div className="mb-4">
+      <FieldLabel>{t('Key visual')}</FieldLabel>
+      <div className="flex flex-col gap-3">
+        {rows.map(row => (
+          <div key={row.key} className="flex flex-col gap-1.5">
+            <p className="text-[11px] text-gray-400">{t(row.label)}</p>
+            <div
+              className="grid gap-2"
+              style={{ gridTemplateColumns: `repeat(${row.tiles.length}, minmax(0, 1fr))` }}
+            >
+              {row.tiles.map(tl => {
+                const a = getAsset(tl.id);
+                if (!a) return null;
+                const selected = value === a.id;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => onChange(a.id)}
+                    className="flex flex-col gap-1 text-left group/kv"
+                  >
+                    <span
+                      style={{ aspectRatio: '140 / 64' }}
+                      className={`block w-full rounded overflow-hidden bg-[#111] transition-shadow ${
+                        selected ? 'ring-2 ring-[#FD312E]' : 'ring-1 ring-transparent group-hover/kv:ring-gray-300'
+                      }`}
+                    >
+                      {!a.blank && (
+                        <img src={thumbUrl(a)} alt={a.label} loading="lazy" className="w-full h-full object-cover" draggable={false} />
+                      )}
+                    </span>
+                    <span
+                      className={`text-[10px] leading-[12px] text-center transition-colors ${
+                        selected ? 'text-[#FD312E] font-medium' : 'text-gray-500'
+                      }`}
+                    >
+                      {t(a.label)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fine positioning for the key visual.
+ *
+ * The board already frames each key visual for the hero, so this is a nudge on
+ * top of that — enough to slide the lockup clear of a long headline, not enough
+ * to re-compose the banner. Reset puts it back on the board's own placement.
+ */
+function NudgeField({
+  x,
+  y,
+  scale,
+  onChange,
+}: {
+  x: number;
+  y: number;
+  scale: number;
+  onChange: (next: { x: number; y: number; scale: number }) => void;
+}) {
+  const t = useT();
+  const clamp = (v: number) => Math.max(-HERO_NUDGE_LIMIT, Math.min(HERO_NUDGE_LIMIT, Math.round(v) || 0));
+  const clampScale = (v: number) =>
+    Math.round(Math.max(HERO_SCALE_MIN, Math.min(HERO_SCALE_MAX, v || 1)) * 100) / 100;
+  const step = (dx: number, dy: number) => onChange({ x: clamp(x + dx), y: clamp(y + dy), scale });
+
+  const Arrow = ({ dx, dy, label }: { dx: number; dy: number; label: string }) => (
+    <button
+      type="button"
+      onClick={() => step(dx, dy)}
+      className="h-7 rounded-md border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-800 transition-colors"
+      aria-label={label}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center mb-1">
+        <FieldLabel>{t('Position')}</FieldLabel>
+        <button
+          type="button"
+          onClick={() => onChange({ x: 0, y: 0, scale: 1 })}
+          disabled={x === 0 && y === 0 && scale === 1}
+          className="ml-auto -mt-1 text-[10px] font-medium text-gray-400 hover:text-[#FD312E] disabled:text-gray-300 disabled:cursor-default transition-colors"
+        >
+          {t('Reset')}
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        {/* 20px per click — a visible step at hero scale without overshooting. */}
+        <div className="grid grid-cols-3 gap-1 w-[92px] shrink-0">
+          <span />
+          <Arrow dx={0} dy={-20} label="↑" />
+          <span />
+          <Arrow dx={-20} dy={0} label="←" />
+          <span />
+          <Arrow dx={20} dy={0} label="→" />
+          <span />
+          <Arrow dx={0} dy={20} label="↓" />
+          <span />
+        </div>
+        <div className="flex-1 grid grid-cols-2 gap-2">
+          <label className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-400 w-2">X</span>
+            <input
+              type="number"
+              value={x}
+              onChange={e => onChange({ x: clamp(Number(e.target.value)), y, scale })}
+              className={`${INPUT_CLASS} tabular-nums`}
+            />
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-400 w-2">Y</span>
+            <input
+              type="number"
+              value={y}
+              onChange={e => onChange({ x, y: clamp(Number(e.target.value)), scale })}
+              className={`${INPUT_CLASS} tabular-nums`}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* Scale — a slider so the framing can be felt, with the multiplier shown
+          because a designer handing the file on will want the number. */}
+      <div className="flex items-center gap-2 mt-2.5">
+        <span className="text-[10px] text-gray-400 w-[38px] shrink-0">{t('Scale')}</span>
+        <input
+          type="range"
+          min={HERO_SCALE_MIN}
+          max={HERO_SCALE_MAX}
+          step={HERO_SCALE_STEP}
+          value={scale}
+          onChange={e => onChange({ x, y, scale: clampScale(Number(e.target.value)) })}
+          className="flex-1 accent-[#FD312E]"
+        />
+        <span className="text-[10px] text-gray-500 tabular-nums w-[38px] text-right shrink-0">
+          {scale.toFixed(2)}×
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: DealHeroState) => void }) {
   const t = useT();
   const set = (p: Partial<DealHeroState>) => onUpdate({ ...data, ...p });
+  // Only the PD Slot key visuals carry plates; everything else reports 0.
+  const plateCount = data.kvAsset ? productSlotCount(data.kvAsset) : 0;
   return (
     <div>
-      <ImageField label={t('Key visual')} value={data.kvImage} onChange={v => set({ kvImage: v })} aspectRatio={1509 / 750} />
+      <KeyVisualField value={data.kvAsset} onChange={id => set({ kvAsset: id })} />
+      <NudgeField
+        x={data.kvNudgeX}
+        y={data.kvNudgeY}
+        scale={data.kvScale ?? 1}
+        onChange={n => set({ kvNudgeX: n.x, kvNudgeY: n.y, kvScale: n.scale })}
+      />
       <ToggleField label={t('Eyebrow')} shown={data.showEyebrow} onShownChange={v => set({ showEyebrow: v })}>
         <input type="text" value={data.eyebrow} onChange={e => set({ eyebrow: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
@@ -295,6 +480,20 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
           className={`${INPUT_CLASS} resize-none`}
         />
       </ToggleField>
+
+      {/* The PD Slot key visuals ship with empty plates baked into the art;
+          this is the same product flow the Content Template Builder runs, so a
+          product cut out there behaves identically here. `-mx-5` cancels the
+          panel's own padding, since the editor brings its own. */}
+      {plateCount > 0 && (
+        <div className="-mx-5 mt-2 pt-4 border-t border-gray-100">
+          <ProductSlotsEditor
+            count={plateCount}
+            slots={data.products.length === plateCount ? data.products : emptyProductSlots(plateCount)}
+            onChange={next => set({ products: next })}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -328,6 +527,15 @@ function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d
           <ShowToggle checked={data.showCta} onChange={v => set({ showCta: v })} tone="group" />
         </div>
       </div>
+      <ToggleField label={t('Carousel controls')} shown={data.showCarousel} onShownChange={v => set({ showCarousel: v })}>
+        <input
+          type="text"
+          value={data.slideCount}
+          onChange={e => set({ slideCount: e.target.value })}
+          className={INPUT_CLASS}
+        />
+        <p className="text-[10px] text-gray-400 mt-0.5">{t('Total slides — shown as "1 / n".')}</p>
+      </ToggleField>
       <SectionDivider>{t('Cards')}</SectionDivider>
       {data.cards.map((card, i) => (
         <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
@@ -573,6 +781,9 @@ function DealCategoryNavPanel({ data, onUpdate }: { data: DealCategoryNavState; 
         <input type="text" value={data.resultsText} onChange={e => set({ resultsText: e.target.value })} className={`${INPUT_CLASS} mb-1.5`} />
         <input type="text" value={data.sortLabel} onChange={e => set({ sortLabel: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
+      <ToggleField label={t('Empty state')} shown={data.showEmptyText} onShownChange={v => set({ showEmptyText: v })}>
+        <input type="text" value={data.emptyText} onChange={e => set({ emptyText: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
       <SectionDivider>{t('Categories')}</SectionDivider>
       {data.items.map((item, i) => (
         <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
@@ -596,11 +807,8 @@ function DealSiteHeaderPanel({ data, onUpdate }: { data: DealSiteHeaderState; on
   return (
     <div>
       <p className="text-[11px] text-gray-400 leading-snug mb-3">
-        {t('The LG logo and the search / account / cart cluster are fixed site chrome.')}
+        {t('The LG logo and the account / cart icons are fixed site chrome.')}
       </p>
-      <ToggleField label={t('Business link')} shown={data.showBusinessLabel} onShownChange={v => set({ showBusinessLabel: v })}>
-        <input type="text" value={data.businessLabel} onChange={e => set({ businessLabel: e.target.value })} className={INPUT_CLASS} />
-      </ToggleField>
       <TextAreaField
         label={t('Global nav')}
         value={data.navItems}
@@ -608,6 +816,7 @@ function DealSiteHeaderPanel({ data, onUpdate }: { data: DealSiteHeaderState; on
         rows={8}
         hint={t('One nav item per line.')}
       />
+      <TextField label={t('Search placeholder')} value={data.searchLabel} onChange={v => set({ searchLabel: v })} />
       <ToggleField label={t('Breadcrumb')} shown={data.showBreadcrumb} onShownChange={v => set({ showBreadcrumb: v })}>
         <textarea value={data.breadcrumb} onChange={e => set({ breadcrumb: e.target.value })} rows={3} className={`${INPUT_CLASS} resize-none`} />
         <p className="text-[10px] text-gray-400 mt-0.5">{t('One crumb per line.')}</p>
@@ -616,7 +825,32 @@ function DealSiteHeaderPanel({ data, onUpdate }: { data: DealSiteHeaderState; on
   );
 }
 
-// ── 7. Site footer ────────────────────────────────────────────────────────────
+// ── 8. Membership CTA ─────────────────────────────────────────────────────────
+
+function DealMembershipPanel({ data, onUpdate }: { data: DealMembershipState; onUpdate: (d: DealMembershipState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealMembershipState>) => onUpdate({ ...data, ...p });
+  return (
+    <div>
+      <ImageField label={t('Banner image')} value={data.image} onChange={v => set({ image: v })} aspectRatio={1600 / 380} />
+      <TextAreaField
+        label={t('Headline')}
+        value={data.headline}
+        onChange={v => set({ headline: v })}
+        rows={3}
+        hint={t('Line break splits the headline.')}
+      />
+      <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
+        <textarea value={data.subCopy} onChange={e => set({ subCopy: e.target.value })} rows={2} className={`${INPUT_CLASS} resize-none`} />
+      </ToggleField>
+      <ToggleField label={t('Button')} shown={data.showCta} onShownChange={v => set({ showCta: v })}>
+        <input type="text" value={data.ctaText} onChange={e => set({ ctaText: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+    </div>
+  );
+}
+
+// ── 9. Site footer ────────────────────────────────────────────────────────────
 
 function DealSiteFooterPanel({ data, onUpdate }: { data: DealSiteFooterState; onUpdate: (d: DealSiteFooterState) => void }) {
   const t = useT();
@@ -712,5 +946,7 @@ export function DealModuleEditPanel({
       return <DealProductListPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-product-list', data: d })} />;
     case 'deal-category-nav':
       return <DealCategoryNavPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-category-nav', data: d })} />;
+    case 'deal-membership':
+      return <DealMembershipPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-membership', data: d })} />;
   }
 }

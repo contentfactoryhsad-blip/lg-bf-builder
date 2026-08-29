@@ -7,24 +7,40 @@ interface Props {
   onBack?: () => void;
   /** Right-aligned actions (buttons, badges, language picker, etc.). */
   right?: React.ReactNode;
+  /** Makes the LG logo + title a link back to the builder-picker home. */
+  onHome?: () => void;
 }
 
 /**
  * Shared 64px app header: Back pill (optional) + LG logo/title, both
  * left-aligned, with right-side actions.
  */
-export function AppHeader({ title, onBack, right }: Props) {
+export function AppHeader({ title, onBack, right, onHome }: Props) {
+  const brand = (
+    <>
+      <img src="/lg-logo.svg" alt="LG" style={{ height: 20, width: 'auto' }} draggable={false} />
+      <div className="w-px h-4 bg-gray-200" />
+      <span className="font-lgei font-bold text-[15px] text-gray-900" style={{ lineHeight: '20px' }}>
+        {title}
+      </span>
+    </>
+  );
   return (
     <header className="bg-white border-b border-gray-200 px-8 h-16 flex items-center justify-between gap-4 shrink-0">
       <div className="flex items-center gap-4 shrink-0">
         {onBack && <BackButton onClick={onBack} />}
-        <div className="flex items-center gap-2">
-          <img src="/lg-logo.svg" alt="LG" style={{ height: 20, width: 'auto' }} draggable={false} />
-          <div className="w-px h-4 bg-gray-200" />
-          <span className="font-lgei font-bold text-[15px] text-gray-900" style={{ lineHeight: '20px' }}>
-            {title}
-          </span>
-        </div>
+        {onHome ? (
+          <button
+            type="button"
+            onClick={onHome}
+            aria-label="Home"
+            className="flex items-center gap-2 rounded-md -mx-1 px-1 hover:opacity-70 transition-opacity"
+          >
+            {brand}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">{brand}</div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 shrink-0">{right}</div>

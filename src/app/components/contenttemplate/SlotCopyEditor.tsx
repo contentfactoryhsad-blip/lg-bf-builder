@@ -6,9 +6,8 @@
  * only a headline and CTA, for instance). Empty fields fall back to the Figma
  * placeholder so a slot never renders blank while you are still filling it in.
  */
-import React from 'react';
 import { useT } from '../../i18n/LanguageContext';
-import { ICON_ROW_STYLES, type IconRowStyle, type SlotLayers } from './lgcomSlots';
+import { ICON_ROW_STYLES, type IconRowStyle } from './lgcomSlots';
 
 export interface SlotCopy {
   eyebrow: string;
@@ -54,26 +53,26 @@ export function SlotCopyEditor({
   copy,
   onChange,
   onReset,
-  layers,
-  onLayersChange,
+  showIconRow,
+  onShowIconRowChange,
   iconStyle,
   onIconStyleChange,
-  showLayers,
+  showIconRowToggle,
 }: {
   channelLabel: string;
   copy: SlotCopy;
   onChange: (next: SlotCopy) => void;
   onReset: () => void;
-  layers: SlotLayers;
-  onLayersChange: (next: SlotLayers) => void;
+  showIconRow: boolean;
+  onShowIconRowChange: (next: boolean) => void;
   iconStyle: IconRowStyle;
   onIconStyleChange: (next: IconRowStyle) => void;
   /**
-   * LG.com only. The toggles strip the two hero sizes down to background +
-   * icons for the web upload; the paid channels ship the full composition, so
-   * they get plain labels and no icon row / indicator rows.
+   * LG.com only. The icon row exists on the two hero sizes of that channel and
+   * nowhere else, so the paid channels get the copy fields alone. Every other
+   * element is fixed — the panel writes copy, it does not compose the layout.
    */
-  showLayers: boolean;
+  showIconRowToggle: boolean;
 }) {
   const t = useT();
   const touched = Object.values(copy).some(v => v.trim() !== '');
@@ -91,20 +90,8 @@ export function SlotCopyEditor({
 
       {FIELDS.map(f => (
         <div key={f.key} className="flex flex-col gap-1">
-          {/* The on/off toggle sits inline with the label — every element row
-              reads the same way, whether it has an input box or not. */}
           <span className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              {showLayers && (
-                <input
-                  type="checkbox"
-                  checked={layers[f.key]}
-                  onChange={e => onLayersChange({ ...layers, [f.key]: e.target.checked })}
-                  className="w-4 h-4 accent-[#FD312E]"
-                />
-              )}
-              <span className="text-xs font-medium text-gray-700">{t(f.label)}</span>
-            </span>
+            <span className="text-xs font-medium text-gray-700">{t(f.label)}</span>
             {f.hint && <span className="text-[10px] text-gray-400">{t(f.hint)}</span>}
           </span>
           {f.multiline ? (
@@ -127,42 +114,36 @@ export function SlotCopyEditor({
         </div>
       ))}
 
-      {showLayers && (
+      {showIconRowToggle && (
       <div className="border-t border-gray-100 pt-4 flex flex-col gap-2">
-        {(['iconRow', 'indicator'] as const).map(key => (
-          <React.Fragment key={key}>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={layers[key]}
-                onChange={e => onLayersChange({ ...layers, [key]: e.target.checked })}
-                className="w-4 h-4 accent-[#FD312E]"
-              />
-              <span className="text-xs font-medium text-gray-700">
-                {t(key === 'iconRow' ? 'Icon row' : 'Indicator')}
-              </span>
-              <span className="text-[10px] text-gray-400">{t('1920×720 · 720×960')}</span>
-            </label>
-            {key === 'iconRow' && layers.iconRow && (
-              <div className="flex flex-wrap gap-1.5 pl-6">
-                {ICON_ROW_STYLES.map(st => (
-                  <button
-                    key={st.key}
-                    type="button"
-                    onClick={() => onIconStyleChange(st.key)}
-                    className={`px-2.5 py-1 rounded-full border text-[11px] transition-colors ${
-                      iconStyle === st.key
-                        ? 'border-[#FD312E] bg-[#FD312E]/8 text-[#FD312E]'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    {t(st.label)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </React.Fragment>
-        ))}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showIconRow}
+            onChange={e => onShowIconRowChange(e.target.checked)}
+            className="w-4 h-4 accent-[#FD312E]"
+          />
+          <span className="text-xs font-medium text-gray-700">{t('Icon row')}</span>
+          <span className="text-[10px] text-gray-400">{t('1920×720 · 720×960')}</span>
+        </label>
+        {showIconRow && (
+          <div className="flex flex-wrap gap-1.5 pl-6">
+            {ICON_ROW_STYLES.map(st => (
+              <button
+                key={st.key}
+                type="button"
+                onClick={() => onIconStyleChange(st.key)}
+                className={`px-2.5 py-1 rounded-full border text-[11px] transition-colors ${
+                  iconStyle === st.key
+                    ? 'border-[#FD312E] bg-[#FD312E]/8 text-[#FD312E]'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                {t(st.label)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       )}
 

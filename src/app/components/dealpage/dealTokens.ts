@@ -1,6 +1,6 @@
 /**
- * Deal Page design tokens — read straight off the Figma variables surfaced by
- * `get_design_context` on frame 1:1212, not eyeballed from a screenshot.
+ * Deal Page design tokens — measured on Figma `miJcDQgz0yJMskLE5a5HHj`, page
+ * "ExporttoFigma | www.lg.com | Deal Page", not eyeballed from a screenshot.
  *
  * The lg.com Deal Page runs a much flatter type scale than the Shop in Shop
  * modules: ONE heading size (56/60 regular) for every section title, banner
@@ -20,6 +20,12 @@ export const T_SMALL = { fontSize: 16, lineHeight: '20px', fontWeight: 400 } as 
 export const T_MICRO = { fontSize: 14, lineHeight: '20px', fontWeight: 400 } as const;
 /** Time Sale digits. `fontsize/80`. */
 export const T_DIGIT = { fontSize: 80, lineHeight: '80px', fontWeight: 400 } as const;
+/** Deal-card title — the one place the page runs 32px (LG EI Text SemiBold). */
+export const T_CARD_TITLE = { fontSize: 32, lineHeight: '36px', fontWeight: 600 } as const;
+/** Carousel counter "1 / 2" and the Time Sale unit labels. */
+export const T_COUNTER = { fontSize: 24, lineHeight: '28px', fontWeight: 400 } as const;
+/** Product sale price. */
+export const T_PRICE = { fontSize: 24, lineHeight: '24px', fontWeight: 600 } as const;
 
 export const W_SEMIBOLD = 600;
 
@@ -41,6 +47,10 @@ export const TEXT_STRIKE = '#646464';
 export const BTN_BORDER = '#94928D';
 /** `stroke/main` — tab-bar rules. */
 export const HAIRLINE = '#E1E2E5';
+/** Warm hairline under the header and around the deal-card band. */
+export const WARM_RULE = '#CBC8C2';
+/** Placeholder ink inside the header's search pill. */
+export const SEARCH_INK = '#6B6B6B';
 /** Base fill under a deal card's art (Figma 1:1310). */
 export const CARD_BASE = '#505050';
 /** `surface/card-orange` + `orange/40` — the Free Shipping pill. */

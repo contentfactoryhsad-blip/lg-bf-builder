@@ -82,8 +82,12 @@ import { AppHeader } from '../AppHeader';
 import type { DraftRecord } from '../../utils/draftStore';
 import { LgcomSlotPreview } from './LgcomSlotPreview';
 import { PaidSlotPreview } from './PaidSlotPreview';
-import { paidSlotsFor } from './paidSlots';
-import { DEFAULT_LAYERS, LGCOM_SLOTS, productSlotCount, type IconRowStyle, type SlotLayers } from './lgcomSlots';
+import { paidSlotsFor, type PaidSlot } from './paidSlots';
+import { DEFAULT_ICON_ROW, LGCOM_SLOTS, artFor, bareOnExport, iconRowStyle, overlayUrl, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
+import { PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
+import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
+import { acquireSaveTarget } from '../../utils/fileSaver';
+import { renderMotionCutLive } from './exportMotion';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
 import {
@@ -119,11 +123,17 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [sizeKey, setSizeKey] = useState<string | null>(null);
 
   const [copy, setCopy] = useState<SlotCopy>(EMPTY_COPY);
-  /** Which optional elements the LG.com sizes draw — see SlotLayers. */
-  const [layers, setLayers] = useState<SlotLayers>(DEFAULT_LAYERS);
+  /** The icon row is the only element that can be switched off — see DEFAULT_ICON_ROW. */
+  const [showIconRow, setShowIconRow] = useState(DEFAULT_ICON_ROW);
   const [iconStyle, setIconStyle] = useState<IconRowStyle>('solid-white');
   /** Products keyed by asset — switching key visual keeps each one's fills. */
   const [products, setProducts] = useState<Record<string, ProductSlots>>({});
+  /** Plate fill on the paid boards; starts on the Figma value. */
+  const [plateColor, setPlateColor] = useState(PD_PLATE_FILL);
+  /** The one size mounted in the hidden export host, and how far along we are. */
+  const [renderSlot, setRenderSlot] = useState<LgcomSlot | PaidSlot | null>(null);
+  const [exportedCount, setExportedCount] = useState<number | null>(null);
+  const exportHost = useRef<HTMLDivElement>(null);
 
   const asset = getAsset(selectedId);
   const channel = channelKey ? CHANNELS.find(c => c.key === channelKey) : undefined;
@@ -134,8 +144,14 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   // than implying a default pick the operator never made.
   const showBanners = !!asset && outputKind === 'channel' && !!channelKey;
   const plateCount = asset ? productSlotCount(asset.id) : 0;
+  /** PD Slot key visuals are the only ones with product plates, and the plates
+   *  take the room the benefit icons would need — so those assets ship without
+   *  an icon row and the control never appears for them. */
+  const iconRowAvailable = plateCount === 0;
   const assetProducts = asset ? products[asset.id] ?? emptyProductSlots(plateCount) : undefined;
   const hasSlots = showBanners && channelKey === 'lgcom';
+  /** Only the paid boards draw their plates, so only they take a colour. */
+  const plateColorEditable = showBanners && channelKey !== 'lgcom' && !!asset && isPdSlotAsset(asset.id);
 
   const left = useDragWidth('ctb.leftW', 320, 256, 520);
   const right = useDragWidth('ctb.rightW', 384, 300, 640);
@@ -150,11 +166,86 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     }
   };
 
+  /**
+   * One ZIP for the chosen key visual on the chosen channel. Sizes render one at
+   * a time through the hidden host so each gets a full layout pass at its true
+   * pixel size; a canvas-scaled screenshot would ship blurry text.
+   */
+  async function handleDownload() {
+    if (!asset || !channelKey || exportedCount !== null) return;
+    const list: (LgcomSlot | PaidSlot)[] =
+      channelKey === 'lgcom' ? LGCOM_SLOTS : (PAID_ASSETS.has(asset.id) ? paidSlotsFor(channelKey) : []);
+    if (list.length === 0) return;
+
+    // ask for the save location first, while the click still counts as a user
+    // gesture — asking after the export made the picker fail and the browser
+    // ask a second time through its own download prompt
+    const save = await acquireSaveTarget(`LG-BF-${asset.id}-${channelKey}-${dateTag()}.zip`);
+    if (!save) return; // cancelled
+
+    setExportedCount(0);
+    const entries: ZipEntry[] = [];
+    const failed: string[] = [];
+    try {
+      await document.fonts.ready;
+      for (let i = 0; i < list.length; i++) {
+        const slot = list[i];
+        setRenderSlot(slot);
+        // let React paint the freshly mounted size before photographing it
+        await new Promise(r => setTimeout(r, 220));
+        // the two bare hero placements ship as video when the asset has one
+        const asMotion = 'id' in slot && bareOnExport(slot.id) && !!asset.motion;
+        if (asMotion) {
+          const lg = slot as LgcomSlot;
+          const iconOn = showIconRow && iconRowAvailable && !!lg.iconRow;
+          // cut live from the current placement — a failure is reported, never
+          // papered over with a stale file
+          try {
+            const art = artFor(asset.id, lg.id);
+            const src = motionUrl(asset);
+            if (!art || !src) throw new Error('no art placement or motion source');
+            const blob = await renderMotionCutLive(src, {
+              w: slot.w,
+              h: slot.h,
+              art: { x: art.x, y: art.y, size: art.size },
+              iconRow: iconOn
+                ? { url: overlayUrl(iconRowStyle(iconStyle).file), ...lg.iconRow! }
+                : undefined,
+            });
+            entries.push({ name: `${asset.id}-${channelKey}-${slot.w}x${slot.h}.mp4`, blob });
+          } catch (err) {
+            console.error('[ContentTemplate] motion cut failed', err);
+            failed.push(`${slot.w}×${slot.h} (mp4)`);
+          }
+        } else {
+          const host = exportHost.current;
+          if (host) {
+            const blob = await captureBox(host, slot.w, slot.h);
+            if (blob) entries.push({ name: `${asset.id}-${channelKey}-${slot.w}x${slot.h}.png`, blob });
+          }
+        }
+        setExportedCount(i + 1);
+      }
+      if (entries.length) await save(await buildZip(entries));
+      if (failed.length) {
+        window.alert(`${t('Some files could not be rendered and were left out of the ZIP:')}\n${failed.join('\n')}`);
+      }
+    } catch (err) {
+      console.error('[ContentTemplate] export failed', err);
+    } finally {
+      setRenderSlot(null);
+      setExportedCount(null);
+    }
+  }
+
+  const exporting = exportedCount !== null;
+
   return (
     <div className="flex flex-col h-screen bg-[#f8f7f5]">
       <AppHeader
         title={t('Content Template Builder')}
         onBack={onBack}
+        onHome={() => onRailNavigate('home')}
         right={
           <>
             <button
@@ -166,7 +257,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
             </button>
             <button
               type="button"
-              disabled={!asset}
+              onClick={() => void handleDownload()}
+              disabled={!asset || !showBanners || exporting}
               className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border transition-colors border-[#FD312E] text-[#FD312E] hover:bg-[#FD312E] hover:text-white disabled:opacity-40 disabled:pointer-events-none"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -178,7 +270,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   strokeLinejoin="round"
                 />
               </svg>
-              {t('Download ZIP')}
+              {exporting ? `${exportedCount} / ${channelKey === 'lgcom' ? LGCOM_SLOTS.length : paidSlotsFor(channelKey ?? '').length}` : t('Download ZIP')}
             </button>
           </>
         }
@@ -309,7 +401,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               asset={asset}
               copy={copy}
               products={assetProducts}
-              layers={layers}
+              plateColor={plateColor}
+              showIconRow={showIconRow && iconRowAvailable}
               iconStyle={iconStyle}
             />
           ) : (
@@ -338,17 +431,19 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 copy={copy}
                 onChange={setCopy}
                 onReset={() => setCopy(EMPTY_COPY)}
-                layers={layers}
-                onLayersChange={setLayers}
+                showIconRow={showIconRow}
+                onShowIconRowChange={setShowIconRow}
                 iconStyle={iconStyle}
                 onIconStyleChange={setIconStyle}
-                showLayers={channelKey === 'lgcom'}
+                showIconRowToggle={channelKey === 'lgcom' && iconRowAvailable}
               />
               {plateCount > 0 && assetProducts && (
                 <ProductSlotsEditor
                   count={plateCount}
                   slots={assetProducts}
                   onChange={next => setProducts(prev => ({ ...prev, [asset.id]: next }))}
+                  color={plateColor}
+                  onColorChange={plateColorEditable ? setPlateColor : undefined}
                 />
               )}
             </>
@@ -374,6 +469,40 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           )}
         </aside>
       </div>
+
+      {/* Off-screen render host — one size at a time, at true pixel size. The
+          preview boxes are rounded on canvas; a delivered file is not. */}
+      {renderSlot && asset && (
+        <div
+          ref={exportHost}
+          className="ctb-export-host"
+          style={{ position: 'fixed', left: -99999, top: 0, pointerEvents: 'none' }}
+          aria-hidden
+        >
+          <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important}'}</style>
+          {'id' in renderSlot ? (
+            <LgcomSlotPreview
+              slot={renderSlot}
+              asset={asset}
+              scale={1}
+              copy={copy}
+              products={assetProducts}
+              showIconRow={showIconRow && iconRowAvailable}
+              iconStyle={iconStyle}
+              bare={bareOnExport(renderSlot.id)}
+            />
+          ) : (
+            <PaidSlotPreview
+              slot={renderSlot}
+              asset={asset}
+              scale={1}
+              copy={copy}
+              products={assetProducts}
+              plateColor={plateColor}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -504,7 +633,19 @@ function PreviewBox({ asset }: { asset: ContentAsset | undefined }) {
  * the paid channels have no compositions yet and say so rather than guessing.
  */
 /** Assets with a paid-media board in Figma. */
-const PAID_ASSETS = new Set(['kv-main', 'kv-main-character']);
+/**
+ * Which key visuals have paid boards behind them. The two Key Visual _Main
+ * artworks share the `PAID_SLOTS` layout; the rest override it per size from
+ * `paidBoards.ts` — the PD Slot pair with plates, PD Centric without.
+ */
+const PAID_ASSETS = new Set([
+  // Teasing is the Main artwork with a motion cut, so it ships the same paid set
+  'kv-main', 'kv-main-character', 'ad-teasing',
+  'kv-product-slot', 'kv-product-slot-character',
+  'kv-product-centric-1', 'kv-product-centric-2',
+  'deal-type-bundle', 'deal-type-time-sale', 'deal-type-gift', 'deal-type-hot-deal',
+  'ad-joy-ryder', 'ad-benefit',
+]);
 
 function ChannelSlots({
   channelKey,
@@ -512,7 +653,8 @@ function ChannelSlots({
   asset,
   copy,
   products,
-  layers,
+  plateColor,
+  showIconRow,
   iconStyle,
 }: {
   channelKey: string;
@@ -520,7 +662,8 @@ function ChannelSlots({
   asset: ContentAsset | undefined;
   copy: SlotCopy;
   products?: ProductSlots;
-  layers: SlotLayers;
+  plateColor: string;
+  showIconRow: boolean;
   iconStyle: IconRowStyle;
 }) {
   const t = useT();
@@ -548,7 +691,15 @@ function ChannelSlots({
       {paid.length > 0 ? (
         <div className="flex flex-col gap-7 pb-10">
           {paid.map(slot => (
-            <PaidSlotPreview key={slot.key} slot={slot} asset={asset!} scale={paidScale} copy={copy} />
+            <PaidSlotPreview
+              key={slot.key}
+              slot={slot}
+              asset={asset!}
+              scale={paidScale}
+              copy={copy}
+              products={products}
+              plateColor={plateColor}
+            />
           ))}
         </div>
       ) : slots.length === 0 ? (
@@ -569,7 +720,7 @@ function ChannelSlots({
               scale={slotScale}
               copy={copy}
               products={products}
-              layers={layers}
+              showIconRow={showIconRow}
               iconStyle={iconStyle}
             />
           ))}
