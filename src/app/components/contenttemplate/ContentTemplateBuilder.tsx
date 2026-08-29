@@ -244,7 +244,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   return (
     <div className="flex flex-col h-screen bg-[#f8f7f5]">
       <AppHeader
-        title={t('Content Template Builder')}
+        title={t('Content Banner Builder')}
         onBack={onBack}
         onHome={() => onRailNavigate('home')}
         right={

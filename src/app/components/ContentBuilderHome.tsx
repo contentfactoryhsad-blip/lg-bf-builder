@@ -72,7 +72,7 @@ export function ContentBuilderHome({ onSelectContentTemplate, onSelectPromotionP
               >
                 <img
                   src="/content-template/home-card.png"
-                  alt={t('Content Template Builder')}
+                  alt={t('Content Banner Builder')}
                   className="w-full h-full object-cover"
                   draggable={false}
                 />
@@ -85,7 +85,10 @@ export function ContentBuilderHome({ onSelectContentTemplate, onSelectPromotionP
                     className="font-lgei font-bold text-[15px] text-gray-900 group-hover:text-[#FD312E] transition-colors"
                     style={{ lineHeight: '20px' }}
                   >
-                    {t('Content Template Builder')}
+                    {t('Content Banner Builder')}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5" style={{ lineHeight: '16px' }}>
+                    {t('Create a Black Friday promotion banner using key visuals, assets, and videos.')}
                   </p>
                 </div>
                 <Chevron />

@@ -23,7 +23,7 @@ interface Props {
 
 const ITEMS: { key: NavRailKey; label: string; Icon: typeof Home }[] = [
   { key: 'home', label: 'Home', Icon: Home },
-  { key: 'content-template', label: 'Content Template Builder', Icon: LayoutTemplate },
+  { key: 'content-template', label: 'Content Banner Builder', Icon: LayoutTemplate },
   { key: 'deal-page', label: 'Promotion Page Builder', Icon: Tag },
   // "shop-in-shop" ("ex") is reference-only now - reachable in code, not in the UI.
 ];
