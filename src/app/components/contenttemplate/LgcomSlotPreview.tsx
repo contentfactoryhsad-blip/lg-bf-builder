@@ -17,6 +17,7 @@ import { useT } from '../../i18n/LanguageContext';
 import { artUrl, fullUrl, motionUrl, type ContentAsset } from './contentTemplateAssets';
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import type { ProductSlots } from './ProductSlotsEditor';
+import { PD_PLATE_FILL } from './paidBoards';
 import {
   CTA_COLOR,
   iconRowStyle,
@@ -80,6 +81,7 @@ export function LgcomSlotPreview({
   scale,
   copy,
   products,
+  plateColor = PD_PLATE_FILL,
   showIconRow,
   iconStyle,
   bare = false,
@@ -91,6 +93,13 @@ export function LgcomSlotPreview({
   copy: SlotCopy;
   /** One product per plate on the PD Slot key visuals; empty plates stay bare. */
   products?: ProductSlots;
+  /**
+   * Fill painted over the plates baked into the PD Slot artwork. `SLOT_BOXES`
+   * was measured off those baked plates, so the paint sits exactly on top of
+   * them — which is what lets the colour change at all on LG.com, where the
+   * plate is part of the image.
+   */
+  plateColor?: string;
   /**
    * Whether to draw the benefit icons. Only the two hero sizes carry an
    * `iconRow` box, so the other four ignore this. Every other element is part
@@ -195,6 +204,7 @@ export function LgcomSlotPreview({
                   width: box.w * S,
                   height: box.h * S,
                   borderRadius: box.r * S,
+                  background: plateColor,
                   overflow: 'hidden',
                 }}
               >

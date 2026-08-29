@@ -151,7 +151,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const assetProducts = asset ? products[asset.id] ?? emptyProductSlots(plateCount) : undefined;
   const hasSlots = showBanners && channelKey === 'lgcom';
   /** Only the paid boards draw their plates, so only they take a colour. */
-  const plateColorEditable = showBanners && channelKey !== 'lgcom' && !!asset && isPdSlotAsset(asset.id);
+  const plateColorEditable =
+    showBanners && !!asset && (channelKey !== 'lgcom' ? isPdSlotAsset(asset.id) : plateCount > 0);
 
   const left = useDragWidth('ctb.leftW', 320, 256, 520);
   const right = useDragWidth('ctb.rightW', 384, 300, 640);
@@ -248,13 +249,17 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         onHome={() => onRailNavigate('home')}
         right={
           <>
-            <button
-              type="button"
-              disabled
-              className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border border-gray-300 text-gray-600 disabled:opacity-40 disabled:pointer-events-none"
-            >
-              {t('Save for Later')}
-            </button>
+            {/* Save for Later is parked, not removed — flip SHOW_SAVE_FOR_LATER
+                when the draft flow for this builder lands. */}
+            {SHOW_SAVE_FOR_LATER && (
+              <button
+                type="button"
+                disabled
+                className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border border-gray-300 text-gray-600 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                {t('Save for Later')}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => void handleDownload()}
@@ -487,6 +492,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               scale={1}
               copy={copy}
               products={assetProducts}
+              plateColor={plateColor}
               showIconRow={showIconRow && iconRowAvailable}
               iconStyle={iconStyle}
               bare={bareOnExport(renderSlot.id)}
@@ -638,6 +644,9 @@ function PreviewBox({ asset }: { asset: ContentAsset | undefined }) {
  * artworks share the `PAID_SLOTS` layout; the rest override it per size from
  * `paidBoards.ts` — the PD Slot pair with plates, PD Centric without.
  */
+/** Parked header button — hidden for now, likely to return with the draft flow. */
+const SHOW_SAVE_FOR_LATER = false;
+
 const PAID_ASSETS = new Set([
   // Teasing is the Main artwork with a motion cut, so it ships the same paid set
   'kv-main', 'kv-main-character', 'ad-teasing',
@@ -720,6 +729,7 @@ function ChannelSlots({
               scale={slotScale}
               copy={copy}
               products={products}
+              plateColor={plateColor}
               showIconRow={showIconRow}
               iconStyle={iconStyle}
             />

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useT } from '../i18n/LanguageContext';
-import { LanguageSelector } from '../i18n/LanguageSelector';
 import { NavRail, type NavRailKey } from './NavRail';
 import { AppHeader } from './AppHeader';
 import type { DraftRecord } from '../utils/draftStore';
@@ -36,7 +35,7 @@ export function ContentBuilderHome({ onSelectContentTemplate, onSelectPromotionP
 
   return (
     <div className="min-h-screen bg-[#f8f7f5] flex flex-col">
-      <AppHeader title={t('LG Black Friday')} right={<LanguageSelector />} />
+      <AppHeader title={t('LG Black Friday')} />
 
       {/* Content */}
       <div className="flex-1 flex min-h-0">
