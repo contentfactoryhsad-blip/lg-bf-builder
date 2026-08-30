@@ -13,10 +13,11 @@ import React, { useRef, useState } from 'react';
 import { useT } from '../../i18n/LanguageContext';
 import { ShowToggle } from '../brandshop/bigPromoCommon';
 import { ImageCropModal } from '../ImageCropModal';
-import { getAsset, thumbUrl, visibleRows } from '../contenttemplate/contentTemplateAssets';
+import { assetsInGroup, getAsset, thumbUrl, visibleRows } from '../contenttemplate/contentTemplateAssets';
 import { productSlotCount } from '../contenttemplate/lgcomSlots';
 import { ProductSlotsEditor, emptyProductSlots } from '../contenttemplate/ProductSlotsEditor';
-import { HERO_NUDGE_LIMIT, HERO_SCALE_MAX, HERO_SCALE_MIN, HERO_SCALE_STEP } from './dealHeroArt';
+import { HERO_MOTION_ID, HERO_NUDGE_LIMIT, HERO_SCALE_MAX, HERO_SCALE_MIN, HERO_SCALE_STEP } from './dealHeroArt';
+import { PROMO_KV_ROWS, PROMO_SLOT, promoArtHasSlots, DEAL_KV_TILES } from './dealBannerArt';
 import {
   type DealEditState,
   type DealSiteHeaderState,
@@ -27,26 +28,21 @@ import {
   type DealCardItem,
   type DealTabNavState,
   type DealPromoBannerState,
-  type DealBannerLayout,
+  type CountdownFields,
   type DealBannerSize,
-  type DealTimeSaleState,
   type DealProductListState,
   type DealProductItem,
   type DealCategoryNavState,
   type DealCategoryNavItem,
-  type DealMembershipState,
-  dealCardDefaults,
-  dealProductDefaultItem,
-  dealCategoryNavDefaults,
+  dealProductItemFor,
+  dealProductSetItems,
+  DEAL_PRODUCT_SETS,
+  type DealProductSetKey,
   dealFooterColumnDefaults,
   DEAL_FOOTER_COLUMN_MIN,
   DEAL_FOOTER_COLUMN_MAX,
-  DEAL_CARD_MIN,
-  DEAL_CARD_MAX,
   DEAL_PRODUCT_MIN,
   DEAL_PRODUCT_MAX,
-  DEAL_CATEGORY_NAV_MIN,
-  DEAL_CATEGORY_NAV_MAX,
 } from './dealEditStates';
 
 // ── Shared UI atoms ───────────────────────────────────────────────────────────
@@ -262,6 +258,42 @@ function CountSelector({
 }
 
 /**
+ * The countdown unit editor (value + label per row) — shared by the hero and
+ * the deal banner, whose states both carry `CountdownFields`. Mount it inside
+ * a ToggleField bound to `showCountdown`.
+ */
+function CountdownEditor<T extends CountdownFields>({ data, onChange }: { data: T; onChange: (p: Partial<CountdownFields>) => void }) {
+  const t = useT();
+  const units = [
+    { v: 'days', l: 'dayLabel', label: t('Day') },
+    { v: 'hours', l: 'hourLabel', label: t('Hour') },
+    { v: 'minutes', l: 'minuteLabel', label: t('Minute') },
+    { v: 'seconds', l: 'secondLabel', label: t('Second') },
+  ] as Array<{ v: keyof CountdownFields; l: keyof CountdownFields; label: string }>;
+  return (
+    <>
+      {units.map(u => (
+        <div key={u.v} className="flex gap-1.5 mb-1.5 last:mb-0 items-center">
+          <span className="text-[10px] text-gray-400 w-12 shrink-0">{u.label}</span>
+          <input
+            type="text"
+            value={data[u.v] as string}
+            onChange={e => onChange({ [u.v]: e.target.value } as Partial<CountdownFields>)}
+            className={`${INPUT_CLASS} w-16 shrink-0 text-center`}
+          />
+          <input
+            type="text"
+            value={data[u.l] as string}
+            onChange={e => onChange({ [u.l]: e.target.value } as Partial<CountdownFields>)}
+            className={INPUT_CLASS}
+          />
+        </div>
+      ))}
+    </>
+  );
+}
+
+/**
  * Grow/shrink a list of editable items, restoring the curated defaults by
  * position on the way back up — same behaviour as the Shop in Shop panels'
  * count controls.
@@ -294,6 +326,8 @@ function KeyVisualField({
 }) {
   const t = useT();
   const rows = visibleRows().filter(r => r.key.startsWith('kv-'));
+  const motionSelected = value === HERO_MOTION_ID;
+  const mainAsset = getAsset('kv-main');
   return (
     <div className="mb-4">
       <FieldLabel>{t('Key visual')}</FieldLabel>
@@ -305,10 +339,13 @@ function KeyVisualField({
               className="grid gap-2"
               style={{ gridTemplateColumns: `repeat(${row.tiles.length}, minmax(0, 1fr))` }}
             >
-              {row.tiles.map(tl => {
+              {row.tiles.map((tl, i) => {
                 const a = getAsset(tl.id);
                 if (!a) return null;
                 const selected = value === a.id;
+                // The registry's captionFromIndex: the first tile IS the row
+                // title, so only the variants after it get a caption.
+                const captioned = i >= (row.captionFromIndex ?? 0);
                 return (
                   <button
                     key={a.id}
@@ -326,19 +363,49 @@ function KeyVisualField({
                         <img src={thumbUrl(a)} alt={a.label} loading="lazy" className="w-full h-full object-cover" draggable={false} />
                       )}
                     </span>
-                    <span
-                      className={`text-[10px] leading-[12px] text-center transition-colors ${
-                        selected ? 'text-[#FD312E] font-medium' : 'text-gray-500'
-                      }`}
-                    >
-                      {t(a.label)}
-                    </span>
+                    {captioned && (
+                      <span
+                        className={`text-[10px] leading-[12px] text-center transition-colors ${
+                          selected ? 'text-[#FD312E] font-medium' : 'text-gray-500'
+                        }`}
+                      >
+                        {t(a.label)}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
         ))}
+
+        {/* KEY VISUAL_Motion — kv-main's animated master, framed exactly like
+            Main. One tile of its own under the three artwork rows. */}
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[11px] text-gray-400">{t('KEY VISUAL_Motion')}</p>
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+            <button type="button" onClick={() => onChange(HERO_MOTION_ID)} className="flex flex-col gap-1 text-left group/kv">
+              <span
+                style={{ aspectRatio: '140 / 64' }}
+                className={`relative block w-full rounded overflow-hidden bg-[#111] transition-shadow ${
+                  motionSelected ? 'ring-2 ring-[#FD312E]' : 'ring-1 ring-transparent group-hover/kv:ring-gray-300'
+                }`}
+              >
+                {mainAsset && (
+                  <img src={thumbUrl(mainAsset)} alt="" loading="lazy" className="w-full h-full object-cover" draggable={false} />
+                )}
+                {/* Play badge — this tile is the video, not another artwork. */}
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-black/55">
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M1.5 0.8v6.4L7 4z" fill="#fff" />
+                    </svg>
+                  </span>
+                </span>
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -462,6 +529,7 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
         scale={data.kvScale ?? 1}
         onChange={n => set({ kvNudgeX: n.x, kvNudgeY: n.y, kvScale: n.scale })}
       />
+      <SectionDivider>{t('Copy')}</SectionDivider>
       <ToggleField label={t('Eyebrow')} shown={data.showEyebrow} onShownChange={v => set({ showEyebrow: v })}>
         <input type="text" value={data.eyebrow} onChange={e => set({ eyebrow: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
@@ -479,6 +547,12 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
           rows={2}
           className={`${INPUT_CLASS} resize-none`}
         />
+      </ToggleField>
+
+      {/* The countdown the board hangs under the hero copy (6236:143805). */}
+      <SectionDivider>{t('Countdown')}</SectionDivider>
+      <ToggleField label={t('Time countdown')} shown={data.showCountdown} onShownChange={v => set({ showCountdown: v })}>
+        <CountdownEditor data={data} onChange={p => set(p)} />
       </ToggleField>
 
       {/* The PD Slot key visuals ship with empty plates baked into the art;
@@ -500,6 +574,57 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
 
 // ── 2. Deal cards ─────────────────────────────────────────────────────────────
 
+/**
+ * Card-art picker — the four deal-type campaign artworks from the Content
+ * Template registry, in the same 4-across tile row that builder's rail uses.
+ * Cards swap between these; there is no upload here, so a new deal artwork
+ * added to the registry appears in every card's picker automatically.
+ */
+function DealArtField({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (id: string) => void;
+}) {
+  const t = useT();
+  const assets = assetsInGroup('deal-type');
+  return (
+    <div className="mb-3">
+      <FieldLabel>{t('Card image')}</FieldLabel>
+      <div className="grid grid-cols-4 gap-2">
+        {assets.map(a => {
+          const selected = value === a.id;
+          return (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => onChange(a.id)}
+              className="flex flex-col gap-1 text-left group/da"
+            >
+              <span
+                style={{ aspectRatio: '1 / 1' }}
+                className={`block w-full rounded overflow-hidden bg-[#111] transition-shadow ${
+                  selected ? 'ring-2 ring-[#FD312E]' : 'ring-1 ring-transparent group-hover/da:ring-gray-300'
+                }`}
+              >
+                <img src={thumbUrl(a)} alt={a.label} loading="lazy" className="w-full h-full object-cover" draggable={false} />
+              </span>
+              <span
+                className={`text-[10px] leading-[12px] text-center transition-colors ${
+                  selected ? 'text-[#FD312E] font-medium' : 'text-gray-500'
+                }`}
+              >
+                {t(a.label)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d: DealCardsState) => void }) {
   const t = useT();
   const set = (p: Partial<DealCardsState>) => onUpdate({ ...data, ...p });
@@ -514,13 +639,6 @@ function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d
       <ToggleField label={t('Section title')} shown={data.showSectionTitle} onShownChange={v => set({ showSectionTitle: v })}>
         <input type="text" value={data.sectionTitle} onChange={e => set({ sectionTitle: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
-      <CountSelector
-        label={t('Number of cards')}
-        min={DEAL_CARD_MIN}
-        max={DEAL_CARD_MAX}
-        value={data.cards.length}
-        onChange={n => set({ cards: resizeList(data.cards, n, i => dealCardDefaults(t)[i] ?? { image: null, title: t('New deal'), ctaText: t('Shop now') }) })}
-      />
       <div className="flex items-center mb-3">
         <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{t('Card button')}</p>
         <div className="ml-auto">
@@ -542,7 +660,9 @@ function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d
           <p className="text-[11px] font-semibold text-gray-500 mb-2">
             {t('Card')} {i + 1}
           </p>
-          <ImageField label={t('Card image')} value={card.image} onChange={v => updateCard(i, { ...card, image: v })} objectFit="contain" />
+          {/* Picking an artwork clears any legacy uploaded/baked image so the
+              old render can't linger underneath the new selection. */}
+          <DealArtField value={card.asset} onChange={id => updateCard(i, { ...card, asset: id, image: null })} />
           <TextField label={t('Title')} value={card.title} onChange={v => updateCard(i, { ...card, title: v })} />
           {data.showCta && (
             <TextField label={t('Button text')} value={card.ctaText} onChange={v => updateCard(i, { ...card, ctaText: v })} />
@@ -594,102 +714,149 @@ function DealTabNavPanel({ data, onUpdate }: { data: DealTabNavState; onUpdate: 
 
 // ── 4. Promotion banner ───────────────────────────────────────────────────────
 
-const BANNER_LAYOUTS: DealBannerLayout[] = ['Art right', 'Art left'];
-const BANNER_SIZES: DealBannerSize[] = ['Large', 'Standard'];
-
-function DealPromoBannerPanel({ data, onUpdate }: { data: DealPromoBannerState; onUpdate: (d: DealPromoBannerState) => void }) {
+/**
+ * Shared by the 400-tall promotion banner and the 350-tall deal banner — the
+ * module type owns the height now, so the old "Banner height" picker is gone
+ * and `size` only feeds the crop aspect. The "Art right / Art left" layout
+ * picker was retired too (2026-08-30): banners run right-art only, as the
+ * board draws them. `DealBannerLayout` stays on the state for old drafts, but
+ * restore normalises it back to 'Art right'.
+ */
+function DealPromoBannerPanel({
+  data,
+  size,
+  onUpdate,
+}: {
+  data: DealPromoBannerState;
+  size: DealBannerSize;
+  onUpdate: (d: DealPromoBannerState) => void;
+}) {
   const t = useT();
   const set = (p: Partial<DealPromoBannerState>) => onUpdate({ ...data, ...p });
   return (
     <div>
-      <div className="mb-3">
-        <FieldLabel>{t('Layout')}</FieldLabel>
-        <div className="flex gap-1">
-          {BANNER_LAYOUTS.map(l => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => set({ layout: l })}
-              className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                data.layout === l ? 'bg-[#FD312E] border-[#FD312E] text-white' : 'border-gray-200 text-gray-500 hover:border-gray-400'
-              }`}
-            >
-              {t(l)}
-            </button>
-          ))}
+      {size === 'Large' ? (
+        // The 400 promotion banner picks its art like the hero does — the four
+        // Promotion Banner_* variants off the board, not an upload. Same row
+        // structure as the hero picker: the first tile of each row IS the row
+        // title, so only the variants after it get a caption.
+        <div className="mb-4">
+          <FieldLabel>{t('Key visual')}</FieldLabel>
+          <div className="flex flex-col gap-3">
+            {PROMO_KV_ROWS.map(row => (
+              <div key={row.label} className="flex flex-col gap-1.5">
+                <p className="text-[11px] text-gray-400">{t(row.label)}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {row.tiles.map((tl, i) => {
+                    const a = getAsset(tl.id);
+                    if (!a) return null;
+                    const selected = data.kvAsset === a.id;
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => set({ kvAsset: a.id })}
+                        className="flex flex-col gap-1 text-left group/pkv"
+                      >
+                        <span
+                          style={{ aspectRatio: '140 / 64' }}
+                          className={`block w-full rounded overflow-hidden bg-[#111] transition-shadow ${
+                            selected ? 'ring-2 ring-[#FD312E]' : 'ring-1 ring-transparent group-hover/pkv:ring-gray-300'
+                          }`}
+                        >
+                          <img src={thumbUrl(a)} alt={a.label} loading="lazy" className="w-full h-full object-cover" draggable={false} />
+                        </span>
+                        {i >= row.captionFromIndex && (
+                          <span
+                            className={`text-[10px] leading-[12px] text-center transition-colors ${
+                              selected ? 'text-[#FD312E] font-medium' : 'text-gray-500'
+                            }`}
+                          >
+                            {t(a.label)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="mb-3">
-        <FieldLabel>{t('Banner height')}</FieldLabel>
-        <div className="flex gap-1">
-          {BANNER_SIZES.map(sz => (
-            <button
-              key={sz}
-              type="button"
-              onClick={() => set({ size: sz })}
-              className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
-                data.size === sz ? 'bg-[#FD312E] border-[#FD312E] text-white' : 'border-gray-200 text-gray-500 hover:border-gray-400'
-              }`}
-            >
-              {t(sz)} · {sz === 'Large' ? 400 : 320}
-            </button>
-          ))}
+      ) : (
+        // The deal banner picks between the four Deal Banner_* types — the
+        // same four campaign artworks the deal cards use, as tiles.
+        <div className="mb-3">
+          <FieldLabel>{t('Key visual')}</FieldLabel>
+          <div className="grid grid-cols-4 gap-2">
+            {DEAL_KV_TILES.map(tl => {
+              const a = getAsset(tl.id);
+              if (!a) return null;
+              const selected = data.kvAsset === a.id;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => set({ kvAsset: a.id })}
+                  className="flex flex-col gap-1 text-left group/dkv"
+                >
+                  <span
+                    style={{ aspectRatio: '1 / 1' }}
+                    className={`block w-full rounded overflow-hidden bg-[#111] transition-shadow ${
+                      selected ? 'ring-2 ring-[#FD312E]' : 'ring-1 ring-transparent group-hover/dkv:ring-gray-300'
+                    }`}
+                  >
+                    <img src={thumbUrl(a)} alt={a.label} loading="lazy" className="w-full h-full object-cover" draggable={false} />
+                  </span>
+                  <span
+                    className={`text-[10px] leading-[12px] text-center transition-colors ${
+                      selected ? 'text-[#FD312E] font-medium' : 'text-gray-500'
+                    }`}
+                  >
+                    {t(a.label)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <ImageField label={t('Banner art')} value={data.image} onChange={v => set({ image: v })} aspectRatio={1600 / (data.size === 'Large' ? 400 : 320)} />
+      )}
       <TextAreaField label={t('Headline')} value={data.headline} onChange={v => set({ headline: v })} rows={2} />
       <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
         <textarea value={data.subCopy} onChange={e => set({ subCopy: e.target.value })} rows={2} className={`${INPUT_CLASS} resize-none`} />
       </ToggleField>
-      <ToggleField label={t('Legal links')} shown={data.showLinks} onShownChange={v => set({ showLinks: v })}>
-        <input type="text" value={data.linkPrimary} onChange={e => set({ linkPrimary: e.target.value })} className={`${INPUT_CLASS} mb-1.5`} />
-        <input type="text" value={data.linkSecondary} onChange={e => set({ linkSecondary: e.target.value })} className={INPUT_CLASS} />
-      </ToggleField>
+      {/* Legal links are a promotion-banner thing — the 350 deal banner never
+          draws them, so it doesn't offer them either. */}
+      {size === 'Large' && (
+        <ToggleField label={t('Legal links')} shown={data.showLinks} onShownChange={v => set({ showLinks: v })}>
+          <input type="text" value={data.linkPrimary} onChange={e => set({ linkPrimary: e.target.value })} className={`${INPUT_CLASS} mb-1.5`} />
+          <input type="text" value={data.linkSecondary} onChange={e => set({ linkSecondary: e.target.value })} className={INPUT_CLASS} />
+        </ToggleField>
+      )}
       <ToggleField label={t('Button')} shown={data.showCta} onShownChange={v => set({ showCta: v })}>
         <input type="text" value={data.ctaText} onChange={e => set({ ctaText: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
-    </div>
-  );
-}
 
-// ── 4. Time Sale ──────────────────────────────────────────────────────────────
+      {/* The old standalone Time Sale module lives on as this toggle — deal
+          banner only, since the 400 promotion banner never counts down. */}
+      {size === 'Standard' && (
+        <ToggleField label={t('Time countdown')} shown={data.showCountdown} onShownChange={v => set({ showCountdown: v })}>
+          <CountdownEditor data={data} onChange={p => set(p)} />
+        </ToggleField>
+      )}
 
-function DealTimeSalePanel({ data, onUpdate }: { data: DealTimeSaleState; onUpdate: (d: DealTimeSaleState) => void }) {
-  const t = useT();
-  const set = (p: Partial<DealTimeSaleState>) => onUpdate({ ...data, ...p });
-  const units: Array<{ v: keyof DealTimeSaleState; l: keyof DealTimeSaleState; label: string }> = [
-    { v: 'days', l: 'dayLabel', label: t('Day') },
-    { v: 'hours', l: 'hourLabel', label: t('Hour') },
-    { v: 'minutes', l: 'minuteLabel', label: t('Minute') },
-    { v: 'seconds', l: 'secondLabel', label: t('Second') },
-  ];
-  return (
-    <div>
-      <ImageField label={t('Banner art')} value={data.image} onChange={v => set({ image: v })} objectFit="contain" />
-      <TextField label={t('Headline')} value={data.headline} onChange={v => set({ headline: v })} />
-      <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
-        <textarea value={data.subCopy} onChange={e => set({ subCopy: e.target.value })} rows={2} className={`${INPUT_CLASS} resize-none`} />
-      </ToggleField>
-      <SectionDivider>{t('Countdown')}</SectionDivider>
-      {units.map(u => (
-        <div key={u.v} className="mb-3">
-          <FieldLabel>{u.label}</FieldLabel>
-          <div className="flex gap-1.5">
-            <input
-              type="text"
-              value={data[u.v] as string}
-              onChange={e => set({ [u.v]: e.target.value } as Partial<DealTimeSaleState>)}
-              className={`${INPUT_CLASS} w-16 shrink-0 text-center`}
-            />
-            <input
-              type="text"
-              value={data[u.l] as string}
-              onChange={e => set({ [u.l]: e.target.value } as Partial<DealTimeSaleState>)}
-              className={INPUT_CLASS}
-            />
-          </div>
+      {/* The PD Slot variants' four product plates — the same crawl + cutout
+          flow as the hero's PD Slot products. `-mx-5` cancels the panel's own
+          padding, since the editor brings its own. */}
+      {size === 'Large' && promoArtHasSlots(data.kvAsset) && (
+        <div className="-mx-5 mt-2 pt-4 border-t border-gray-100">
+          <ProductSlotsEditor
+            count={PROMO_SLOT.count}
+            slots={data.products.length === PROMO_SLOT.count ? data.products : emptyProductSlots(PROMO_SLOT.count)}
+            onChange={next => set({ products: next })}
+          />
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -699,11 +866,9 @@ function DealTimeSalePanel({ data, onUpdate }: { data: DealTimeSaleState; onUpda
 function DealProductListPanel({ data, onUpdate }: { data: DealProductListState; onUpdate: (d: DealProductListState) => void }) {
   const t = useT();
   const set = (p: Partial<DealProductListState>) => onUpdate({ ...data, ...p });
-  const updateProduct = (idx: number, p: DealProductItem) => {
-    const products = [...data.products];
-    products[idx] = p;
-    set({ products });
-  };
+  // Drafts from before the curated sets carry no productSet — treat them as
+  // the refrigerator row (that is what their products actually were).
+  const activeSet: DealProductSetKey = data.productSet ?? 'refrigerator';
 
   return (
     <div>
@@ -714,14 +879,60 @@ function DealProductListPanel({ data, onUpdate }: { data: DealProductListState; 
         <textarea value={data.tabs} onChange={e => set({ tabs: e.target.value })} rows={3} className={`${INPUT_CLASS} resize-none`} />
         <p className="text-[10px] text-gray-400 mt-0.5">{t('One tab per line — the first one renders as active.')}</p>
       </ToggleField>
+
+      {/* Curated product rows off the Page Template board — picking one swaps
+          the whole grid. Per-product editing is parked (see below), so the set
+          and the count are the only knobs the grid needs. */}
+      <div className="mb-3">
+        <FieldLabel>{t('Product set')}</FieldLabel>
+        <div className="flex gap-1">
+          {(Object.keys(DEAL_PRODUCT_SETS) as DealProductSetKey[]).map(key => {
+            const selected = activeSet === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => set({ productSet: key, products: dealProductSetItems(t, key, data.products.length) })}
+                className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                  selected ? 'bg-[#FD312E] border-[#FD312E] text-white' : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                }`}
+              >
+                {t(DEAL_PRODUCT_SETS[key].label)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <CountSelector
         label={t('Number of products')}
         min={DEAL_PRODUCT_MIN}
         max={DEAL_PRODUCT_MAX}
         value={data.products.length}
-        onChange={n => set({ products: resizeList(data.products, n, i => dealProductDefaultItem(t, i)) })}
+        onChange={n => set({ products: resizeList(data.products, n, i => dealProductItemFor(t, activeSet, i)) })}
       />
-      <SectionDivider>{t('Products')}</SectionDivider>
+    </div>
+  );
+}
+
+/**
+ * ⏸ PARKED — per-product editors (image / badge / name / SKU / rating /
+ * prices / CTAs). The grid now swaps between the board's curated rows, so
+ * none of this renders; it is kept because per-product editing is expected
+ * to return. Re-mount it inside DealProductListPanel under a
+ * `<SectionDivider>{t('Products')}</SectionDivider>` when it does.
+ */
+export function DealProductItemsEditor({ data, onUpdate }: { data: DealProductListState; onUpdate: (d: DealProductListState) => void }) {
+  const t = useT();
+  const set = (p: Partial<DealProductListState>) => onUpdate({ ...data, ...p });
+  const updateProduct = (idx: number, p: DealProductItem) => {
+    const products = [...data.products];
+    products[idx] = p;
+    set({ products });
+  };
+
+  return (
+    <div>
       {data.products.map((p, i) => (
         <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
           <p className="text-[11px] font-semibold text-gray-500 mb-2">
@@ -770,13 +981,6 @@ function DealCategoryNavPanel({ data, onUpdate }: { data: DealCategoryNavState; 
 
   return (
     <div>
-      <CountSelector
-        label={t('Number of categories')}
-        min={DEAL_CATEGORY_NAV_MIN}
-        max={DEAL_CATEGORY_NAV_MAX}
-        value={data.items.length}
-        onChange={n => set({ items: resizeList(data.items, n, i => dealCategoryNavDefaults(t)[i] ?? { icon: null, name: t('New category') }) })}
-      />
       <ToggleField label={t('Results bar')} shown={data.showResultsBar} onShownChange={v => set({ showResultsBar: v })}>
         <input type="text" value={data.resultsText} onChange={e => set({ resultsText: e.target.value })} className={`${INPUT_CLASS} mb-1.5`} />
         <input type="text" value={data.sortLabel} onChange={e => set({ sortLabel: e.target.value })} className={INPUT_CLASS} />
@@ -784,14 +988,19 @@ function DealCategoryNavPanel({ data, onUpdate }: { data: DealCategoryNavState; 
       <ToggleField label={t('Empty state')} shown={data.showEmptyText} onShownChange={v => set({ showEmptyText: v })}>
         <input type="text" value={data.emptyText} onChange={e => set({ emptyText: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
+
+      {/* The category row is fixed to the shipped seven — no count control,
+          and the icons are site chrome, so each row is just its label. */}
       <SectionDivider>{t('Categories')}</SectionDivider>
       {data.items.map((item, i) => (
-        <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
-          <p className="text-[11px] font-semibold text-gray-500 mb-2">
-            {t('Category')} {i + 1}
-          </p>
-          <ImageField label={t('Icon')} value={item.icon} onChange={v => updateItem(i, { ...item, icon: v })} objectFit="contain" />
-          <TextField label={t('Name')} value={item.name} onChange={v => updateItem(i, { ...item, name: v })} />
+        <div key={i} className="flex items-center gap-2 mb-1.5">
+          <span className="text-[10px] text-gray-400 w-4 shrink-0 text-right">{i + 1}</span>
+          <input
+            type="text"
+            value={item.name}
+            onChange={e => updateItem(i, { ...item, name: e.target.value })}
+            className={INPUT_CLASS}
+          />
         </div>
       ))}
     </div>
@@ -820,31 +1029,6 @@ function DealSiteHeaderPanel({ data, onUpdate }: { data: DealSiteHeaderState; on
       <ToggleField label={t('Breadcrumb')} shown={data.showBreadcrumb} onShownChange={v => set({ showBreadcrumb: v })}>
         <textarea value={data.breadcrumb} onChange={e => set({ breadcrumb: e.target.value })} rows={3} className={`${INPUT_CLASS} resize-none`} />
         <p className="text-[10px] text-gray-400 mt-0.5">{t('One crumb per line.')}</p>
-      </ToggleField>
-    </div>
-  );
-}
-
-// ── 8. Membership CTA ─────────────────────────────────────────────────────────
-
-function DealMembershipPanel({ data, onUpdate }: { data: DealMembershipState; onUpdate: (d: DealMembershipState) => void }) {
-  const t = useT();
-  const set = (p: Partial<DealMembershipState>) => onUpdate({ ...data, ...p });
-  return (
-    <div>
-      <ImageField label={t('Banner image')} value={data.image} onChange={v => set({ image: v })} aspectRatio={1600 / 380} />
-      <TextAreaField
-        label={t('Headline')}
-        value={data.headline}
-        onChange={v => set({ headline: v })}
-        rows={3}
-        hint={t('Line break splits the headline.')}
-      />
-      <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
-        <textarea value={data.subCopy} onChange={e => set({ subCopy: e.target.value })} rows={2} className={`${INPUT_CLASS} resize-none`} />
-      </ToggleField>
-      <ToggleField label={t('Button')} shown={data.showCta} onShownChange={v => set({ showCta: v })}>
-        <input type="text" value={data.ctaText} onChange={e => set({ ctaText: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
     </div>
   );
@@ -939,14 +1123,12 @@ export function DealModuleEditPanel({
     case 'deal-tab-nav':
       return <DealTabNavPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-tab-nav', data: d })} />;
     case 'deal-promo-banner':
-      return <DealPromoBannerPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-promo-banner', data: d })} />;
-    case 'deal-time-sale':
-      return <DealTimeSalePanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-time-sale', data: d })} />;
+      return <DealPromoBannerPanel data={editState.data} size="Large" onUpdate={d => onUpdate({ type: 'deal-promo-banner', data: d })} />;
+    case 'deal-banner':
+      return <DealPromoBannerPanel data={editState.data} size="Standard" onUpdate={d => onUpdate({ type: 'deal-banner', data: d })} />;
     case 'deal-product-list':
       return <DealProductListPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-product-list', data: d })} />;
     case 'deal-category-nav':
       return <DealCategoryNavPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-category-nav', data: d })} />;
-    case 'deal-membership':
-      return <DealMembershipPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-membership', data: d })} />;
   }
 }

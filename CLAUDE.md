@@ -102,11 +102,63 @@ GitHub: `https://github.com/contentfactoryhsad-blip/lg-retail-obs-content-builde
 - 라디우스도 토큰이다 — `R_LG=28`(딜 카드·배너·타임세일), `R_MD=16`(상품카드), `R_SM=8`(버튼), `R_XS=4`(배지·pill).
 - 🔴 **배너 아트는 오브제 합성이 아니라 통짜 KV다.** `public/deal-page/banner-*.png`는 Figma의 이미지 프레임을
   통째로 export한 것이고, LG Black Friday 락업·오브제·제품 썸네일이 이미 그 안에 들어있다. 검은 박스에 오브제를
-  얹는 식으로 다시 만들지 말 것. 배너 높이는 2종 — exclusive 400(`1:1388`), 그 아래 Hot Deals/Bundles/Gifts 320(`1:2460`).
-- 🔴 **딜 카드 아트는 카드보다 크다** — `1:1311` 기준 179.27% × 193.89%를 `-39.82% / -61.05%`에 깐다(`DEAL_CARD_ART`).
-  이 수치가 오브제를 프레임 위쪽에 걸어 조명처럼 읽히게 만든다. contain 썸네일로 바꾸면 원본과 전혀 달라진다.
+  얹는 식으로 다시 만들지 말 것.
+- 🔴 **배너 높이 2종은 사이즈 피커가 아니라 모듈 타입이다**(2026-08-30) — `deal-promo-banner`(Promotion banner,
+  400, 최대 4) / `deal-banner`(Deal banner, 350, 최대 6). **Standard=350은 기획 스펙이고 보드 프레임
+  (6080:52226/52439/52643)은 아직 320이다** — 보드가 따라오면 `BANNER_COPY.Standard` 오프셋을 재실측할 것.
+  구 드래프트의 Standard 프로모션 배너는 `dealPagePayload.ts` 복원에서 `deal-banner`로 이관된다.
+- 🔴 **프로모션 배너(400)는 업로드가 아니라 히어로식 KV 피커다**(2026-08-30, `dealBannerArt.ts`) — 보드 우측
+  `Promotion Banner_*` 프레임 5장(6240:144564 standard setting + 변형 4)에서 옮김. 네 변형 모두 배치는 한 벌
+  (`PROMO_ART`: 1154.7² @ 652.6,−376.9)이고 아트만 다르다. 🔴 **PD Slot 변형의 아트 스템은 레지스트리 id와
+  다르다** — 타일 id는 `kv-product-slot(-character)`(라벨·썸네일용)인데 그리는 파일은 `kv-product-slot001(-character)`
+  (플레이트 없는 v1, paidBoards와 같은 스템). 플레이트 4칸은 아트에 구운 게 아니라 **프레임이 그린 박스**라
+  렌더러가 직접 그린다(`PROMO_SLOT`: 1002,276.75 / 102.88 박스 / 112.88 피치 / r8.12 / #333) — 빈 칸도 보인다.
+  제품은 히어로와 같은 크롤+누끼 플로우(`ProductSlotsEditor`)고, 기본값은 standard setting 프레임의 제품 4종
+  (`banner-product-1..4.png`, AC스탠드/TV/냉장고/세탁기). `image`는 레거시 폴백 — 복원 시 `kvAsset` 없는 구
+  드래프트엔 null을 박아 업로드 아트를 지킨다.
+- **딜 배너(350)도 업로드가 아니라 타입 피커다**(2026-08-30, `DEAL_KV_TILES`) — 보드 y2057의 `Deal Banner_*`
+  프레임 4장(Time Sale 6240:144854 / Hot Deal 144775 / Gift 144882 / Bundle 144910·이름 없는 프레임)에서 옮김.
+  네 프레임은 템플릿이 같고 **아트만 다르며, 아트는 타입별로 크롭이 달라** 배치도 타입별이다(파일
+  `deal-banner-art-*.jpg`, 2000px로 다운스케일). 아트 위에 좌측 스크림(`DEAL_BANNER_SCRIM`, Rectangle 2 실측)을
+  덮는다. 타일 id는 딜 카드와 같은 deal-type 레지스트리 4종. 프리셋의 Hot Deals/Bundles/Gifts/Time Sale 배너도
+  전부 kvAsset으로 갈아탔고, `banner-*.png` 업로드 아트는 레거시 폴백으로만 남는다.
+- **배너의 "Art right / Art left" 레이아웃 피커는 삭제됐다**(2026-08-30) — 우측 아트 고정. 필드는 상태에 남아
+  있고 복원이 'Art left'를 'Art right'로 정규화한다. **Legal links 컨트롤은 프로모션 배너(400)에만 있다** —
+  350 딜 배너는 링크를 그리지 않으므로 패널에서도 뺐다.
+- **Hero KV 피커에 KEY VISUAL_Motion 타일이 있다**(2026-08-30, `HERO_MOTION_ID`) — 레지스트리 에셋이 아니라
+  kv-main의 모션 마스터(`/content-template/motion/kv-main-motion.mp4`)를 트는 것. 배치는 Main과 동일
+  (`HERO_ART['kv-main-motion']`)하고, 렌더는 **kv-main 정적 아트 위에 `<video autoplay loop muted>`를 얹는다** —
+  html-to-image가 비디오를 못 굽기 때문에 PNG export에는 정적 아트가 찍힌다(의도된 폴백).
+- **Category nav 패널은 이름 7칸 + Results bar/Empty state뿐이다**(2026-08-30) — 개수 컨트롤과 아이콘
+  업로드를 걷어냈다(아이콘은 사이트 크롬). 상태의 `icon` 필드와 MIN/MAX 상수는 남아 있다.
+- **Membership CTA 모듈은 삭제됐다**(2026-08-30) — 레지스트리/상태/렌더러/패널/프리셋에서 전부 걷어냈고,
+  구 드래프트의 membership 아이템은 복원에서 조용히 스킵된다(unknown type 경로). `banner-membership.png`는
+  public 원칙대로 남겨뒀다.
+- **Time Sale은 모듈이 아니라 `showCountdown` 토글이다**(2026-08-30). 카운트다운은 보드에서 한 컴포넌트라
+  (`CountdownFields` + 렌더러 `CountdownRow` + 패널 `CountdownEditor`) **딜 배너와 Hero KV가 공유한다** —
+  배너는 (80,182), 히어로는 콘텐츠 레일 (420,294)(Figma `6236:143805`). 딜 배너에서 켜면 카피 리듬이
+  66/134로 올라가고(`BANNER_COPY_COUNTDOWN`) CTA는 숨는다(디짓 자리와 겹침); 400 프로모션 배너는
+  카운트다운 없음. 구 `deal-time-sale` 드래프트는 복원에서 `deal-banner`+`showCountdown:true`로
+  이관된다 — 필드명이 같아 그대로 머지된다.
+- 🔴 **딜 카드는 3장 고정이고(개수 컨트롤 없음 — 3×464+2×24=1440 레일 정합), 아트는 업로드가 아니라
+  deal-type 에셋 4종(Bundle/Time Sale/Gift/Hot Deal) 스왑이다**(2026-08-30). 🔴 **배치는 에셋별이다**(`DEAL_CARD_ART`) —
+  Figma 구운 카드는 오브제를 ~187px 높이로 **정규화**해 그리는데 preview(1960×928) 속 원본 오브제는 640~491px로
+  제각각이라, 단일 스케일이면 시계가 보드보다 1/3 커진다. 각 항목은 실측 오브제 bbox 기준 scale=187/h로
+  중심을 (232,125)에 놓은 값. 아트 하단 에지(y 264~308)가 카드 검정 위에 걸리므로 스크림(`DEAL_CARD_SCRIM`)은
+  가장 이른 에지(264) 전에 완전 검정이어야 심이 안 보인다.
+  `DealCardItem.image`는 구 드래프트(구운 card-N.png)의 폴백으로만 남아 있다 — 에셋을 고르면 null로 지운다.
 - 🔴 **상품 카드 폭은 342 고정이고 행은 좌측 정렬이다**(`1:1541`/`1:1745`). 3개일 때 오른쪽이 비는 게 원본이다 —
   레일을 꽉 채우려고 늘리지 말 것.
+- 🔴 **Product list는 큐레이션 세트 3종(냉장고/세탁기/워시타워 × 4)을 스왑한다**(2026-08-30, `DEAL_PRODUCT_SETS`).
+  Page Template 보드의 세 슬라이더 실측: 냉장고 `6080:51305`, 세탁기 `6080:51511`의 앞 4장(뒤 6장은 캐러셀
+  오프스테이지), 워시타워 `6080:52452`(Laundry Bundles, WK 모델). **줄마다 4번째 카드가 자기 제품 중복인 건
+  보드 그대로다** — 버그로 알고 지우지 말 것. 배지(9/6/24 interest-free)와 CTA(Buy now vs Get stock alert)는
+  카드별 값이라 시드에 실려 있다. 오른쪽 바 옵션은 섹션 타이틀/탭/세트/개수(2·3·4)뿐이고, per-product 편집기는
+  `DealProductItemsEditor`로 **파킹**돼 있다(다시 쓸 예정이라 지우지 말 것). 제품 이미지는
+  `public/deal-page/product-washer-*.png`/`product-washtower-*.png`(Figma MCP 로컬 asset 서버에서 다운로드).
+- **팔레트→캔버스 드롭은 포인터 Y 기준이다**(`handleDragMove`) — dnd-kit `over`는 위/아래를 구분 못 해서
+  삽입 칸을 직접 계산하고 빨간 인디케이터 라인으로 보여준다. 팔레트 드래그 충돌 판정은 `pointerWithin`
+  (closestCenter는 옆 모듈 중심이 이겨서 엉뚱한 칸에 꽂혔다).
 - **`deal-site-header` / `deal-site-footer`는 lg.com 공홈 크롬**이다(Figma `1:1214`+`1:1267`, `1:3102`).
   LG 로고·검색/계정/장바구니 클러스터(`header-utility.png`)·하단 배지(`footer-badges.png`)는 **Figma export 이미지 그대로 박혀 있다** —
   아이콘 벡터를 손으로 그리지 않기 위해서고, 어차피 시장별로 바뀌지 않는 부분이다. 나머지 문구는 전부 편집 가능.

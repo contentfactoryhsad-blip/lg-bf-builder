@@ -19,11 +19,10 @@ export type DealModuleType =
   | 'deal-hero'
   | 'deal-cards'
   | 'deal-promo-banner'
+  | 'deal-banner'
   | 'deal-tab-nav'
-  | 'deal-time-sale'
   | 'deal-product-list'
   | 'deal-category-nav'
-  | 'deal-membership'
   | 'deal-site-footer';
 
 /**
@@ -76,12 +75,16 @@ export const DEAL_MODULE_DEFS: DealModuleDef[] = [
   { type: 'deal-site-header',  label: 'Site header',      section: 'LG.com global header',        width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 134,  maxCount: 1, zipName: 'site-header'   },
   { type: 'deal-hero',         label: 'Hero KV',          section: 'Page hero',                   width: DEAL_PAGE_WIDTH, height: 720,    placeholderHeight: 720,  maxCount: 1, zipName: 'hero',         artSize: { w: DEAL_HERO_WIDTH, h: 720 } },
   { type: 'deal-cards',        label: 'Deal cards',       section: 'Discover exclusive deals',    width: DEAL_PAGE_WIDTH, height: 561,    placeholderHeight: 561,  maxCount: 2, zipName: 'deal-cards',   artSize: { w: 464, h: 368 } },
-  { type: 'deal-promo-banner', label: 'Promotion banner', section: 'Exclusive offer / Hot Deals / Bundles / Gifts', width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 496, maxCount: 6, zipName: 'promo-banner', artSize: { w: DEAL_BANNER_WIDTH, h: 400 } },
+  // One banner family, two palette entries: the 400-tall promotion banner and
+  // the 350-tall deal banner (the height is the module type now, not a size
+  // picker in the panel).
+  { type: 'deal-promo-banner', label: 'Promotion banner', section: 'Exclusive offer',              width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 496, maxCount: 4, zipName: 'promo-banner', artSize: { w: DEAL_BANNER_WIDTH, h: 400 } },
+  { type: 'deal-banner',       label: 'Deal banner',      section: 'Hot Deals / Bundles / Gifts',  width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 398, maxCount: 6, zipName: 'deal-banner',  artSize: { w: DEAL_BANNER_WIDTH, h: 350 } },
+  // (Time Sale is no longer its own module — it is the deal banner's
+  //  countdown toggle. Old deal-time-sale drafts migrate on restore.)
   { type: 'deal-tab-nav',      label: 'Deal tabs',        section: 'Deal-type tab bar',           width: DEAL_PAGE_WIDTH, height: 98,     placeholderHeight: 98,   maxCount: 2, zipName: 'tab-nav'       },
-  { type: 'deal-time-sale',    label: 'Time Sale',        section: 'Time Sale ends in',           width: DEAL_PAGE_WIDTH, height: 398,    placeholderHeight: 398,  maxCount: 1, zipName: 'time-sale',    artSize: { w: DEAL_BANNER_WIDTH, h: 350 } },
   { type: 'deal-product-list', label: 'Product list',     section: 'Deal product grid',           width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 796,  maxCount: 8, zipName: 'product-list'  },
   { type: 'deal-category-nav', label: 'Category nav',     section: 'Category filter + results',   width: DEAL_PAGE_WIDTH, height: 353,    placeholderHeight: 353,  maxCount: 1, zipName: 'category-nav'  },
-  { type: 'deal-membership',   label: 'Membership CTA',   section: 'Become an LG Member',         width: DEAL_PAGE_WIDTH, height: 476,    placeholderHeight: 476,  maxCount: 1, zipName: 'membership',   artSize: { w: DEAL_BANNER_WIDTH, h: 380 } },
   { type: 'deal-site-footer',  label: 'Site footer',      section: 'LG.com global footer',        width: DEAL_PAGE_WIDTH, height: 848,    placeholderHeight: 848,  maxCount: 1, zipName: 'site-footer'   },
 ];
 

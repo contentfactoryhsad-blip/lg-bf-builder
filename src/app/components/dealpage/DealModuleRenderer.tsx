@@ -39,16 +39,17 @@ import type {
   DealCardsState,
   DealTabNavState,
   DealPromoBannerState,
-  DealTimeSaleState,
+  DealBannerSize,
+  CountdownFields,
   DealProductListState,
   DealProductItem,
   DealCategoryNavState,
-  DealMembershipState,
 } from './dealEditStates';
 import { DEAL_SOCIAL_ICONS, DEAL_BANNER_HEIGHT } from './dealEditStates';
-import { artOf, artUrl, getAsset } from '../contenttemplate/contentTemplateAssets';
+import { artOf, artUrl, getAsset, previewUrl } from '../contenttemplate/contentTemplateAssets';
 import { slotBoxesFor } from '../contenttemplate/lgcomSlots';
-import { heroArtFor, HERO_SCRIM, HERO_SCRIM_X, HERO_SLOT_ID } from './dealHeroArt';
+import { heroArtFor, HERO_SCRIM, HERO_SCRIM_X, HERO_SLOT_ID, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
+import { PROMO_ART, PROMO_SLOT, promoArtHasSlots, promoArtStem, dealBannerArtFor, DEAL_BANNER_SCRIM } from './dealBannerArt';
 
 const FONT = 'var(--obs-font)';
 const FONT_TEXT = 'var(--obs-font-text, var(--obs-font))';
@@ -261,7 +262,10 @@ function DealSiteHeaderTemplate({ data }: { data: DealSiteHeaderState }) {
 // ── 1. Hero KV (Figma 6080:51044 — 2280×720) ──────────────────────────────────
 
 function DealHeroTemplate({ data }: { data: DealHeroState }) {
-  const kv = getAsset(data.kvAsset);
+  // Motion is not a registry asset — it plays kv-main's animated master over
+  // Main's static art (which doubles as the frame a PNG export can capture).
+  const motion = data.kvAsset === HERO_MOTION_ID;
+  const kv = getAsset(motion ? 'kv-main' : data.kvAsset);
   // Every key visual has its own framing on the board; the nudge rides on top.
   // Scale is about the artwork's centre, so zooming does not also shift it.
   const base = heroArtFor(data.kvAsset);
@@ -291,6 +295,26 @@ function DealHeroTemplate({ data }: { data: DealHeroState }) {
               top: art.y,
               width: art.size,
               height: art.size,
+              display: 'block',
+              maxWidth: 'none',
+            }}
+          />
+        )}
+
+        {motion && (
+          <video
+            src={HERO_MOTION_SRC}
+            autoPlay
+            loop
+            muted
+            playsInline
+            style={{
+              position: 'absolute',
+              left: art.x,
+              top: art.y,
+              width: art.size,
+              height: art.size,
+              objectFit: 'cover',
               display: 'block',
               maxWidth: 'none',
             }}
@@ -354,6 +378,10 @@ function DealHeroTemplate({ data }: { data: DealHeroState }) {
           {data.subCopy}
         </At>
       )}
+
+      {/* Countdown under the copy (Figma 6236:143805) — same digit row as the
+          deal banner, on the content rail. */}
+      {data.showCountdown && <CountdownRow x={CONTENT_INSET} y={294} data={data} />}
     </Band>
   );
 }
@@ -364,6 +392,37 @@ const DEAL_CARD_W = 464;
 const DEAL_CARD_H = 368;
 /** 488 pitch − 464 card. */
 const DEAL_CARD_GAP = 24;
+
+/**
+ * Deal-type artwork placement inside a card — PER ASSET, because the baked
+ * Figma cards NORMALISE the objects: on the board every object reads ~187px
+ * tall centred at (232, 125), but in the 1960×928 previews the raw objects
+ * range from 640px (clock) down to 491px (gift box). One shared scale renders
+ * the clock a third larger than the board. Each entry is
+ * scale = 187 / <object px height in preview>, then x/y place the measured
+ * object centre at (232, 125). The plate always overflows the card's sides
+ * and top; its bottom edge (y 264–308 depending on scale) must sit below the
+ * scrim's full-black line or it shows as a hairline seam.
+ */
+const DEAL_CARD_ART: Record<string, { w: number; x: number; y: number }> = {
+  // object bbox in preview: x 712–1250, y 132–772 → centre (981, 452), h 640
+  'deal-type-time-sale': { w: 573, x: -55, y: -7 },
+  // x 712–1255, y 176–754 → centre (983.5, 465), h 578
+  'deal-type-hot-deal':  { w: 634, x: -86, y: -25 },
+  // x 710–1234, y 192–732 → centre (972, 462), h 540
+  'deal-type-bundle':    { w: 679, x: -105, y: -35 },
+  // x 659–1300, y 200–691 → centre (979.5, 445.5), h 491
+  'deal-type-gift':      { w: 747, x: -141, y: -45 },
+};
+/** A future fifth artwork renders mid-range until it gets measured in. */
+const DEAL_CARD_ART_FALLBACK = { w: 647, x: -91, y: -24 };
+/**
+ * Bottom scrim over the artwork — fades the plate into black under the copy
+ * and CTA, standing in for the scrim the old baked renders carried. Fully
+ * black by y 262: above the highest plate bottom edge (time sale, y 264).
+ */
+const DEAL_CARD_SCRIM =
+  'linear-gradient(to bottom, rgba(0,0,0,0) 205px, rgba(0,0,0,1) 262px)';
 
 /**
  * The two round carousel arrows (6149:68180 / 6149:68181).
@@ -420,7 +479,10 @@ function DealCardsTemplate({ data }: { data: DealCardsState }) {
         }}
       >
         <div style={{ display: 'flex', gap: DEAL_CARD_GAP }}>
-        {data.cards.map((card, i) => (
+        {data.cards.map((card, i) => {
+          const art = getAsset(card.asset ?? null);
+          const place = (card.asset && DEAL_CARD_ART[card.asset]) || DEAL_CARD_ART_FALLBACK;
+          return (
           <div
             key={i}
             style={{
@@ -433,14 +495,32 @@ function DealCardsTemplate({ data }: { data: DealCardsState }) {
               flexShrink: 0,
             }}
           >
-            {card.image && (
+            {art ? (
+              <>
+                <img
+                  src={previewUrl(art)}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    position: 'absolute',
+                    left: place.x,
+                    top: place.y,
+                    width: place.w,
+                    display: 'block',
+                    maxWidth: 'none',
+                  }}
+                />
+                <div style={{ position: 'absolute', inset: 0, background: DEAL_CARD_SCRIM }} />
+              </>
+            ) : card.image ? (
+              // Drafts saved before the asset picker carry a baked 464×368 render.
               <img
                 src={card.image}
                 alt=""
                 draggable={false}
                 style={{ width: DEAL_CARD_W, height: DEAL_CARD_H, objectFit: 'cover', display: 'block', maxWidth: 'none' }}
               />
-            )}
+            ) : null}
             {/* Copy sits inside a 32 pad, bottom-aligned and CENTRED across the
                 card — the 400-wide box is the 464 card minus its 32 pads. */}
             <p
@@ -495,7 +575,8 @@ function DealCardsTemplate({ data }: { data: DealCardsState }) {
               </span>
             )}
           </div>
-        ))}
+          );
+        })}
         </div>
       </div>
     </Band>
@@ -553,9 +634,11 @@ function DealTabNavTemplate({ data }: { data: DealTabNavState }) {
 // ── 4. Promotion banner (Figma 6080:51148 / 52223 / 52436 / 52640) ────────────
 
 /**
- * The two banner sizes are not one frame scaled — they run a different copy
- * rhythm. The 400 banner carries the legal links and sets its sub copy at 16px;
- * the 320 banner drops the links and sets it at 20px.
+ * The two banner heights are not one frame scaled — they run a different copy
+ * rhythm. The 400 promotion banner carries the legal links and sets its sub
+ * copy at 16px; the 350 deal banner drops the links and sets it at 20px. Its
+ * copy keeps the 320-era offsets (the extra 30px grows the banner downward)
+ * until the 350 board frames land to re-measure against.
  */
 const BANNER_COPY = {
   Large:    { headTop: 90, subTop: 218, subSize: T_SMALL, linkTop: 262, padBottom: 48 },
@@ -565,11 +648,112 @@ const BANNER_COPY = {
 /** Both legal links sit on a fixed 204 pitch, whatever the first one measures. */
 const BANNER_LINK_PITCH = 204;
 
-function DealPromoBannerTemplate({ data }: { data: DealPromoBannerState }) {
-  const bannerH = DEAL_BANNER_HEIGHT[data.size] ?? 400;
-  const m = BANNER_COPY[data.size] ?? BANNER_COPY.Large;
-  const dark = data.size === 'Large';
-  const ink = dark ? WHITE : WHITE;
+/**
+ * Shared by `deal-promo-banner` (size forced to Large / 400) and `deal-banner`
+ * (forced to Standard / 350) — the module type owns the height now, `data.size`
+ * only carries what old drafts said.
+ */
+/**
+ * Countdown copy rhythm (the old Time Sale banner, Figma 6080:51264) — with
+ * the digit row in the banner the copy sits higher than the plain deal
+ * banner's 88/156.
+ */
+const BANNER_COPY_COUNTDOWN = { headTop: 66, subTop: 134, subSize: T_BODY, linkTop: null, padBottom: 0 } as const;
+
+/** Digit-box left edges inside the countdown banner, from the 80 copy rail. */
+const TS_UNIT_LEFT = [0, 128, 256, 383];
+/** Each separator hangs off the right of its own digit box, centred in it. */
+const TS_SEP = [
+  { left: 96, w: 32 },
+  { left: 103, w: 18 },
+  { left: 102, w: 18 },
+];
+
+/**
+ * The Time Sale digit row (Figma 6236:143805 / 6080:51264) — one component on
+ * the board, reused by the hero and the deal banner. 511×112 including the
+ * labels; the caller places it.
+ */
+function CountdownRow({ x, y, data }: { x: number; y: number; data: CountdownFields }) {
+  const units = [
+    { value: data.days, label: data.dayLabel, sep: '-' },
+    { value: data.hours, label: data.hourLabel, sep: ':' },
+    { value: data.minutes, label: data.minuteLabel, sep: ':' },
+    { value: data.seconds, label: data.secondLabel, sep: null },
+  ];
+  return (
+    <div style={{ position: 'absolute', left: x, top: y, width: 511, height: 112 }}>
+      {units.map((u, i) => (
+        <React.Fragment key={i}>
+          <p
+            style={{
+              position: 'absolute',
+              left: TS_UNIT_LEFT[i],
+              top: 0,
+              width: 96,
+              margin: 0,
+              fontFamily: FONT_TEXT,
+              ...T_DIGIT,
+              fontWeight: W_SEMIBOLD,
+              color: WHITE,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {u.value}
+          </p>
+          {u.sep && (
+            <p
+              style={{
+                position: 'absolute',
+                left: TS_UNIT_LEFT[i] + TS_SEP[i].left,
+                top: 0,
+                width: TS_SEP[i].w,
+                margin: 0,
+                textAlign: 'center',
+                fontFamily: FONT_TEXT,
+                ...T_DIGIT,
+                fontWeight: W_SEMIBOLD,
+                color: WHITE,
+              }}
+            >
+              {u.sep}
+            </p>
+          )}
+          <p
+            style={{
+              position: 'absolute',
+              left: TS_UNIT_LEFT[i],
+              top: 84,
+              width: 96,
+              margin: 0,
+              textAlign: 'center',
+              fontFamily: FONT_TEXT,
+              ...T_COUNTER,
+              color: WHITE,
+              ...DESCENDER,
+            }}
+          >
+            {u.label}
+          </p>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function DealPromoBannerTemplate({ data, size }: { data: DealPromoBannerState; size: DealBannerSize }) {
+  const bannerH = DEAL_BANNER_HEIGHT[size] ?? 400;
+  // The countdown only ever runs on the deal banner — the panel gates the
+  // toggle, this guard keeps a stray flag off the 400 promotion banner.
+  const countdown = data.showCountdown && size === 'Standard';
+  const m = countdown ? BANNER_COPY_COUNTDOWN : BANNER_COPY[size] ?? BANNER_COPY.Large;
+  const ink = WHITE;
+  // Promotion banner (400) key-visual art — takes precedence over the legacy
+  // uploaded image; PD Slot variants also draw the four product plates.
+  const kvStem = size === 'Large' ? promoArtStem(data.kvAsset) : null;
+  const slots = kvStem !== null && promoArtHasSlots(data.kvAsset);
+  // Deal banner (350) type art — the four Deal Banner_* frames, art + scrim.
+  const dealArt = size === 'Standard' ? dealBannerArtFor(data.kvAsset) : null;
 
   return (
     <Band height={48 + bannerH + m.padBottom}>
@@ -586,7 +770,93 @@ function DealPromoBannerTemplate({ data }: { data: DealPromoBannerState }) {
         }}
       >
         <div style={{ position: 'absolute', inset: 0, transform: data.layout === 'Art left' ? 'scaleX(-1)' : undefined }}>
-          <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={bannerH} />
+          {kvStem !== null ? (
+            <>
+              <img
+                src={artUrl(kvStem)}
+                alt=""
+                draggable={false}
+                style={{
+                  position: 'absolute',
+                  left: PROMO_ART.x,
+                  top: PROMO_ART.y,
+                  width: PROMO_ART.size,
+                  height: PROMO_ART.size,
+                  display: 'block',
+                  maxWidth: 'none',
+                }}
+              />
+              {/* Product plates (Figma "slot" 6240:143919) — drawn by the
+                  frame, not baked into the art, so empty plates still show. */}
+              {slots &&
+                Array.from({ length: PROMO_SLOT.count }, (_, i) => {
+                  const product = data.products[i]?.image ?? null;
+                  const inset = PROMO_SLOT.size * PROMO_SLOT.inset;
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        position: 'absolute',
+                        left: PROMO_SLOT.x + i * PROMO_SLOT.pitch,
+                        top: PROMO_SLOT.y,
+                        width: PROMO_SLOT.size,
+                        height: PROMO_SLOT.size,
+                        borderRadius: PROMO_SLOT.radius,
+                        background: PROMO_SLOT.plate,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {product && (
+                        <img
+                          src={product}
+                          alt=""
+                          draggable={false}
+                          style={{
+                            position: 'absolute',
+                            left: inset,
+                            top: inset,
+                            width: PROMO_SLOT.size - inset * 2,
+                            height: PROMO_SLOT.size - inset * 2,
+                            objectFit: 'contain',
+                            maxWidth: 'none',
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+            </>
+          ) : dealArt ? (
+            <>
+              <img
+                src={dealArt.file}
+                alt=""
+                draggable={false}
+                style={{
+                  position: 'absolute',
+                  left: dealArt.x,
+                  top: dealArt.y,
+                  width: dealArt.w,
+                  height: dealArt.h,
+                  display: 'block',
+                  maxWidth: 'none',
+                }}
+              />
+              {/* Left scrim ("Rectangle 2") — copy always sits on black. */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: DEAL_BANNER_SCRIM.x,
+                  top: DEAL_BANNER_SCRIM.y,
+                  width: DEAL_BANNER_SCRIM.w,
+                  height: DEAL_BANNER_SCRIM.h,
+                  background: DEAL_BANNER_SCRIM.gradient,
+                }}
+              />
+            </>
+          ) : (
+            <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={bannerH} />
+          )}
         </div>
 
         {/* Copy — 80 in from the banner edge, which is the 420 content rail. */}
@@ -598,6 +868,7 @@ function DealPromoBannerTemplate({ data }: { data: DealPromoBannerState }) {
             {data.subCopy}
           </At>
         )}
+        {countdown && <CountdownRow x={80} y={182} data={data} />}
         {data.showLinks && m.linkTop !== null && (
           <div style={{ position: 'absolute', left: 80, top: m.linkTop, display: 'flex' }}>
             {[data.linkPrimary, data.linkSecondary].filter(Boolean).map((l, i) => (
@@ -619,139 +890,36 @@ function DealPromoBannerTemplate({ data }: { data: DealPromoBannerState }) {
             ))}
           </div>
         )}
-        {data.showCta && (
+        {/* CTA — the button layer the board carries (Figma 6241:145174):
+            DEAL_RED plate, r8, min 100×44, 20px side pads, 16/16 SemiBold,
+            24 below the legal links (links top + 16 link height + 24 + 8 pad). */}
+        {data.showCta && !countdown && (
           <span
             style={{
               position: 'absolute',
               left: 80,
-              top: (m.linkTop ?? m.subTop + 44) + 40,
+              top: m.linkTop !== null ? m.linkTop + 48 : m.subTop + 84,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minWidth: 162,
-              height: 44,
-              padding: '0 12px',
+              minWidth: 100,
+              minHeight: 44,
+              padding: '0 20px',
               borderRadius: R_SM,
               background: DEAL_RED,
+              border: `1px solid ${DEAL_RED}`,
               color: WHITE,
               fontFamily: FONT_TEXT,
               ...T_SMALL,
-              lineHeight: '18px',
+              lineHeight: '16px',
               fontWeight: W_SEMIBOLD,
               boxSizing: 'border-box',
+              whiteSpace: 'nowrap',
             }}
           >
             {data.ctaText}
           </span>
         )}
-      </div>
-    </Band>
-  );
-}
-
-// ── 5. Time Sale (Figma 6080:51264 — 2280×398) ────────────────────────────────
-
-/** Digit-box left edges inside the banner, measured from the 80 copy rail. */
-const TS_UNIT_LEFT = [0, 128, 256, 383];
-/** Each separator hangs off the right of its own digit box, centred in it. */
-const TS_SEP = [
-  { left: 96, w: 32 },
-  { left: 103, w: 18 },
-  { left: 102, w: 18 },
-];
-
-function DealTimeSaleTemplate({ data }: { data: DealTimeSaleState }) {
-  const units = [
-    { value: data.days, label: data.dayLabel, sep: '-' },
-    { value: data.hours, label: data.hourLabel, sep: ':' },
-    { value: data.minutes, label: data.minuteLabel, sep: ':' },
-    { value: data.seconds, label: data.secondLabel, sep: null },
-  ];
-  return (
-    <Band height={398}>
-      <div
-        style={{
-          position: 'absolute',
-          left: BANNER_INSET,
-          top: 48,
-          width: DEAL_BANNER_WIDTH,
-          height: 350,
-          borderRadius: R_LG,
-          background: BLACK,
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ position: 'absolute', inset: 0 }}>
-          <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={350} />
-        </div>
-
-        <At x={80} y={66} w={860} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: WHITE }}>
-          {data.headline}
-        </At>
-        {data.showSubCopy && (
-          <At x={80} y={134} w={860} style={{ fontFamily: FONT_TEXT, ...T_BODY, color: WHITE }}>
-            {data.subCopy}
-          </At>
-        )}
-
-        {/* Countdown — four 96-wide digit boxes with the label centred under
-            each, and the separator hanging off the box's right edge. */}
-        <div style={{ position: 'absolute', left: 80, top: 182, width: 511, height: 112 }}>
-          {units.map((u, i) => (
-            <React.Fragment key={i}>
-              <p
-                style={{
-                  position: 'absolute',
-                  left: TS_UNIT_LEFT[i],
-                  top: 0,
-                  width: 96,
-                  margin: 0,
-                  fontFamily: FONT_TEXT,
-                  ...T_DIGIT,
-                  fontWeight: W_SEMIBOLD,
-                  color: WHITE,
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {u.value}
-              </p>
-              {u.sep && (
-                <p
-                  style={{
-                    position: 'absolute',
-                    left: TS_UNIT_LEFT[i] + TS_SEP[i].left,
-                    top: 0,
-                    width: TS_SEP[i].w,
-                    margin: 0,
-                    textAlign: 'center',
-                    fontFamily: FONT_TEXT,
-                    ...T_DIGIT,
-                    fontWeight: W_SEMIBOLD,
-                    color: WHITE,
-                  }}
-                >
-                  {u.sep}
-                </p>
-              )}
-              <p
-                style={{
-                  position: 'absolute',
-                  left: TS_UNIT_LEFT[i],
-                  top: 84,
-                  width: 96,
-                  margin: 0,
-                  textAlign: 'center',
-                  fontFamily: FONT_TEXT,
-                  ...T_COUNTER,
-                  color: WHITE,
-                  ...DESCENDER,
-                }}
-              >
-                {u.label}
-              </p>
-            </React.Fragment>
-          ))}
-        </div>
       </div>
     </Band>
   );
@@ -1141,65 +1309,6 @@ function DealCategoryNavTemplate({ data }: { data: DealCategoryNavState }) {
   );
 }
 
-// ── 8. Membership CTA (Figma 6080:52852 — 2280×476) ───────────────────────────
-
-function DealMembershipTemplate({ data }: { data: DealMembershipState }) {
-  return (
-    <Band height={476}>
-      <div
-        style={{
-          position: 'absolute',
-          left: BANNER_INSET,
-          top: 48,
-          width: DEAL_BANNER_WIDTH,
-          height: 380,
-          borderRadius: R_LG,
-          background: '#EFEAE2',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ position: 'absolute', inset: 0 }}>
-          <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={380} />
-        </div>
-
-        {/* Dark copy on a light plate — the one banner that does not run white. */}
-        <At x={80} y={88} w={860} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: BLACK }}>
-          {data.headline}
-        </At>
-        {data.showSubCopy && (
-          <At x={80} y={276} w={860} style={{ fontFamily: FONT_TEXT, ...T_SMALL, color: BLACK }}>
-            {data.subCopy}
-          </At>
-        )}
-        {data.showCta && (
-          <span
-            style={{
-              position: 'absolute',
-              left: 80,
-              top: 320,
-              height: 44,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 25px',
-              borderRadius: R_SM,
-              background: DEAL_RED,
-              color: WHITE,
-              fontFamily: FONT_TEXT,
-              ...T_SMALL,
-              lineHeight: '16px',
-              fontWeight: W_SEMIBOLD,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {data.ctaText}
-          </span>
-        )}
-      </div>
-    </Band>
-  );
-}
-
 // ── 9. Site footer (Figma 6080:52867 — 2280×848) ──────────────────────────────
 
 function FooterDisclaimer({ text, moreLabel }: { text: string; moreLabel: string }) {
@@ -1332,11 +1441,10 @@ export function DealModuleRenderer({ editState }: { editState: DealEditState }) 
     case 'deal-hero':         return <DealHeroTemplate data={editState.data} />;
     case 'deal-cards':        return <DealCardsTemplate data={editState.data} />;
     case 'deal-tab-nav':      return <DealTabNavTemplate data={editState.data} />;
-    case 'deal-promo-banner': return <DealPromoBannerTemplate data={editState.data} />;
-    case 'deal-time-sale':    return <DealTimeSaleTemplate data={editState.data} />;
+    case 'deal-promo-banner': return <DealPromoBannerTemplate data={editState.data} size="Large" />;
+    case 'deal-banner':       return <DealPromoBannerTemplate data={editState.data} size="Standard" />;
     case 'deal-product-list': return <DealProductListTemplate data={editState.data} />;
     case 'deal-category-nav': return <DealCategoryNavTemplate data={editState.data} />;
-    case 'deal-membership':   return <DealMembershipTemplate data={editState.data} />;
     case 'deal-site-footer':  return <DealSiteFooterTemplate data={editState.data} />;
   }
 }

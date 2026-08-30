@@ -18,9 +18,10 @@ import {
   useSensor,
   useSensors,
   rectIntersection,
-  closestCenter,
+  pointerWithin,
   type CollisionDetection,
   type DragStartEvent,
+  type DragMoveEvent,
   type DragEndEvent,
   useDraggable,
   useDroppable,
@@ -38,7 +39,12 @@ import {
   type DealModuleDef,
   type DealModuleType,
 } from './dealModuleRegistry';
-import { createDealDefaultState, dealProductDefaultItem, DEAL_BANNER_HEIGHT, type DealEditState } from './dealEditStates';
+import {
+  createDealDefaultState,
+  dealProductSetItems,
+  type DealEditState,
+  type DealProductSetKey,
+} from './dealEditStates';
 import { DealModuleRenderer } from './DealModuleRenderer';
 import { DealModuleEditPanel } from './DealModuleEditPanel';
 import { saveBlob } from '../../utils/fileSaver';
@@ -77,34 +83,34 @@ const BLACK_FRIDAY_PAGE_PRESET: DealModuleType[] = [
   'deal-cards',          // 2
   'deal-promo-banner',   // 3  exclusive offer, 400
   'deal-tab-nav',        // 4
-  'deal-time-sale',      // 5
+  'deal-banner',         // 5  time sale countdown
   'deal-product-list',   // 6
   'deal-product-list',   // 7
   'deal-category-nav',   // 8
-  'deal-promo-banner',   // 9  hot deals, 320
+  'deal-banner',         // 9  hot deals, 350
   'deal-product-list',   // 10
-  'deal-promo-banner',   // 11 bundles, 320
+  'deal-banner',         // 11 bundles, 350
   'deal-product-list',   // 12
-  'deal-promo-banner',   // 13 gifts, 320
+  'deal-banner',         // 13 gifts, 350
   'deal-product-list',   // 14
-  'deal-membership',     // 15
+  'deal-promo-banner',   // 15 closing offer — PD Slot, where Membership CTA used to sit
   'deal-site-footer',    // 16
 ];
 
 type PresetOverride = (t: TFunction, state: DealEditState) => DealEditState;
 
-/** The three lower banners: 320 tall, 20px sub copy, no legal links. */
-function bannerOverride(headline: string, subCopy: string, image: string): PresetOverride {
+/** The three lower banners: deal banners (350 tall), 20px sub copy, no legal links. */
+function bannerOverride(headline: string, subCopy: string, kvAsset: string): PresetOverride {
   return (t, state) => {
-    if (state.type !== 'deal-promo-banner') return state;
+    if (state.type !== 'deal-banner') return state;
     return {
-      type: 'deal-promo-banner',
-      data: { ...state.data, size: 'Standard', headline: t(headline), subCopy: t(subCopy), showLinks: false, image },
+      type: 'deal-banner',
+      data: { ...state.data, size: 'Standard', headline: t(headline), subCopy: t(subCopy), showLinks: false, kvAsset, image: null },
     };
   };
 }
 
-function productListOverride(sectionTitle: string, tabs: string[], seedFrom: number, count = 3): PresetOverride {
+function productListOverride(sectionTitle: string, tabs: string[], productSet: DealProductSetKey, count = 4): PresetOverride {
   return (t, state) => {
     if (state.type !== 'deal-product-list') return state;
     return {
@@ -114,27 +120,74 @@ function productListOverride(sectionTitle: string, tabs: string[], seedFrom: num
         sectionTitle: t(sectionTitle),
         tabs: tabs.map(x => t(x)).join('\n'),
         showTabs: tabs.length > 0,
-        products: Array.from({ length: count }, (_, i) => dealProductDefaultItem(t, seedFrom + i)),
+        productSet,
+        products: dealProductSetItems(t, productSet, count),
       },
     };
   };
 }
 
+// Product-list rows follow the board's own curated sets: washers under
+// "Black Friday prices…" and "Hot Deals", WashTower under "Laundry Bundles",
+// refrigerators under "Free gifts" (three cards there, as on the board).
+/** Position 5: the Time Sale banner — a deal banner with the countdown on. */
+function timeSaleOverride(): PresetOverride {
+  return (t, state) => {
+    if (state.type !== 'deal-banner') return state;
+    return {
+      type: 'deal-banner',
+      data: {
+        ...state.data,
+        headline: t('Time Sale ends in'),
+        subCopy: t('Limited hours only — when the clock stops, the price is gone.'),
+        showLinks: false,
+        kvAsset: 'deal-type-time-sale',
+        image: null,
+        showCountdown: true,
+      },
+    };
+  };
+}
+
+/** Promotion banners: the opener runs PD Centric art, the closer PD Slot. */
+function promoBannerOverride(kvAsset: string): PresetOverride {
+  return (_t, state) => {
+    if (state.type !== 'deal-promo-banner') return state;
+    return { type: 'deal-promo-banner', data: { ...state.data, kvAsset } };
+  };
+}
+
+/** Position 15: the closing PD Slot banner — no legal links, CTA on. */
+function closingPromoOverride(): PresetOverride {
+  return (_t, state) => {
+    if (state.type !== 'deal-promo-banner') return state;
+    return {
+      type: 'deal-promo-banner',
+      data: { ...state.data, showLinks: false, showCta: true },
+    };
+  };
+}
+
 const PRESET_OVERRIDES: Record<number, PresetOverride> = {
-  7:  productListOverride('Black Friday prices… Don’t miss out! 🎁', ['Washers', 'Refrigerators', 'Monitors', 'Speakers'], 3),
-  9:  bannerOverride('Hot Deals, online only', 'The season’s deepest markdowns, on LG.com only.', '/deal-page/banner-hot-deals.png'),
-  10: productListOverride('Hot Deals you won’t find anywhere else', ['Washers', 'Refrigerators', 'Soundbars'], 1),
-  11: bannerOverride('Bundles on sale', 'Add more to the set and the discount grows with it.', '/deal-page/banner-bundles.png'),
-  12: productListOverride('Laundry Bundles', [], 2),
-  13: bannerOverride('Gifts on sale', 'Get a free gift with select Black Friday purchases.', '/deal-page/banner-gifts.png'),
-  14: productListOverride('Free gifts with your purchase', ['Refrigerators', 'Washers'], 0),
+  3:  promoBannerOverride('kv-product-centric-1'),
+  5:  timeSaleOverride(),
+  7:  productListOverride('Black Friday prices… Don’t miss out! 🎁', ['Washers', 'Refrigerators', 'Monitors', 'Speakers'], 'washer'),
+  9:  bannerOverride('Hot Deals, online only', 'The season’s deepest markdowns, on LG.com only.', 'deal-type-hot-deal'),
+  10: productListOverride('Hot Deals you won’t find anywhere else', ['Washers', 'Refrigerators', 'Soundbars'], 'washer'),
+  11: bannerOverride('Bundles on sale', 'Add more to the set and the discount grows with it.', 'deal-type-bundle'),
+  12: productListOverride('Laundry Bundles', [], 'washtower'),
+  13: bannerOverride('Gifts on sale', 'Get a free gift with select Black Friday purchases.', 'deal-type-gift'),
+  14: productListOverride('Free gifts with your purchase', ['Refrigerators', 'Washers'], 'refrigerator', 3),
+  15: closingPromoOverride(),
 };
 
-// Palette → canvas drops use closestCenter (registers as soon as the dragged
-// card is nearest the canvas); on-canvas reordering needs real overlap with a
-// sibling, so it stays on rectIntersection. Same split as Shop in Shop.
+// Palette → canvas drops follow the POINTER (closestCenter compared centre
+// distances, so next to a tall module the wrong neighbour would win, and a
+// release anywhere — even over the palette — still dropped somewhere). The
+// insertion slot itself is computed from pointer Y in onDragMove; on-canvas
+// reordering needs real overlap with a sibling, so it stays on rectIntersection.
 const collisionDetectionStrategy: CollisionDetection = args =>
-  args.active.data.current?.source === 'palette' ? closestCenter(args) : rectIntersection(args);
+  args.active.data.current?.source === 'palette' ? pointerWithin(args) : rectIntersection(args);
 
 // ── Palette card ──────────────────────────────────────────────────────────────
 
@@ -224,6 +277,7 @@ function SortableCanvasItem({
   scale,
   isSelected,
   canDuplicate,
+  indicator,
   onSelect,
   onRemove,
   onDuplicate,
@@ -232,6 +286,8 @@ function SortableCanvasItem({
   scale: number;
   isSelected: boolean;
   canDuplicate: boolean;
+  /** Palette-drag insertion marker — which edge the new module would land on. */
+  indicator: 'above' | 'below' | null;
   onSelect: () => void;
   onRemove: () => void;
   onDuplicate: () => void;
@@ -262,6 +318,7 @@ function SortableCanvasItem({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      data-deal-canvas-item
       style={{
         position: 'relative',
         transform: CSS.Transform.toString(transform),
@@ -272,6 +329,21 @@ function SortableCanvasItem({
       }}
       className="group"
     >
+      {indicator && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `calc(50% - ${boxW / 2}px)`,
+            width: boxW,
+            height: 3,
+            borderRadius: 2,
+            background: '#FD312E',
+            ...(indicator === 'above' ? { top: -2.5 } : { bottom: -2.5 }),
+            zIndex: 20,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       <div style={{ width: boxW, margin: '0 auto', position: 'relative' }}>
         <div
           onClick={e => {
@@ -459,15 +531,49 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
 
   const handleDragStart = ({ active }: DragStartEvent) => setActiveDragId(String(active.id));
 
+  /**
+   * Palette-drag insertion slot, computed from POINTER Y against the rendered
+   * modules' midpoints — above a module's midpoint lands before it, below
+   * lands after. dnd-kit's `over` can't express that (it only names a module,
+   * and the old code always inserted before it), so the slot is tracked here
+   * and `handleDragEnd` consumes it. State drives the indicator line; the ref
+   * is what the drop reads, immune to a stale render.
+   */
+  const [dragInsertIndex, setDragInsertIndex] = useState<number | null>(null);
+  const dragInsertRef = useRef<number | null>(null);
+  const setInsertIndex = (idx: number | null) => {
+    dragInsertRef.current = idx;
+    setDragInsertIndex(prev => (prev === idx ? prev : idx));
+  };
+
+  const handleDragMove = ({ active }: DragMoveEvent) => {
+    if (!String(active.id).startsWith('palette::')) return;
+    const container = canvasContainerRef.current;
+    const rect = active.rect.current.translated; // snapCenterToCursor → centre ≈ pointer
+    if (!container || !rect) return setInsertIndex(null);
+    const px = rect.left + rect.width / 2;
+    const py = rect.top + rect.height / 2;
+    const cb = container.getBoundingClientRect();
+    if (px < cb.left || px > cb.right || py < cb.top || py > cb.bottom) return setInsertIndex(null);
+    const nodes = container.querySelectorAll('[data-deal-canvas-item]');
+    let idx = 0;
+    nodes.forEach(node => {
+      const r = node.getBoundingClientRect();
+      if (py > r.top + r.height / 2) idx += 1;
+    });
+    setInsertIndex(idx);
+  };
+
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveDragId(null);
-    if (!over) return;
+    const insertIdx = dragInsertRef.current;
+    setInsertIndex(null);
 
     const activeId = String(active.id);
-    const overId = String(over.id);
 
-    // Palette → Canvas
+    // Palette → Canvas — lands at the slot the indicator showed.
     if (activeId.startsWith('palette::')) {
+      if (insertIdx === null && !over) return; // released outside the canvas
       const moduleType = activeId.replace('palette::', '') as DealModuleType;
       const def = getDealModuleDef(moduleType);
       if (countOnCanvas(moduleType) >= def.maxCount) return;
@@ -478,25 +584,27 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
         editState: createDealDefaultState(moduleType, t),
       };
 
-      if (overId === 'canvas') {
-        setCanvasItems(prev => [...prev, newItem]);
-      } else {
-        const overIndex = canvasItems.findIndex(i => i.id === overId);
-        setCanvasItems(prev => {
-          const next = [...prev];
-          next.splice(overIndex === -1 ? next.length : overIndex, 0, newItem);
-          return next;
-        });
-      }
+      setCanvasItems(prev => {
+        const next = [...prev];
+        next.splice(insertIdx === null ? next.length : Math.min(insertIdx, next.length), 0, newItem);
+        return next;
+      });
       return;
     }
 
     // Canvas → Canvas (reorder)
+    if (!over) return;
+    const overId = String(over.id);
     if (activeId !== overId && overId !== 'canvas') {
       const oldIdx = canvasItems.findIndex(i => i.id === activeId);
       const newIdx = canvasItems.findIndex(i => i.id === overId);
       if (oldIdx !== -1 && newIdx !== -1) setCanvasItems(prev => arrayMove(prev, oldIdx, newIdx));
     }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragId(null);
+    setInsertIndex(null);
   };
 
   const removeModule = useCallback((id: string) => {
@@ -628,7 +736,9 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
         sensors={sensors}
         collisionDetection={collisionDetectionStrategy}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <div className="flex flex-1 overflow-hidden">
           <NavRail active={railActive} onNavigate={key => guard(() => onRailNavigate(key))} onOpenDraft={onOpenDraft} />
@@ -676,13 +786,22 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
                     <p className="text-gray-400 text-sm">{t('Drag a module from the left to get started.')}</p>
                   </div>
                 ) : (
-                  canvasItems.map(item => (
+                  canvasItems.map((item, i) => (
                     <SortableCanvasItem
                       key={item.id}
                       item={item}
                       scale={scale}
                       isSelected={item.id === selectedId}
                       canDuplicate={countOnCanvas(item.type) < getDealModuleDef(item.type).maxCount}
+                      indicator={
+                        dragInsertIndex === null
+                          ? null
+                          : dragInsertIndex === i
+                          ? 'above'
+                          : dragInsertIndex === i + 1 && i === canvasItems.length - 1
+                          ? 'below'
+                          : null
+                      }
                       onSelect={() => setSelectedId(item.id)}
                       onRemove={() => removeModule(item.id)}
                       onDuplicate={() => duplicateModule(item.id)}
@@ -698,14 +817,9 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
             {selectedItem ? (
               (() => {
                 const def = getDealModuleDef(selectedItem.type);
-                // The promotion banner runs at two heights, so the panel reports
-                // the one this instance is actually set to rather than the
-                // nominal 400 the palette shows.
-                const bannerH =
-                  selectedItem.editState.type === 'deal-promo-banner'
-                    ? DEAL_BANNER_HEIGHT[selectedItem.editState.data.size]
-                    : undefined;
-                const size = artSizeLabel(def, bannerH);
+                // Each banner type carries a fixed height now (promotion 400,
+                // deal 350), so the registry's own artSize is the answer.
+                const size = artSizeLabel(def);
                 return (
                   <div className="p-5">
                     <p className={`font-lgei font-bold text-[15px] text-gray-900 ${size ? 'mb-0.5' : 'mb-5'}`}>

@@ -8,15 +8,34 @@
  */
 
 import type { DealModuleType } from './dealModuleRegistry';
+import { PROMO_DEFAULT_PRODUCTS } from './dealBannerArt';
 import type { TFunction } from '../../i18n/LanguageContext';
 
 // Same fallback as the Shop in Shop states: module-scope palette previews are
 // built outside the language context, so they render the English source copy.
 const identityT = ((s: string) => s) as TFunction;
 
+// ── Countdown fields (shared by hero + deal banner) ───────────────────────────
+
+/**
+ * The Time Sale digit row — one component on the board (96-wide digit boxes,
+ * labels under), carried by whichever module switches it on.
+ */
+export interface CountdownFields {
+  showCountdown: boolean;
+  days: string;
+  hours: string;
+  minutes: string;
+  seconds: string;
+  dayLabel: string;
+  hourLabel: string;
+  minuteLabel: string;
+  secondLabel: string;
+}
+
 // ── Hero (Figma 6080:51044 — 2280×720) ────────────────────────────────────────
 
-export interface DealHeroState {
+export interface DealHeroState extends CountdownFields {
   eyebrow: string;
   showEyebrow: boolean;
   headline: string;
@@ -40,11 +59,20 @@ export interface DealHeroState {
    * the Content Template Builder's product slots.
    */
   products: { url: string; image: string | null }[];
+  // + CountdownFields: the digit row under the copy (Figma 6236:143805),
+  //   sitting on the content rail at y 294.
 }
 
 // ── Deal cards (Figma 6149:67786 — "Discover exclusive deals") ────────────────
 
 export interface DealCardItem {
+  /**
+   * Deal-type asset id from the Content Template registry
+   * (`deal-type-bundle` / `-time-sale` / `-gift` / `-hot-deal`) — the card art
+   * is swapped between these four campaign artworks, not uploaded.
+   */
+  asset: string | null;
+  /** Legacy baked card render — only drafts saved before the asset picker have one. */
   image: string | null;
   title: string;
   ctaText: string;
@@ -65,24 +93,21 @@ export interface DealCardsState {
   cards: DealCardItem[];
 }
 
-/** Card count the section supports — 4 is the shipped lg.com row. */
-export const DEAL_CARD_MIN = 2;
-export const DEAL_CARD_MAX = 4;
+/**
+ * Card count is FIXED at 3 — the three cards fill the 1440 rail exactly
+ * (3×464 + 2×24), and the section no longer offers a count control.
+ */
+export const DEAL_CARD_COUNT = 3;
 
 /**
- * Card art is the flattened 464×368 render of each Figma card, so the object,
- * its lighting and the scrim under the copy arrive as one baked image — the
- * same way the banners do.
- *
- * ⚠️ Two strings here are deliberately NOT what Figma shows: card 3's CTA is
- * "Show now" (a typo) and card 4 is still Spanish. Fixed here; fix the board
- * too and these will match again.
+ * Card art comes from the four deal-type campaign artworks (the same registry
+ * tiles the Content Template Builder shows). Three cards, four artworks — the
+ * spare (Gift by default) stays available in each card's picker.
  */
 export const DEAL_CARD_DEFAULTS: DealCardItem[] = [
-  { image: '/deal-page/card-1.png', title: 'Time Sale, hourly',        ctaText: 'Shop now' },
-  { image: '/deal-page/card-2.png', title: 'Hot Deals, 60% off',       ctaText: 'Shop now' },
-  { image: '/deal-page/card-3.png', title: 'Bundles, save even more',  ctaText: 'Shop now' },
-  { image: '/deal-page/card-4.png', title: 'More benefits in a combo!', ctaText: 'Shop now' },
+  { asset: 'deal-type-time-sale', image: null, title: 'Time Sale, hourly',       ctaText: 'Shop now' },
+  { asset: 'deal-type-hot-deal',  image: null, title: 'Hot Deals, 60% off',      ctaText: 'Shop now' },
+  { asset: 'deal-type-bundle',    image: null, title: 'Bundles, save even more', ctaText: 'Shop now' },
 ];
 
 export function dealCardDefaults(t: TFunction): DealCardItem[] {
@@ -106,16 +131,21 @@ export const DEAL_TAB_MAX = 6;
 export type DealBannerLayout = 'Art right' | 'Art left';
 
 /**
- * The page runs two banner heights: the hero-adjacent exclusive-offer banner is
- * 400 tall (Figma 6080:51204), and the Hot Deals / Bundles / Gifts banners
- * further down are 320 (6080:52226, 52439, 52643). Same rail, different rhythm
- * — and a different band height, since only the 400 one is padded below.
+ * The page runs two banner heights, and since 2026-08-30 they are two MODULE
+ * TYPES rather than a size picker: `deal-promo-banner` is the 400-tall
+ * exclusive-offer banner (Figma 6080:51204), `deal-banner` is the 350-tall
+ * Hot Deals / Bundles / Gifts banner. The `size` field stays on the state so
+ * old drafts keep their meaning — restore maps a Standard promo banner to the
+ * deal-banner type, and the renderer forces size from the type.
+ *
+ * ⚠️ Standard is 350 by spec (per the design owner) even though the shipped
+ * board frames 6080:52226/52439/52643 still measure 320 — the board is behind.
  */
 export type DealBannerSize = 'Large' | 'Standard';
 
-export const DEAL_BANNER_HEIGHT: Record<DealBannerSize, number> = { Large: 400, Standard: 320 };
+export const DEAL_BANNER_HEIGHT: Record<DealBannerSize, number> = { Large: 400, Standard: 350 };
 
-export interface DealPromoBannerState {
+export interface DealPromoBannerState extends CountdownFields {
   layout: DealBannerLayout;
   size: DealBannerSize;
   headline: string;
@@ -127,24 +157,22 @@ export interface DealPromoBannerState {
   showLinks: boolean;
   ctaText: string;
   showCta: boolean;
+  /** Legacy uploaded/baked banner art — used only while `kvAsset` is null. */
   image: string | null;
-}
-
-// ── Time Sale (Figma 6080:51264 — 2280×398) ───────────────────────────────────
-
-export interface DealTimeSaleState {
-  headline: string;
-  subCopy: string;
-  showSubCopy: boolean;
-  days: string;
-  hours: string;
-  minutes: string;
-  seconds: string;
-  dayLabel: string;
-  hourLabel: string;
-  minuteLabel: string;
-  secondLabel: string;
-  image: string | null;
+  /**
+   * Promotion banner (400) only: key-visual variant off the board's
+   * `Promotion Banner_*` frames (see dealBannerArt.ts). Takes precedence over
+   * `image`; null keeps a legacy draft's uploaded art.
+   */
+  kvAsset: string | null;
+  /**
+   * Product cutouts for the PD Slot variants' four plates — same shape and
+   * crawl + background-removal flow as the hero's PD Slot products.
+   */
+  products: { url: string; image: string | null }[];
+  // + CountdownFields: the old standalone Time Sale module folded into the
+  //   deal banner (2026-08-30) — only the deal banner's panel surfaces the
+  //   toggle; the 400 promotion banner never counts down.
 }
 
 // ── Product list (Figma 6080:51291 — 2280×796) ────────────────────────────────
@@ -169,12 +197,23 @@ export interface DealProductItem {
   primaryCta: string;
 }
 
+/**
+ * The grid runs on FIXED product sets now — the board (Page Template) carries
+ * three curated rows of four, and the builder swaps between them instead of
+ * editing products one by one. Per-product fields still exist on
+ * `DealProductItem` (old drafts carry them, and per-product editing may come
+ * back), the right bar just doesn't surface them any more.
+ */
+export type DealProductSetKey = 'refrigerator' | 'washer' | 'washtower';
+
 export interface DealProductListState {
   sectionTitle: string;
   showSectionTitle: boolean;
   /** Tab strip above the grid — one label per line, first one is active. */
   tabs: string;
   showTabs: boolean;
+  /** Which curated product row fills the grid. */
+  productSet: DealProductSetKey;
   products: DealProductItem[];
 }
 
@@ -186,41 +225,92 @@ export interface DealProductListState {
 export const DEAL_PRODUCT_MIN = 2;
 export const DEAL_PRODUCT_MAX = 4;
 
-const DEAL_PRODUCT_IMAGES = [
-  '/deal-page/product-1.png',
-  '/deal-page/product-2.png',
-  '/deal-page/product-3.png',
-  '/deal-page/product-1.png',
-];
+interface DealProductSeed {
+  badge: string;
+  name: string;
+  sku: string;
+  rating: string;
+  reviewCount: string;
+  discountPercent: string;
+  salePrice: string;
+  originalPrice: string;
+  image: string;
+  primaryCta: string;
+}
 
-const DEAL_PRODUCT_SEED = [
-  { name: 'LG Side by Side Refrigerator 617L Door-in-Door, Silver', sku: 'GS66SDP', rating: '4.9', reviewCount: '(10)',  discountPercent: '29%', salePrice: '$1,135', originalPrice: '$1,608' },
-  { name: 'LG Side by Side Refrigerator 625L, no water line required, Total No Frost', sku: 'GS66SPY', rating: '4.6', reviewCount: '(517)', discountPercent: '36%', salePrice: '$1,000', originalPrice: '$1,567' },
-  { name: 'LG Side by Side Refrigerator 658L with Smart Diagnosis, Total No Frost',    sku: 'GS66BPM', rating: '4.7', reviewCount: '(45)',  discountPercent: '19%', salePrice: '$729',   originalPrice: '$965'   },
-  { name: 'LG Washer Dryer 12kg Wash / 7kg Dry, AI DD\u2122 and ThinQ',               sku: 'WD12BVC2S6C', rating: '4.2', reviewCount: '(55)', discountPercent: '54%', salePrice: '$513', originalPrice: '$1,121' },
-];
+/**
+ * The three curated rows, card for card off the Page Template board
+ * (`miJcDQgz0yJMskLE5a5HHj`): refrigerators = "Offer available\u2026" slider
+ * 6080:51305, washers = the first four cards of the "Black Friday prices\u2026"
+ * slider 6080:51511 (the board's rail clips at four; the other six are
+ * off-stage carousel slides), washtower = the "Laundry Bundles" slider
+ * 6080:52452. Each row's fourth card is the board's own fourth card \u2014 two rows
+ * simply repeat one of their products, which is faithful, not a bug. Badges,
+ * CTAs ("Get stock alert" vs "Buy now") and prices are per-card on the board,
+ * so they ride on the seed rather than the item factory.
+ */
+export const DEAL_PRODUCT_SETS: Record<DealProductSetKey, { label: string; thumb: string; seed: DealProductSeed[] }> = {
+  refrigerator: {
+    label: 'Refrigerator',
+    thumb: '/deal-page/product-1.png',
+    seed: [
+      { badge: '9 interest-free installments', name: 'LG Side by Side Refrigerator 617L Door-in-Door, Silver',                    sku: 'GS66SDP', rating: '4.9', reviewCount: '(10)',  discountPercent: '29%', salePrice: '$1,135', originalPrice: '$1,608', image: '/deal-page/product-1.png', primaryCta: 'Buy now' },
+      { badge: '9 interest-free installments', name: 'LG Side by Side Refrigerator 625L, no water line required, Total No Frost', sku: 'GS66SPY', rating: '4.6', reviewCount: '(517)', discountPercent: '36%', salePrice: '$1,000', originalPrice: '$1,567', image: '/deal-page/product-2.png', primaryCta: 'Buy now' },
+      // originalPrice $905 is the board's value \u2014 an older seed here said $965.
+      { badge: '9 interest-free installments', name: 'LG Side by Side Refrigerator 658L with Smart Diagnosis, Total No Frost',    sku: 'GS66BPM', rating: '4.7', reviewCount: '(45)',  discountPercent: '19%', salePrice: '$729',   originalPrice: '$905',   image: '/deal-page/product-3.png', primaryCta: 'Buy now' },
+      { badge: '9 interest-free installments', name: 'LG Side by Side Refrigerator 625L, no water line required, Total No Frost', sku: 'GS66SPY', rating: '4.6', reviewCount: '(517)', discountPercent: '36%', salePrice: '$1,000', originalPrice: '$1,567', image: '/deal-page/product-2.png', primaryCta: 'Buy now' },
+    ],
+  },
+  washer: {
+    label: 'Washer',
+    thumb: '/deal-page/product-washer-1.png',
+    seed: [
+      { badge: '9 interest-free installments', name: 'LG Washer Dryer 12kg Wash / 7kg Dry, AI DD\u2122 and ThinQ',                     sku: 'WD12BVC2S6C', rating: '4.2', reviewCount: '(55)', discountPercent: '54%', salePrice: '$513', originalPrice: '$1,121', image: '/deal-page/product-washer-1.png', primaryCta: 'Get stock alert' },
+      { badge: '6 interest-free installments', name: 'LG Washer Dryer 12kg Wash / 7kg Dry, AI DD\u2122 and ThinQ',                     sku: 'WD12PVC3S6C', rating: '4.9', reviewCount: '(20)', discountPercent: '51%', salePrice: '$500', originalPrice: '$1,040', image: '/deal-page/product-washer-2.png', primaryCta: 'Buy now' },
+      { badge: '9 interest-free installments', name: 'Washer Dryer 16kg Wash / 8kg Dry, AI DD with PetCare Cycle, ThinQ, Matte Black', sku: 'WD16EBNT6PC', rating: '4.8', reviewCount: '(6)',  discountPercent: '35%', salePrice: '$729', originalPrice: '$1,135', image: '/deal-page/product-washer-3.png', primaryCta: 'Buy now' },
+      { badge: '9 interest-free installments', name: 'Washer Dryer 18kg Wash / 10kg Dry, AI DD with PetCare Cycle, ThinQ, Graphite',   sku: 'WD18EGNTSPG', rating: '4.6', reviewCount: '(8)',  discountPercent: '44%', salePrice: '$811', originalPrice: '$1,459', image: '/deal-page/product-washer-4.png', primaryCta: 'Buy now' },
+    ],
+  },
+  washtower: {
+    label: 'WashTower',
+    thumb: '/deal-page/product-washtower-1.png',
+    seed: [
+      { badge: '24 interest-free installments', name: 'Get a microwave for $27 with the purchase of a WashTower 14kg Wash / 10kg Dry', sku: 'WK14BMS203.ESPR', rating: '5.0', reviewCount: '(6)', discountPercent: '34%', salePrice: '$1,526', originalPrice: '$2,324', image: '/deal-page/product-washtower-1.png', primaryCta: 'Get stock alert' },
+      { badge: '24 interest-free installments', name: 'Get a microwave for $27 with the purchase of a WashTower 22kg Wash / 16kg Dry', sku: 'WK22GMS203.ESPR', rating: '4.8', reviewCount: '(4)', discountPercent: '34%', salePrice: '$1,756', originalPrice: '$2,675', image: '/deal-page/product-washtower-2.png', primaryCta: 'Get stock alert' },
+      { badge: '24 interest-free installments', name: 'Get a microwave for $27 with the purchase of a WashTower 22kg Wash / 16kg Dry', sku: 'WK22BMS203.ESPR', rating: '5.0', reviewCount: '(4)', discountPercent: '39%', salePrice: '$1,810', originalPrice: '$2,999', image: '/deal-page/product-washtower-3.png', primaryCta: 'Get stock alert' },
+      { badge: '24 interest-free installments', name: 'Get a microwave for $27 with the purchase of a WashTower 14kg Wash / 10kg Dry', sku: 'WK14BMS203.ESPR', rating: '5.0', reviewCount: '(6)', discountPercent: '34%', salePrice: '$1,526', originalPrice: '$2,324', image: '/deal-page/product-washtower-1.png', primaryCta: 'Get stock alert' },
+    ],
+  },
+};
 
-export function dealProductDefaultItem(t: TFunction, i: number): DealProductItem {
-  const seed = DEAL_PRODUCT_SEED[i % DEAL_PRODUCT_SEED.length];
+/** Build the i-th card of a curated set (wraps past the set's four seeds). */
+export function dealProductItemFor(t: TFunction, setKey: DealProductSetKey, i: number): DealProductItem {
+  const { seed } = DEAL_PRODUCT_SETS[setKey];
+  const s = seed[i % seed.length];
   return {
-    badge: t('9 interest-free installments'),
+    badge: t(s.badge),
     showBadge: true,
-    name: t(seed.name),
-    sku: seed.sku,
-    rating: seed.rating,
-    reviewCount: seed.reviewCount,
+    name: t(s.name),
+    sku: s.sku,
+    rating: s.rating,
+    reviewCount: s.reviewCount,
     showRating: true,
-    image: DEAL_PRODUCT_IMAGES[i % DEAL_PRODUCT_IMAGES.length],
-    discountPercent: seed.discountPercent,
+    image: s.image,
+    discountPercent: s.discountPercent,
     showDiscountPercent: true,
-    salePrice: seed.salePrice,
-    originalPrice: seed.originalPrice,
+    salePrice: s.salePrice,
+    originalPrice: s.originalPrice,
     showOriginalPrice: true,
     shippingNote: t('Free Shipping'),
     showShippingNote: true,
     secondaryCta: t('Learn more'),
-    primaryCta: t('Buy now'),
+    primaryCta: t(s.primaryCta),
   };
+}
+
+/** The full curated row for a set at a given card count. */
+export function dealProductSetItems(t: TFunction, setKey: DealProductSetKey, count: number): DealProductItem[] {
+  return Array.from({ length: count }, (_, i) => dealProductItemFor(t, setKey, i));
 }
 
 // ── Category nav (Figma 6080:52130 — 2280×353) ────────────────────────────────
@@ -277,17 +367,6 @@ export interface DealSiteHeaderState {
   showBreadcrumb: boolean;
 }
 
-// ── Membership CTA (Figma 6080:52852 — 2280×476) ──────────────────────────────
-
-export interface DealMembershipState {
-  headline: string;
-  subCopy: string;
-  showSubCopy: boolean;
-  ctaText: string;
-  showCta: boolean;
-  image: string | null;
-}
-
 // ── Site footer (Figma 6080:52867 — 2280×848) ─────────────────────────────────
 
 export interface DealFooterColumn {
@@ -339,6 +418,21 @@ export const DEAL_SOCIAL_ICONS = [
   '/deal-page/icons/social-blog.svg',
 ];
 
+/** Countdown fields shared by both banner defaults (off until switched on). */
+function countdownDefaults(t: TFunction) {
+  return {
+    showCountdown: false,
+    days: '00',
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+    dayLabel: t('Day'),
+    hourLabel: t('Hour'),
+    minuteLabel: t('Minute'),
+    secondLabel: t('Second'),
+  };
+}
+
 // ── Discriminated union ───────────────────────────────────────────────────────
 
 export type DealEditState =
@@ -347,10 +441,9 @@ export type DealEditState =
   | { type: 'deal-cards';        data: DealCardsState }
   | { type: 'deal-tab-nav';     data: DealTabNavState }
   | { type: 'deal-promo-banner'; data: DealPromoBannerState }
-  | { type: 'deal-time-sale';    data: DealTimeSaleState }
+  | { type: 'deal-banner';       data: DealPromoBannerState }
   | { type: 'deal-product-list'; data: DealProductListState }
   | { type: 'deal-category-nav'; data: DealCategoryNavState }
-  | { type: 'deal-membership';   data: DealMembershipState }
   | { type: 'deal-site-footer';  data: DealSiteFooterState };
 
 // ── Default state factory ─────────────────────────────────────────────────────
@@ -406,6 +499,7 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           kvNudgeY: 0,
           kvScale: 1,
           products: [],
+          ...countdownDefaults(t),
         },
       };
     case 'deal-cards':
@@ -429,38 +523,45 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
         },
       };
     case 'deal-promo-banner':
+      // The board's "standard setting" frame: PD Slot art with one product
+      // already sitting in each of the four plates.
       return {
         type,
         data: {
           layout: 'Art right',
           size: 'Large',
           headline: t('LG Black Friday Exclusive offer\nup to 60% off'),
-          subCopy: t('Extra 8% coupon, 24 interest-free installments'),
+          subCopy: t('Extra 8% coupon, 24 interest-free installments and free shipping.'),
           showSubCopy: true,
           linkPrimary: t('Terms and Conditions'),
           linkSecondary: t('Privacy Policy'),
           showLinks: true,
           ctaText: t('Shop now'),
           showCta: false,
-          image: '/deal-page/banner-exclusive.png',
+          image: null,
+          kvAsset: 'kv-product-slot',
+          products: PROMO_DEFAULT_PRODUCTS.map(p => ({ url: '', image: p })),
+          ...countdownDefaults(t),
         },
       };
-    case 'deal-time-sale':
+    case 'deal-banner':
       return {
         type,
         data: {
-          headline: t('Time Sale ends in'),
-          subCopy: t('Limited hours only — when the clock stops, the price is gone.'),
+          layout: 'Art right',
+          size: 'Standard',
+          headline: t('Hot Deals, online only'),
+          subCopy: t('The season’s deepest markdowns, on LG.com only.'),
           showSubCopy: true,
-          days: '00',
-          hours: '00',
-          minutes: '00',
-          seconds: '00',
-          dayLabel: t('Day'),
-          hourLabel: t('Hour'),
-          minuteLabel: t('Minute'),
-          secondLabel: t('Second'),
-          image: '/deal-page/banner-time-sale.png',
+          linkPrimary: t('Terms and Conditions'),
+          linkSecondary: t('Privacy Policy'),
+          showLinks: false,
+          ctaText: t('Shop now'),
+          showCta: false,
+          image: null,
+          kvAsset: 'deal-type-hot-deal',
+          products: [],
+          ...countdownDefaults(t),
         },
       };
     case 'deal-product-list':
@@ -471,7 +572,8 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           showSectionTitle: true,
           tabs: [t('Refrigerators'), t('Washers')].join('\n'),
           showTabs: true,
-          products: [0, 1, 2].map(i => dealProductDefaultItem(t, i)),
+          productSet: 'refrigerator',
+          products: dealProductSetItems(t, 'refrigerator', 4),
         },
       };
     case 'deal-category-nav':
@@ -484,18 +586,6 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           sortLabel: t('Sort by'),
           emptyText: t('There is no available product.'),
           showEmptyText: true,
-        },
-      };
-    case 'deal-membership':
-      return {
-        type,
-        data: {
-          headline: t('Become an LG Member today and enjoy exclusive Black Friday benefits instantly.'),
-          subCopy: t('Sign up now to unlock your Black Friday member rewards.'),
-          showSubCopy: true,
-          ctaText: t('Join us'),
-          showCta: true,
-          image: '/deal-page/banner-membership.png',
         },
       };
   }

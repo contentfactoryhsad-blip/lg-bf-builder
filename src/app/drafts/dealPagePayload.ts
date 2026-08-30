@@ -31,14 +31,48 @@ export function restoreDealCanvasItems(payload: DealPagePayloadV1, t?: TFunction
   const restored: DealCanvasItem[] = [];
 
   for (const item of items) {
-    if (!item || !isKnownDealModuleType(item.type)) continue;
-    const defaults = createDealDefaultState(item.type, t);
-    const savedData = (item.editState as DealEditState | undefined)?.data;
+    if (!item) continue;
+    let savedData = (item.editState as DealEditState | undefined)?.data as Record<string, unknown> | undefined;
+    let rawType = item.type as string;
+
+    // The standalone Time Sale module folded into the deal banner — a
+    // 'deal-time-sale' draft becomes a deal banner with the countdown on
+    // (its fields carry the same names, so they merge straight over).
+    if (rawType === 'deal-time-sale') {
+      rawType = 'deal-banner';
+      savedData = { ...(savedData ?? {}), showCountdown: true, showLinks: false, showCta: false };
+    }
+
+    if (!isKnownDealModuleType(rawType)) continue;
+
+    // The banner heights became module types (promotion 400 / deal 350) — a
+    // draft saved when 'deal-promo-banner' still had a size picker maps its
+    // Standard instances onto the deal-banner type so they keep their height.
+    let type = rawType;
+    if (type === 'deal-promo-banner' && savedData?.size === 'Standard') {
+      type = 'deal-banner';
+    }
+
+    // Banners saved before the key-visual pickers carry an uploaded `image`
+    // and no `kvAsset` — pin kvAsset to null so the default-merge below can't
+    // swap their art for the new default variant.
+    if ((type === 'deal-promo-banner' || type === 'deal-banner') && savedData && !('kvAsset' in savedData)) {
+      savedData = { ...savedData, kvAsset: null };
+    }
+
+    // The "Art left" layout option was retired — banners run right-art only,
+    // so a draft that had flipped one comes back the standard way (there is no
+    // control left to unflip it with).
+    if ((type === 'deal-promo-banner' || type === 'deal-banner') && savedData?.layout === 'Art left') {
+      savedData = { ...savedData, layout: 'Art right' };
+    }
+
+    const defaults = createDealDefaultState(type, t);
     restored.push({
       id: typeof item.id === 'string' && item.id ? item.id : crypto.randomUUID(),
-      type: item.type,
+      type,
       editState: {
-        type: item.type,
+        type,
         data: { ...(defaults.data as object), ...((savedData ?? {}) as object) },
       } as DealEditState,
     });

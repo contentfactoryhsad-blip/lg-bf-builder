@@ -33,6 +33,8 @@ export interface HeroArt {
 
 export const HERO_ART: Record<string, HeroArt> = {
   'kv-main':                   { x: 355.3, y: -695.9, size: 2136.9, scrimW: 1035 },
+  // Motion is kv-main's animated master — same square, same framing.
+  'kv-main-motion':            { x: 355.3, y: -695.9, size: 2136.9, scrimW: 1035 },
   'kv-main-character':         { x: 355.3, y: -695.9, size: 2136.9, scrimW: 1038 },
   'kv-product-centric-1':      { x: 327.7, y: -695.9, size: 2146.9, scrimW: 991 },
   'kv-product-centric-2':      { x: 327.7, y: -695.9, size: 2146.9, scrimW: 1019 },
@@ -54,6 +56,17 @@ export const HERO_SCRIM_X = 5;
  */
 export const HERO_SCRIM =
   'linear-gradient(270deg, rgba(0,0,0,0) 7.21%, rgba(0,0,0,1) 52.4%, rgba(0,0,0,1) 100%)';
+
+/**
+ * The Motion key visual — kv-main's animated master
+ * (`lg-bf-kv-main-motion-3000x3000.mp4`, derived into
+ * `public/content-template/motion/`). Not a registry asset: the picker offers
+ * it as its own tile, the placement is EXACTLY Main's (same square, same
+ * framing), and the renderer plays the video over Main's static art so a PNG
+ * export still shows the artwork where a video can't rasterise.
+ */
+export const HERO_MOTION_ID = 'kv-main-motion';
+export const HERO_MOTION_SRC = '/content-template/motion/kv-main-motion.mp4';
 
 /** Fallback for a key visual the board has no hero frame for yet. */
 export const DEFAULT_HERO_ART: HeroArt = HERO_ART['kv-main'];
