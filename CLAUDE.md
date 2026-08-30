@@ -131,6 +131,10 @@ GitHub: `https://github.com/contentfactoryhsad-blip/lg-retail-obs-content-builde
   html-to-image가 비디오를 못 굽기 때문에 PNG export에는 정적 아트가 찍힌다(의도된 폴백).
 - **Category nav 패널은 이름 7칸 + Results bar/Empty state뿐이다**(2026-08-30) — 개수 컨트롤과 아이콘
   업로드를 걷어냈다(아이콘은 사이트 크롬). 상태의 `icon` 필드와 MIN/MAX 상수는 남아 있다.
+- **PD Slot 플레이트 컬러는 모듈 상태다**(`plateColor`, 기본 `PD_PLATE_FILL`) — 히어로는 구운 플레이트 위에
+  같은 자리 박스를 **덧그려서**(Content Banner Builder의 LG.com 미리보기와 같은 레시피) 리컬러를 가능하게 했고,
+  패널은 `ProductSlotsEditor`의 내장 `color`/`onColorChange`(Slot Color 필드)를 그대로 쓴다. 헤더의
+  로고·타이틀은 `AppHeader onHome`으로 홈으로 간다(unsaved guard 통과).
 - **Membership CTA 모듈은 삭제됐다**(2026-08-30) — 레지스트리/상태/렌더러/패널/프리셋에서 전부 걷어냈고,
   구 드래프트의 membership 아이템은 복원에서 조용히 스킵된다(unknown type 경로). `banner-membership.png`는
   public 원칙대로 남겨뒀다.

@@ -48,6 +48,7 @@ import type {
 import { DEAL_SOCIAL_ICONS, DEAL_BANNER_HEIGHT } from './dealEditStates';
 import { artOf, artUrl, getAsset, previewUrl } from '../contenttemplate/contentTemplateAssets';
 import { slotBoxesFor } from '../contenttemplate/lgcomSlots';
+import { PD_PLATE_FILL } from '../contenttemplate/paidBoards';
 import { heroArtFor, HERO_SCRIM, HERO_SCRIM_X, HERO_SLOT_ID, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
 import { PROMO_ART, PROMO_SLOT, promoArtHasSlots, promoArtStem, dealBannerArtFor, DEAL_BANNER_SCRIM } from './dealBannerArt';
 
@@ -321,15 +322,13 @@ function DealHeroTemplate({ data }: { data: DealHeroState }) {
           />
         )}
 
+        {/* Plates are drawn OVER the baked ones (same recipe as the Content
+            Banner Builder's LG.com preview) so their colour can be changed. */}
         {plates.map((box, i) => {
           const product = data.products[i]?.image ?? null;
-          if (!product) return null;
           return (
-            <img
+            <div
               key={i}
-              src={product}
-              alt=""
-              draggable={false}
               style={{
                 position: 'absolute',
                 left: art.x + box.x * art.size,
@@ -337,10 +336,19 @@ function DealHeroTemplate({ data }: { data: DealHeroState }) {
                 width: box.w * art.size,
                 height: box.h * art.size,
                 borderRadius: box.r * art.size,
-                objectFit: 'contain',
-                maxWidth: 'none',
+                background: data.plateColor ?? PD_PLATE_FILL,
+                overflow: 'hidden',
               }}
-            />
+            >
+              {product && (
+                <img
+                  src={product}
+                  alt=""
+                  draggable={false}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', maxWidth: 'none' }}
+                />
+              )}
+            </div>
           );
         })}
 
@@ -802,7 +810,7 @@ function DealPromoBannerTemplate({ data, size }: { data: DealPromoBannerState; s
                         width: PROMO_SLOT.size,
                         height: PROMO_SLOT.size,
                         borderRadius: PROMO_SLOT.radius,
-                        background: PROMO_SLOT.plate,
+                        background: data.plateColor ?? PROMO_SLOT.plate,
                         overflow: 'hidden',
                       }}
                     >

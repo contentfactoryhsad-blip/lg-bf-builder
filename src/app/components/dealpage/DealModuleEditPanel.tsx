@@ -565,6 +565,8 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
             count={plateCount}
             slots={data.products.length === plateCount ? data.products : emptyProductSlots(plateCount)}
             onChange={next => set({ products: next })}
+            color={data.plateColor}
+            onColorChange={v => set({ plateColor: v })}
           />
         </div>
       )}
@@ -854,6 +856,8 @@ function DealPromoBannerPanel({
             count={PROMO_SLOT.count}
             slots={data.products.length === PROMO_SLOT.count ? data.products : emptyProductSlots(PROMO_SLOT.count)}
             onChange={next => set({ products: next })}
+            color={data.plateColor}
+            onColorChange={v => set({ plateColor: v })}
           />
         </div>
       )}

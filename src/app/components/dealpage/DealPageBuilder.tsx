@@ -715,6 +715,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       <AppHeader
         title={t('Promotion Page Builder')}
         onBack={() => guard(onBack)}
+        onHome={() => guard(() => onRailNavigate('home'))}
         right={
           <>
             <SaveForLaterButton draft={draft} defaultName={defaultDraftName} disabled={canvasItems.length === 0} />

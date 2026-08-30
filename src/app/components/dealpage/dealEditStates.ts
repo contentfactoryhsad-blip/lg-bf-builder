@@ -9,6 +9,7 @@
 
 import type { DealModuleType } from './dealModuleRegistry';
 import { PROMO_DEFAULT_PRODUCTS } from './dealBannerArt';
+import { PD_PLATE_FILL } from '../contenttemplate/paidBoards';
 import type { TFunction } from '../../i18n/LanguageContext';
 
 // Same fallback as the Shop in Shop states: module-scope palette previews are
@@ -59,6 +60,8 @@ export interface DealHeroState extends CountdownFields {
    * the Content Template Builder's product slots.
    */
   products: { url: string; image: string | null }[];
+  /** PD Slot plate fill — drawn over the baked plates so it can be recoloured. */
+  plateColor: string;
   // + CountdownFields: the digit row under the copy (Figma 6236:143805),
   //   sitting on the content rail at y 294.
 }
@@ -170,6 +173,8 @@ export interface DealPromoBannerState extends CountdownFields {
    * crawl + background-removal flow as the hero's PD Slot products.
    */
   products: { url: string; image: string | null }[];
+  /** PD Slot plate fill (the four boxes the frame draws over the art). */
+  plateColor: string;
   // + CountdownFields: the old standalone Time Sale module folded into the
   //   deal banner (2026-08-30) — only the deal banner's panel surfaces the
   //   toggle; the 400 promotion banner never counts down.
@@ -499,6 +504,7 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           kvNudgeY: 0,
           kvScale: 1,
           products: [],
+          plateColor: PD_PLATE_FILL,
           ...countdownDefaults(t),
         },
       };
@@ -541,6 +547,7 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           image: null,
           kvAsset: 'kv-product-slot',
           products: PROMO_DEFAULT_PRODUCTS.map(p => ({ url: '', image: p })),
+          plateColor: PD_PLATE_FILL,
           ...countdownDefaults(t),
         },
       };
@@ -561,6 +568,7 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           image: null,
           kvAsset: 'deal-type-hot-deal',
           products: [],
+          plateColor: PD_PLATE_FILL,
           ...countdownDefaults(t),
         },
       };
