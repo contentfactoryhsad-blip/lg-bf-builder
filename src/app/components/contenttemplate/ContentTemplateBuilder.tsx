@@ -83,7 +83,7 @@ import type { DraftRecord } from '../../utils/draftStore';
 import { LgcomSlotPreview } from './LgcomSlotPreview';
 import { PaidSlotPreview } from './PaidSlotPreview';
 import { paidSlotsFor, type PaidSlot } from './paidSlots';
-import { DEFAULT_ICON_ROW, LGCOM_SLOTS, artFor, bareOnExport, iconRowStyle, overlayUrl, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
+import { DEFAULT_ICON_ROW, artFor, bareOnExport, iconRowStyle, lgcomSlotsFor, overlayUrl, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
 import { PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
@@ -175,7 +175,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   async function handleDownload() {
     if (!asset || !channelKey || exportedCount !== null) return;
     const list: (LgcomSlot | PaidSlot)[] =
-      channelKey === 'lgcom' ? LGCOM_SLOTS : (PAID_ASSETS.has(asset.id) ? paidSlotsFor(channelKey) : []);
+      channelKey === 'lgcom' ? lgcomSlotsFor(asset.id) : (PAID_ASSETS.has(asset.id) ? paidSlotsFor(channelKey) : []);
     if (list.length === 0) return;
 
     // ask for the save location first, while the click still counts as a user
@@ -275,7 +275,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   strokeLinejoin="round"
                 />
               </svg>
-              {exporting ? `${exportedCount} / ${channelKey === 'lgcom' ? LGCOM_SLOTS.length : paidSlotsFor(channelKey ?? '').length}` : t('Download ZIP')}
+              {exporting ? `${exportedCount} / ${channelKey === 'lgcom' ? lgcomSlotsFor(asset?.id ?? '').length : paidSlotsFor(channelKey ?? '').length}` : t('Download ZIP')}
             </button>
           </>
         }
@@ -676,7 +676,7 @@ function ChannelSlots({
   iconStyle: IconRowStyle;
 }) {
   const t = useT();
-  const slots = channelKey === 'lgcom' ? LGCOM_SLOTS : [];
+  const slots = channelKey === 'lgcom' && asset ? lgcomSlotsFor(asset.id) : [];
   // The paid boards exist only for the two Key Visual _Main artworks; every
   // other asset would need its own board before it could be laid out here.
   const paid = channelKey === 'lgcom' || !asset || !PAID_ASSETS.has(asset.id)

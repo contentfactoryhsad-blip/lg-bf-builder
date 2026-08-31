@@ -458,6 +458,15 @@ export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device}`;
 export const bareOnExport = (slotId: string) =>
   slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960';
 
+/**
+ * Which LG.com sizes an asset runs at all. The Dynamic (motion) asset ships
+ * video, and video goes out on the two hero placements only — the
+ * `LG.com — Dynamic` board (`6210:73073`) hides the other four frames, and the
+ * hero flag marks exactly that pair. Everything else runs the full set.
+ */
+export const lgcomSlotsFor = (assetId: string): LgcomSlot[] =>
+  assetId === 'ad-teasing' ? LGCOM_SLOTS.filter(s => s.hero) : LGCOM_SLOTS;
+
 /* ------------------------------------------------------------------ */
 /* Icon row                                                            */
 /* ------------------------------------------------------------------ */

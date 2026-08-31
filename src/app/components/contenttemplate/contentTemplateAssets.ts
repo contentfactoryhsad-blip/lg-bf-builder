@@ -14,7 +14,7 @@
 
 import { ASSET_STAMP } from './assetStamp';
 
-export type AssetGroupKey = 'key-visual' | 'deal-type' | 'ad-creative' | 'shorts';
+export type AssetGroupKey = 'key-visual' | 'deal-type' | 'dynamic' | 'ad-creative' | 'shorts';
 
 export interface ContentAsset {
   /** Stable key for selection. Unique across groups. */
@@ -110,10 +110,17 @@ export const ASSET_ROWS: AssetRow[] = [
     ],
   },
   {
+    // The motion piece stands alone — its row heading names it, so the tile
+    // itself carries no caption, same as the Key Visual rows.
+    key: 'dynamic',
+    label: 'DYNAMIC',
+    captionFromIndex: 1,
+    tiles: [{ id: 'ad-teasing', w: 136 }],
+  },
+  {
     key: 'ad-creative',
     label: 'AD CREATIVE',
     tiles: [
-      { id: 'ad-teasing', w: 136 },
       { id: 'ad-joy-ryder', w: 66 },
       { id: 'ad-benefit', w: 66 },
     ],
@@ -146,9 +153,12 @@ export const CONTENT_ASSETS: ContentAsset[] = [
   { id: 'deal-type-gift', label: 'Gift', group: 'deal-type' },
   { id: 'deal-type-hot-deal', label: 'Hot Deal', group: 'deal-type' },
 
-  // AD CREATIVE — three concepts. Teasing is the motion piece; the `-2`
-  // source variants are held back until a concept calls for them.
-  { id: 'ad-teasing', label: 'Teasing Content', group: 'ad-creative', src: 'kv-main', motion: 'kv-main-motion' },
+  // DYNAMIC — the motion piece (Main artwork + motion cut), its own group
+  // since 2026-08-31 so it can ride alongside an ad-creative pick.
+  { id: 'ad-teasing', label: 'Teasing Content', group: 'dynamic', src: 'kv-main', motion: 'kv-main-motion' },
+
+  // AD CREATIVE — the `-2` source variants are held back until a concept calls
+  // for them.
   { id: 'ad-joy-ryder', label: 'Joy & Ryder', group: 'ad-creative', src: 'ad-creative-a-1' },
   { id: 'ad-benefit', label: 'Benefit', group: 'ad-creative', src: 'ad-creative-b-1' },
 

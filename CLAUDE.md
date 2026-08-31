@@ -32,11 +32,16 @@ GitHub: `https://github.com/contentfactoryhsad-blip/lg-retail-obs-content-builde
 - 상태 타입은 `components/thumbnail/thumbnailTypes.ts` (`ThumbnailDefaultState`, `ThumbnailPromotionState`, `ThumbnailBundleState` …)
 - **구현이 한 번 통째로 갈아엎어졌다.** 구버전(`ProductCardEditor`/`TemplateSelector`/`BulkGenerator`/`EditorPanel`/`components/templates/`/`src/app/types.ts`/`i18n/sloganFit.ts`/`components/icons/FeatureIcons.tsx`/`src/imports/`)은 진입점부터 그래프를 타서 **어디에서도 닿지 않는 것을 확인하고 삭제**(2026-08-13). 옛 문서나 AHQ 레포에서 이 이름을 보면 위 thumbnail 쪽을 보면 된다
 
-### 1.7) Content Template Builder — 에셋 조합 → 채널별 사이즈
+### 1.7) Content Banner Builder — 에셋 조합 → 채널별 사이즈
+(화면 이름은 2026-08-31부터 Content Banner Builder. 코드 폴더·내부 키는 `contenttemplate` 그대로다.
+DYNAMIC 그룹 = 구 AD CREATIVE의 Teasing Content 타일이 독립한 것 — 모션 에셋 `ad-teasing` 하나뿐이고,
+Key Visual 행처럼 캡션 없이 행 제목이 이름을 댄다. 목업 판 `miJcDQgz0yJMskLE5a5HHj`의 `6068:45105`도 같은 구조.
+Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlotsFor(assetId)`가 `hero` 플래그로 거르고,
+`LG.com — Dynamic` 보드(`6210:73073`, 구 Teasing Content)도 그 4칸을 숨겨놨다. 캔버스·ZIP 둘 다 이 필터를 탄다.)
 - `components/contenttemplate/` — `ContentTemplateBuilder.tsx`(옆 빌더와 같은 4분할 셸)가
   `contentTemplateAssets.ts`(에셋·채널 레지스트리)를 물고 있다. **모듈을 쌓는 빌더가 아니다** —
   팔레트가 담는 건 페이지 모듈이 아니라 **소재(에셋) 소스**고, 캔버스는 드롭존이 아니라 **결과 미리보기**다.
-- 흐름: 구분선 위에서 Key Visual / Deal Type / Ad Creative를 **그룹당 하나씩** 고르고,
+- 흐름: 구분선 위에서 Key Visual / Deal Type / Dynamic / Ad Creative를 **그룹당 하나씩** 고르고,
   아래에서 Channel을 고르면 그 채널이 집행하는 사이즈 세트가 캔버스에 쌓인다.
 - 레이아웃 수치는 Figma 목업(`fUup3vSq71f6eUIRpmzz8s`, 페이지 "Content Template Builder", 프레임 `26:2`)에서 그대로 왔다 —
   레일 80 / 팔레트 320 / 편집 384, 썸네일 66px에 거터 8. 이 세 폭은 **다른 빌더(64/256/320)와 다르다**.
