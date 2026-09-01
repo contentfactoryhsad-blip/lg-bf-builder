@@ -103,7 +103,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
       { role: 'eyebrow',    x: 240, y: 72,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
       { role: 'headline',   x: 240, y: 94,  w: 542, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
       { role: 'subcopy',    x: 240, y: 218, w: 542, size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 240, y: 658, w: 542, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
+      { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
     cta: { x: 240, y: 265, w: 110.6, h: 44, radius: 9.03, size: 16.93, label: 'Shop now' },
   },  {
@@ -455,6 +455,15 @@ export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device}`;
  * placements, so baking it into the file would double it up. Same pair as
  * `hero`, but kept separate: one is about motion, this one about what ships.
  */
+/**
+ * Disclaimer rule (2026-09-01): a size with either dimension at 1000px or more
+ * carries the long, editable disclaimer, bottom-anchored so extra lines grow
+ * upward. Every smaller size is locked to the short "*T&C's apply" — the copy
+ * field does not reach it.
+ */
+export const longDisclaimer = (w: number, h: number) => w >= 1000 || h >= 1000;
+export const SHORT_DISCLAIMER = '*T&C\u2019s apply';
+
 export const bareOnExport = (slotId: string) =>
   slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960';
 

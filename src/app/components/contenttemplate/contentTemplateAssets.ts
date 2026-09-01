@@ -14,7 +14,20 @@
 
 import { ASSET_STAMP } from './assetStamp';
 
-export type AssetGroupKey = 'key-visual' | 'deal-type' | 'dynamic' | 'ad-creative' | 'shorts';
+export type AssetGroupKey = 'key-visual' | 'deal-type' | 'dynamic' | 'ad-creative' | 'shorts' | 'upload';
+
+export const CUSTOM_ASSET_ID = 'custom-upload';
+
+/**
+ * The uploaded artwork, as an object URL. Module-level rather than React state
+ * so the URL helpers below stay plain functions; the builder owns the lifecycle
+ * (set on upload, revoke + clear on replace). 🔴 Returned raw — never append
+ * the `?v=` stamp to it, blob URLs with query strings fail to fetch.
+ */
+let customArtUrl: string | null = null;
+export const setCustomArt = (url: string | null) => { customArtUrl = url; };
+export const hasCustomArt = () => customArtUrl !== null;
+
 
 export interface ContentAsset {
   /** Stable key for selection. Unique across groups. */
@@ -166,6 +179,11 @@ export const CONTENT_ASSETS: ContentAsset[] = [
   // on the Figma board, so they are numbered here rather than renamed.
   { id: 'shorts-01', label: '01', group: 'shorts', blank: true },
   { id: 'shorts-02', label: '01', group: 'shorts', blank: true },
+
+  // UPLOAD — the operator's own 3000×3000 square, laid out with the Key Visual
+  // _Main skeleton on every channel. The file itself lives in `customArtUrl`
+  // below; until one is chosen the palette shows a dropzone, not this asset.
+  { id: CUSTOM_ASSET_ID, label: 'Uploaded image', group: 'upload' },
 ];
 
 /** Artwork stem for an asset — `src` when it borrows another asset's art. */
@@ -183,22 +201,27 @@ export const artOf = (a: ContentAsset) => a.src ?? a.id;
  */
 const V = `?v=${ASSET_STAMP}`;
 
-export const thumbUrl = (a: ContentAsset) => `/content-template/thumb/${artOf(a)}.webp${V}`;
-export const previewUrl = (a: ContentAsset) => `/content-template/preview/${artOf(a)}.webp${V}`;
+export const thumbUrl = (a: ContentAsset) =>
+  a.id === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/thumb/${artOf(a)}.webp${V}`;
+export const previewUrl = (a: ContentAsset) =>
+  a.id === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/preview/${artOf(a)}.webp${V}`;
 /** The delivered frame, uncropped — what the edit panel shows. */
-export const sourceUrl = (a: ContentAsset) => `/content-template/source/${artOf(a)}.webp${V}`;
+export const sourceUrl = (a: ContentAsset) =>
+  a.id === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/source/${artOf(a)}.webp${V}`;
 /**
  * Same frame at 3000px. Banner slots place it as large as 1809px, and the
  * Figma placements were judged against the 3000px original, so slots read this
  * one rather than the 800px `source` copy.
  */
-export const fullUrl = (a: ContentAsset) => `/content-template/full/${artOf(a)}.webp${V}`;
+export const fullUrl = (a: ContentAsset) =>
+  a.id === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/full/${artOf(a)}.webp${V}`;
 /**
  * Same, for a stem chosen per banner size — see `Placement.src`. A PD Slot tile
  * renders the row-of-four art at PC sizes and the 2x2 art at the rest, so the
  * slot, not the asset, decides which file to load.
  */
-export const artUrl = (stem: string) => `/content-template/full/${stem}.webp${V}`;
+export const artUrl = (stem: string) =>
+  stem === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/full/${stem}.webp${V}`;
 export const motionUrl = (a: ContentAsset) =>
   a.motion ? `/content-template/motion/${a.motion}.mp4${V}` : null;
 

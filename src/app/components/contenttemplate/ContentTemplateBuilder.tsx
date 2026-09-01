@@ -83,14 +83,15 @@ import type { DraftRecord } from '../../utils/draftStore';
 import { LgcomSlotPreview } from './LgcomSlotPreview';
 import { PaidSlotPreview } from './PaidSlotPreview';
 import { paidSlotsFor, type PaidSlot } from './paidSlots';
-import { DEFAULT_ICON_ROW, artFor, bareOnExport, iconRowStyle, lgcomSlotsFor, overlayUrl, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
-import { PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
+import { artFor, bareOnExport, lgcomSlotsFor, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
+import { IconRowInline } from './icons/IconRowInline';
+import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
 import { renderMotionCutLive } from './exportMotion';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
-import {
+import { CUSTOM_ASSET_ID, hasCustomArt, setCustomArt,
   ASSET_ROWS,
   SHORTS_SIZES,
   TILE_H,
@@ -123,15 +124,64 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [sizeKey, setSizeKey] = useState<string | null>(null);
 
   const [copy, setCopy] = useState<SlotCopy>(EMPTY_COPY);
-  /** The icon row is the only element that can be switched off — see DEFAULT_ICON_ROW. */
-  const [showIconRow, setShowIconRow] = useState(DEFAULT_ICON_ROW);
-  const [iconStyle, setIconStyle] = useState<IconRowStyle>('solid-white');
+  /**
+   * Icon row settings, ported from promotion-banner-variation: None / Solid /
+   * Line, a colour, how many groups, and which benefit each group shows —
+   * solid and line keep separate picks, matching the source app.
+   */
+  const [iconKind, setIconKind] = useState<'none' | 'solid' | 'line'>('none');
+  const [iconColor, setIconColor] = useState<'black' | 'white'>('white');
+  const [iconCount, setIconCount] = useState<1 | 2 | 3>(3);
+  const [solidIconIds, setSolidIconIds] = useState<string[]>(['free-delivery', 'free-disposal', 'free-installation']);
+  const [lineIconIds, setLineIconIds] = useState<string[]>(['free-delivery', 'free-disposal', 'free-installation']);
+  /** Caption overrides per slot — operators localise the labels. null = registry text. */
+  const [solidIconLabels, setSolidIconLabels] = useState<(string | null)[]>([null, null, null]);
+  const [lineIconLabels, setLineIconLabels] = useState<(string | null)[]>([null, null, null]);
+  const showIconRow = iconKind !== 'none';
+  const iconStyle = `${iconKind === 'none' ? 'solid' : iconKind}-${iconColor}` as IconRowStyle;
+  const iconIds = (iconKind === 'line' ? lineIconIds : solidIconIds).slice(0, iconCount);
+  const iconLabels = (iconKind === 'line' ? lineIconLabels : solidIconLabels).slice(0, iconCount);
   /** Products keyed by asset — switching key visual keeps each one's fills. */
   const [products, setProducts] = useState<Record<string, ProductSlots>>({});
   /** Plate fill on the paid boards; starts on the Figma value. */
   const [plateColor, setPlateColor] = useState(PD_PLATE_FILL);
+  /**
+   * The operator's uploaded 3000×3000, as an object URL. Mirrored into the
+   * asset registry (`setCustomArt`) so every URL helper resolves it; kept in
+   * state as well so uploads re-render and the old URL can be revoked.
+   */
+  const [uploadUrl, setUploadUrl] = useState<string | null>(null);
+  const uploadInput = useRef<HTMLInputElement>(null);
+
+  function handleUploadFile(file: File) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      // the Main skeleton places a square — anything else would render distorted
+      if (Math.abs(img.width - img.height) > img.width * 0.01) {
+        URL.revokeObjectURL(url);
+        window.alert(t('Please upload a square image (3000×3000).'));
+        return;
+      }
+      if (uploadUrl) URL.revokeObjectURL(uploadUrl);
+      setCustomArt(url);
+      setUploadUrl(url);
+      setSelectedId(CUSTOM_ASSET_ID);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); window.alert(t('That file could not be read as an image.')); };
+    img.src = url;
+  }
+
   /** The one size mounted in the hidden export host, and how far along we are. */
   const [renderSlot, setRenderSlot] = useState<LgcomSlot | PaidSlot | null>(null);
+  /**
+   * When set, the export host renders just this slot's icon row on a
+   * transparent ground — rasterised and composited over the motion cut, now
+   * that the row is drawn live instead of shipped as a baked PNG.
+   */
+  const [renderIconRowSlot, setRenderIconRowSlot] = useState<LgcomSlot | null>(null);
+  /** A Dynamic paid size whose copy layers render art-less for the mp4 overlay. */
+  const [renderPaidOverlaySlot, setRenderPaidOverlaySlot] = useState<PaidSlot | null>(null);
   const [exportedCount, setExportedCount] = useState<number | null>(null);
   const exportHost = useRef<HTMLDivElement>(null);
 
@@ -175,7 +225,11 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   async function handleDownload() {
     if (!asset || !channelKey || exportedCount !== null) return;
     const list: (LgcomSlot | PaidSlot)[] =
-      channelKey === 'lgcom' ? lgcomSlotsFor(asset.id) : (PAID_ASSETS.has(asset.id) ? paidSlotsFor(channelKey) : []);
+      channelKey === 'lgcom'
+        ? lgcomSlotsFor(asset.id)
+        : asset.id === 'ad-teasing'
+          ? (DYNAMIC_PAID_SLOTS[channelKey] ?? [])
+          : (PAID_ASSETS.has(asset.id) ? paidSlotsFor(channelKey) : []);
     if (list.length === 0) return;
 
     // ask for the save location first, while the click still counts as a user
@@ -194,26 +248,52 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         setRenderSlot(slot);
         // let React paint the freshly mounted size before photographing it
         await new Promise(r => setTimeout(r, 220));
-        // the two bare hero placements ship as video when the asset has one
-        const asMotion = 'id' in slot && bareOnExport(slot.id) && !!asset.motion;
+        // video goes out wherever the asset has a motion cut and the frame is
+        // bare: LG.com's two hero placements, and every Dynamic paid size
+        const dynamicPaid = channelKey !== 'lgcom' && asset.id === 'ad-teasing';
+        const asMotion = !!asset.motion && (dynamicPaid || ('id' in slot && bareOnExport(slot.id)));
         if (asMotion) {
-          const lg = slot as LgcomSlot;
-          const iconOn = showIconRow && iconRowAvailable && !!lg.iconRow;
+          const lg = dynamicPaid ? null : (slot as LgcomSlot);
+          const iconOn = !!lg && showIconRow && iconRowAvailable && !!lg.iconRow;
           // cut live from the current placement — a failure is reported, never
           // papered over with a stale file
           try {
-            const art = artFor(asset.id, lg.id);
+            const art = dynamicPaid ? (slot as PaidSlot).art : artFor(asset.id, lg!.id);
             const src = motionUrl(asset);
             if (!art || !src) throw new Error('no art placement or motion source');
-            const blob = await renderMotionCutLive(src, {
-              w: slot.w,
-              h: slot.h,
-              art: { x: art.x, y: art.y, size: art.size },
-              iconRow: iconOn
-                ? { url: overlayUrl(iconRowStyle(iconStyle).file), ...lg.iconRow! }
-                : undefined,
-            });
-            entries.push({ name: `${asset.id}-${channelKey}-${slot.w}x${slot.h}.mp4`, blob });
+            // the icon row is drawn live now, so the overlay for the video is
+            // rasterised from the same component the canvas uses
+            // whatever rides over the video gets rasterised from the same
+            // components the canvas uses: the icon row on LG.com heroes, the
+            // full copy/logo/CTA layer set on Dynamic paid sizes
+            let overlayUrl: string | null = null;
+            let overlayBox: { x: number; y: number; w: number; h: number } | null = null;
+            if (dynamicPaid) {
+              setRenderPaidOverlaySlot(slot as PaidSlot);
+              await new Promise(r => setTimeout(r, 220));
+              const host = exportHost.current;
+              const ovBlob = host ? await captureBox(host, slot.w, slot.h) : null;
+              setRenderPaidOverlaySlot(null);
+              if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: slot.w, h: slot.h }; }
+            } else if (iconOn && lg) {
+              setRenderIconRowSlot(lg);
+              await new Promise(r => setTimeout(r, 220));
+              const host = exportHost.current;
+              const iconBlob = host ? await captureBox(host, lg!.iconRow!.w, lg!.iconRow!.h) : null;
+              setRenderIconRowSlot(null);
+              if (iconBlob) { overlayUrl = URL.createObjectURL(iconBlob); overlayBox = { ...lg.iconRow! }; }
+            }
+            try {
+              const blob = await renderMotionCutLive(src, {
+                w: slot.w,
+                h: slot.h,
+                art: { x: art.x, y: art.y, size: art.size },
+                iconRow: overlayUrl && overlayBox ? { url: overlayUrl, ...overlayBox } : undefined,
+              });
+              entries.push({ name: `${asset.id}-${channelKey}-${slot.w}x${slot.h}.mp4`, blob });
+            } finally {
+              if (overlayUrl) URL.revokeObjectURL(overlayUrl);
+            }
           } catch (err) {
             console.error('[ContentTemplate] motion cut failed', err);
             failed.push(`${slot.w}×${slot.h} (mp4)`);
@@ -247,6 +327,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         title={t('Content Banner Builder')}
         onBack={onBack}
         onHome={() => onRailNavigate('home')}
+        center={<StepIndicator active={!asset ? 0 : showBanners || (outputKind === 'size' && sizeKey) ? 2 : 1} />}
         right={
           <>
             {/* Save for Later is parked, not removed — flip SHOW_SAVE_FOR_LATER
@@ -275,7 +356,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   strokeLinejoin="round"
                 />
               </svg>
-              {exporting ? `${exportedCount} / ${channelKey === 'lgcom' ? lgcomSlotsFor(asset?.id ?? '').length : paidSlotsFor(channelKey ?? '').length}` : t('Download ZIP')}
+              {exporting ? `${exportedCount} / ${channelKey === 'lgcom' ? lgcomSlotsFor(asset?.id ?? '').length : asset?.id === 'ad-teasing' ? (DYNAMIC_PAID_SLOTS[channelKey ?? ''] ?? []).length : paidSlotsFor(channelKey ?? '').length}` : t('Download ZIP')}
             </button>
           </>
         }
@@ -324,52 +405,64 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 </div>
               </section>
             ))}
-          </div>
 
-          <div className="h-px bg-gray-200 shrink-0" />
-
-          <div className="p-4 pt-6 flex flex-col gap-2.5">
-            <p className="text-[12px] font-medium text-gray-400 uppercase tracking-wide px-1">
-              {t(outputKind === 'size' ? 'Size' : 'Channel')}
-            </p>
-            {outputKind === 'size' ? (
-              <div className="flex flex-wrap gap-2">
-                {SHORTS_SIZES.map(sz => (
+            {/* UPLOAD IMAGE — the operator's own square, laid out with the Main skeleton */}
+            <section className="flex flex-col gap-1">
+              <p className="text-[12px] font-medium text-gray-400 tracking-wide px-1">
+                {t('UPLOAD IMAGE')}
+              </p>
+              <p className="text-[11px] text-gray-400 px-1 -mt-0.5 mb-0.5">
+                {t('Please upload your finished image.')}
+              </p>
+              <input
+                ref={uploadInput}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadFile(f);
+                  e.target.value = '';
+                }}
+              />
+              {uploadUrl ? (
+                <div className="flex flex-col gap-1" style={{ width: 140 }}>
                   <button
-                    key={sz.key}
                     type="button"
-                    onClick={() => setSizeKey(prev => (prev === sz.key ? null : sz.key))}
-                    className={`px-[15px] py-2 rounded-full border text-xs font-medium transition-colors ${
-                      sizeKey === sz.key
-                        ? 'border-[#FD312E] bg-[#FD312E]/8 text-[#FD312E]'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    onClick={() => pick(getAsset(CUSTOM_ASSET_ID)!)}
+                    className={`block rounded overflow-hidden bg-[#111] transition-shadow ${
+                      selectedId === CUSTOM_ASSET_ID
+                        ? 'ring-2 ring-[#FD312E]'
+                        : 'ring-1 ring-transparent hover:ring-gray-300'
                     }`}
+                    style={{ width: 140, height: TILE_H }}
                   >
-                    {sz.label}
+                    <img src={uploadUrl} alt={t('Uploaded image')} className="w-full h-full object-cover" draggable={false} />
                   </button>
-                ))}
-              </div>
-            ) : (
-              (['owned', 'paid'] as const).map(kind => (
-                <div key={kind} className="flex flex-wrap gap-2">
-                  {CHANNELS.filter(c => c.kind === kind).map(c => (
-                    <button
-                      key={c.key}
-                      type="button"
-                      onClick={() => setChannelKey(prev => (prev === c.key ? null : c.key))}
-                      className={`px-[15px] py-2 rounded-full border text-xs font-medium transition-colors ${
-                        channelKey === c.key
-                          ? 'border-[#FD312E] bg-[#FD312E]/8 text-[#FD312E]'
-                          : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                      }`}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => uploadInput.current?.click()}
+                    className="self-start px-1 text-[11px] text-gray-400 hover:text-gray-700"
+                  >
+                    {t('Replace')}
+                  </button>
                 </div>
-              ))
-            )}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => uploadInput.current?.click()}
+                  className="flex flex-col items-center justify-center gap-1 rounded border border-dashed border-gray-300 text-gray-400 hover:border-[#FD312E] hover:text-[#FD312E] transition-colors"
+                  style={{ width: 140, height: TILE_H }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 9V1M4 4l3-3 3 3M2 11h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[10px] leading-none">3000×3000</span>
+                </button>
+              )}
+            </section>
           </div>
+
         </aside>
 
         <DragHandle onMouseDown={e => left.start(e, 'left')} onDoubleClick={left.reset} />
@@ -378,12 +471,19 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         <main className="flex-1 overflow-y-auto p-6" style={{ background: '#CDC8C1' }}>
           {!asset ? (
             <div className="h-full flex items-center justify-center px-12">
-              <p className="text-sm text-center" style={{ color: '#8A8078' }}>
-                {t('Pick an asset on the left to preview it.')}
-              </p>
+              {/* Gone the moment an asset is picked — this is the !asset branch */}
+              <div className="text-center">
+                <p className="font-lgei font-bold text-[15px] text-gray-700 mb-1">{t('Canvas')}</p>
+                <p className="text-sm" style={{ color: '#8A8078' }}>
+                  {t('Pick an asset on the left to preview it.')}
+                </p>
+                <p className="text-sm" style={{ color: '#8A8078' }}>
+                  {t('You can preview the image being edited.')}
+                </p>
+              </div>
             </div>
           ) : asset.blank ? (
-            <div className="h-full flex items-center justify-center px-12">
+            <div className="flex-1 flex items-center justify-center px-12">
               <div className="flex flex-col items-center gap-3">
                 <div
                   className="rounded-lg bg-black"
@@ -397,31 +497,64 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                     ? `${shortsSize.label} — ${t('artwork not delivered yet')}`
                     : t('Pick a size below to see the output.')}
                 </p>
+                <OutputPicker
+                  outputKind={outputKind}
+                  channelKey={channelKey}
+                  onChannel={setChannelKey}
+                  sizeKey={sizeKey}
+                  onSize={setSizeKey}
+                />
               </div>
             </div>
           ) : showBanners ? (
-            <ChannelSlots
-              channelKey={channelKey!}
-              channelLabel={channel ? channel.label : ''}
-              asset={asset}
-              copy={copy}
-              products={assetProducts}
-              plateColor={plateColor}
-              showIconRow={showIconRow && iconRowAvailable}
-              iconStyle={iconStyle}
-            />
+            <>
+              <OutputPicker
+                outputKind={outputKind}
+                channelKey={channelKey}
+                onChannel={setChannelKey}
+                sizeKey={sizeKey}
+                onSize={setSizeKey}
+              />
+              <ChannelSlots
+                channelKey={channelKey!}
+                channelLabel={channel ? channel.label : ''}
+                asset={asset}
+                copy={copy}
+                products={assetProducts}
+                plateColor={plateColor}
+                showIconRow={showIconRow && iconRowAvailable}
+                iconStyle={iconStyle}
+                iconIds={iconIds}
+                iconLabels={iconLabels}
+              />
+            </>
           ) : (
-            <PreviewBox asset={asset} />
+            <>
+              <PreviewBox asset={asset} />
+              <OutputPicker
+                outputKind={outputKind}
+                channelKey={channelKey}
+                onChannel={setChannelKey}
+                sizeKey={sizeKey}
+                onSize={setSizeKey}
+              />
+            </>
           )}
         </main>
 
         <DragHandle onMouseDown={e => right.start(e, 'right')} onDoubleClick={right.reset} />
 
         {/* Right — the source frame while studying it, the copy once banners are up */}
-        <aside className="shrink-0 bg-white border-l border-gray-200 overflow-y-auto" style={{ width: right.w }}>
+        <aside className="shrink-0 bg-white border-l border-gray-200 overflow-y-auto flex flex-col" style={{ width: right.w }}>
           {!asset ? (
-            <div className="h-full flex items-center justify-center px-12">
-              <p className="text-sm text-gray-400 text-center">{t('Nothing selected yet.')}</p>
+            /* Gone the moment an asset is picked — same treatment as the canvas */
+            <div className="flex-1 flex items-center justify-center px-12">
+              <div className="text-center">
+                <p className="font-lgei font-bold text-[15px] text-gray-700 mb-1">{t('Edit')}</p>
+                <p className="text-sm text-gray-400">
+                  {t('You can modify the elements included in the banner.')}
+                </p>
+              </div>
             </div>
           ) : asset.blank ? (
             <div className="h-full flex items-center justify-center px-12">
@@ -436,10 +569,26 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 copy={copy}
                 onChange={setCopy}
                 onReset={() => setCopy(EMPTY_COPY)}
-                showIconRow={showIconRow}
-                onShowIconRowChange={setShowIconRow}
+                iconKind={iconKind}
+                onIconKind={setIconKind}
+                iconColor={iconColor}
+                onIconColor={setIconColor}
+                iconCount={iconCount}
+                onIconCount={setIconCount}
+                iconIds={iconKind === 'line' ? lineIconIds : solidIconIds}
+                onIconId={(i, id) => {
+                  const set = iconKind === 'line' ? setLineIconIds : setSolidIconIds;
+                  set(prev => { const next = prev.slice(); next[i] = id; return next; });
+                  // a new icon starts from its own registry caption
+                  const setL = iconKind === 'line' ? setLineIconLabels : setSolidIconLabels;
+                  setL(prev => { const next = prev.slice(); next[i] = null; return next; });
+                }}
+                iconLabels={iconKind === 'line' ? lineIconLabels : solidIconLabels}
+                onIconLabel={(i, label) => {
+                  const setL = iconKind === 'line' ? setLineIconLabels : setSolidIconLabels;
+                  setL(prev => { const next = prev.slice(); next[i] = label; return next; });
+                }}
                 iconStyle={iconStyle}
-                onIconStyleChange={setIconStyle}
                 showIconRowToggle={channelKey === 'lgcom' && iconRowAvailable}
               />
               {plateCount > 0 && assetProducts && (
@@ -477,7 +626,43 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
 
       {/* Off-screen render host — one size at a time, at true pixel size. The
           preview boxes are rounded on canvas; a delivered file is not. */}
-      {renderSlot && asset && (
+      {renderPaidOverlaySlot && asset && (
+        <div
+          ref={exportHost}
+          className="ctb-export-host"
+          style={{ position: 'fixed', left: -99999, top: 0, pointerEvents: 'none' }}
+          aria-hidden
+        >
+          <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt />
+        </div>
+      )}
+      {!renderPaidOverlaySlot && renderIconRowSlot && (
+        <div
+          ref={exportHost}
+          className="ctb-export-host"
+          style={{ position: 'fixed', left: -99999, top: 0, pointerEvents: 'none' }}
+          aria-hidden
+        >
+          <div
+            data-export-box
+            style={{
+              position: 'relative',
+              width: renderIconRowSlot.iconRow!.w,
+              height: renderIconRowSlot.iconRow!.h,
+              background: 'transparent',
+            }}
+          >
+            <IconRowInline
+              box={{ ...renderIconRowSlot.iconRow!, x: 0, y: 0 }}
+              style={iconStyle}
+              iconIds={iconIds}
+              labels={iconLabels}
+            />
+          </div>
+        </div>
+      )}
+      {!renderPaidOverlaySlot && !renderIconRowSlot && renderSlot && asset && (
         <div
           ref={exportHost}
           className="ctb-export-host"
@@ -495,6 +680,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               plateColor={plateColor}
               showIconRow={showIconRow && iconRowAvailable}
               iconStyle={iconStyle}
+              iconIds={iconIds}
+              iconLabels={iconLabels}
               bare={bareOnExport(renderSlot.id)}
             />
           ) : (
@@ -515,6 +702,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
 
 /** The heading of the row this asset sits in — used in the preview captions. */
 function groupLabel(assetId: string): string {
+  if (assetId === CUSTOM_ASSET_ID) return 'UPLOAD IMAGE';
   return ASSET_ROWS.find(r => r.tiles.some(t => t.id === assetId))?.label ?? assetId;
 }
 
@@ -576,6 +764,96 @@ function AssetCell({
  * Canvas preview box. `PREVIEW_*` must track the pipeline: the stills are cut to
  * this ratio at PREVIEW_ZOOM of the source height (see buildContentTemplateAssets).
  */
+/**
+ * The three-step flow marker in the header — pick an asset, pick a channel,
+ * edit. Purely reflective: it follows the selection state rather than driving
+ * it, and the active step wears the dashed red ring from the Figma reference.
+ * Widths flex so it survives narrow windows: the connectors give way first,
+ * and below ~lg the labels drop to keep the numbers.
+ */
+function StepIndicator({ active }: { active: number }) {
+  const t = useT();
+  const STEPS = ['Select Visual Type', 'Select Channel', 'Edit'];
+  return (
+    <div className="flex items-center min-w-0">
+      {STEPS.map((label, i) => {
+        const isActive = i === active;
+        return (
+          <React.Fragment key={label}>
+            {i > 0 && <div className="h-px bg-gray-300 w-[clamp(10px,4vw,110px)] mx-2 xl:mx-4 shrink" />}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <span
+                className={`flex items-center justify-center rounded-full text-[15px] font-medium border ${
+                  isActive
+                    ? 'border-[#FD312E] border-dashed text-[#FD312E]'
+                    : 'border-gray-300 text-gray-400'
+                }`}
+                style={{ width: 34, height: 34, borderWidth: 1.6 }}
+              >
+                {i + 1}
+              </span>
+              <span
+                className={`hidden xl:block text-[15px] whitespace-nowrap ${
+                  isActive ? 'text-[#FD312E] font-medium' : 'text-gray-400'
+                }`}
+              >
+                {t(label)}
+              </span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Channel / Size chips, shown on the canvas under whatever the asset renders —
+ * they moved out of the palette footer (2026-09-01) so the choice sits with the
+ * image it applies to. Same pill styling the palette used.
+ */
+function OutputPicker({
+  outputKind,
+  channelKey,
+  onChannel,
+  sizeKey,
+  onSize,
+}: {
+  outputKind: 'channel' | 'size';
+  channelKey: string | null;
+  onChannel: (next: string | null) => void;
+  sizeKey: string | null;
+  onSize: (next: string | null) => void;
+}) {
+  const t = useT();
+  const pill = (active: boolean) =>
+    `px-[15px] py-2 rounded-full border text-xs font-medium transition-colors ${
+      active
+        ? 'border-[#FD312E] bg-[#FD312E]/8 text-[#FD312E]'
+        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+    }`;
+  return (
+    <div className="mx-auto w-full mt-4 flex flex-col items-center gap-2" style={{ maxWidth: PREVIEW_W }}>
+      <p className="text-[12px] font-medium uppercase tracking-wide" style={{ color: '#8A8078' }}>
+        {t(outputKind === 'size' ? 'Size' : 'Channel')}
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {outputKind === 'size'
+          ? SHORTS_SIZES.map(sz => (
+              <button key={sz.key} type="button" onClick={() => onSize(sizeKey === sz.key ? null : sz.key)} className={pill(sizeKey === sz.key)}>
+                {sz.label}
+              </button>
+            ))
+          : CHANNELS.map(c => (
+              <button key={c.key} type="button" onClick={() => onChannel(channelKey === c.key ? null : c.key)} className={pill(channelKey === c.key)}>
+                {c.label}
+              </button>
+            ))}
+      </div>
+    </div>
+  );
+}
+
 const PREVIEW_W = 980;
 const PREVIEW_H = 464;
 const PREVIEW_ZOOM = 2.5;
@@ -648,8 +926,9 @@ function PreviewBox({ asset }: { asset: ContentAsset | undefined }) {
 const SHOW_SAVE_FOR_LATER = false;
 
 const PAID_ASSETS = new Set([
-  // Teasing is the Main artwork with a motion cut, so it ships the same paid set
-  'kv-main', 'kv-main-character', 'ad-teasing',
+  // Teasing is the Main artwork with a motion cut, and the uploaded square is
+  // placed with the Main skeleton outright — both ship the same paid set
+  'kv-main', 'kv-main-character', 'ad-teasing', CUSTOM_ASSET_ID,
   'kv-product-slot', 'kv-product-slot-character',
   'kv-product-centric-1', 'kv-product-centric-2',
   'deal-type-bundle', 'deal-type-time-sale', 'deal-type-gift', 'deal-type-hot-deal',
@@ -665,6 +944,8 @@ function ChannelSlots({
   plateColor,
   showIconRow,
   iconStyle,
+  iconIds,
+  iconLabels,
 }: {
   channelKey: string;
   channelLabel: string;
@@ -674,14 +955,20 @@ function ChannelSlots({
   plateColor: string;
   showIconRow: boolean;
   iconStyle: IconRowStyle;
+  iconIds: string[];
+  iconLabels: (string | null)[];
 }) {
   const t = useT();
   const slots = channelKey === 'lgcom' && asset ? lgcomSlotsFor(asset.id) : [];
   // The paid boards exist only for the two Key Visual _Main artworks; every
   // other asset would need its own board before it could be laid out here.
-  const paid = channelKey === 'lgcom' || !asset || !PAID_ASSETS.has(asset.id)
-    ? []
-    : paidSlotsFor(channelKey);
+  const dynamicPaid = channelKey !== 'lgcom' && asset?.id === 'ad-teasing';
+  const paid = dynamicPaid
+    ? DYNAMIC_PAID_SLOTS[channelKey] ?? []
+    : channelKey === 'lgcom' || !asset || !PAID_ASSETS.has(asset.id)
+      ? []
+      : paidSlotsFor(channelKey);
+  const paidMotion = dynamicPaid && asset ? motionUrl(asset) : null;
   // The banners scale to the width the canvas really has — fixed 980 made them
   // needlessly small on wide windows and cramped on narrow ones.
   const { ref: measureRef, w: availW } = useMeasuredWidth<HTMLDivElement>();
@@ -708,6 +995,7 @@ function ChannelSlots({
               copy={copy}
               products={products}
               plateColor={plateColor}
+              motionSrc={paidMotion}
             />
           ))}
         </div>
@@ -732,6 +1020,8 @@ function ChannelSlots({
               plateColor={plateColor}
               showIconRow={showIconRow}
               iconStyle={iconStyle}
+              iconIds={iconIds}
+              iconLabels={iconLabels}
             />
           ))}
         </div>

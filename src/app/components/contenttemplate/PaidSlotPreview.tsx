@@ -10,7 +10,7 @@
 import React from 'react';
 import { artUrl, type ContentAsset } from './contentTemplateAssets';
 import { type SlotCopy } from './SlotCopyEditor';
-import { CTA_COLOR, SLOT_BG } from './lgcomSlots';
+import { CTA_COLOR, SHORT_DISCLAIMER, SLOT_BG, longDisclaimer } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
 import { PD_PLATE_FILL, paidPlacementFor } from './paidBoards';
 import { type ProductSlots } from './ProductSlotsEditor';
@@ -27,13 +27,16 @@ const maskCss = (m: PaidMask) =>
     .map(([pos, a]) => `rgba(255,255,255,${a}) ${(pos * 100).toFixed(1)}%`)
     .join(', ')})`;
 
-function Line({ spec, text }: { spec: PaidText; text: string }) {
+function Line({ spec, text, slotH }: { spec: PaidText; text: string; slotH?: number }) {
   return (
     <p
       style={{
         position: 'absolute',
         left: spec.x,
-        top: spec.y,
+        // the disclaimer is bottom-anchored so extra lines grow upward
+        ...(spec.role === 'disclaimer' && slotH != null
+          ? { bottom: slotH - (spec.y + spec.h) }
+          : { top: spec.y }),
         width: spec.w,
         margin: 0,
         fontFamily: spec.face === 'headline' ? 'var(--obs-font)' : 'var(--obs-font-text)',
@@ -59,6 +62,8 @@ export function PaidSlotPreview({
   copy,
   products,
   plateColor = PD_PLATE_FILL,
+  hideArt = false,
+  motionSrc = null,
 }: {
   slot: PaidSlot;
   /** Which artwork this tile stands for. */
@@ -69,6 +74,13 @@ export function PaidSlotPreview({
   products?: ProductSlots;
   /** Fill behind the plates — the Figma value unless the operator changes it. */
   plateColor?: string;
+  /**
+   * Copy layers only — no artwork, transparent ground. The Dynamic mp4 export
+   * rasterises this and composites it over the video cut.
+   */
+  hideArt?: boolean;
+  /** Play the motion master in the art box instead of the still — Dynamic sizes. */
+  motionSrc?: string | null;
 }) {
   /**
    * Key visuals with a board of their own bring their own artwork framing, their
@@ -92,7 +104,7 @@ export function PaidSlotPreview({
       <div
         data-export-box
         className="relative overflow-hidden rounded"
-        style={{ width: slot.w * scale, height: slot.h * scale, background: SLOT_BG }}
+        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : SLOT_BG }}
       >
         <div
           style={{
@@ -116,6 +128,27 @@ export function PaidSlotPreview({
                 : null),
             }}
           >
+            {!hideArt && motionSrc && (
+              <video
+                key={motionSrc}
+                src={motionSrc}
+                poster={artUrl(artSrc)}
+                autoPlay
+                loop
+                muted
+                playsInline
+                style={{
+                  position: 'absolute',
+                  left: art.x,
+                  top: art.y,
+                  width: art.size,
+                  height: art.size,
+                  maxWidth: 'none',
+                  objectFit: 'cover',
+                }}
+              />
+            )}
+            {!hideArt && !motionSrc && (
             <img
               src={artUrl(artSrc)}
               alt={asset.label}
@@ -131,6 +164,7 @@ export function PaidSlotPreview({
               }}
               draggable={false}
             />
+            )}
           </div>
 
           {slot.logo && (
@@ -155,17 +189,29 @@ export function PaidSlotPreview({
           {slot.text
             .filter(s => s.role !== 'cta')
             .map(spec => {
+              // small sizes lock the disclaimer to the short version
+              if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
+                return <Line key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} />;
+              }
               const typed = copy[spec.role].trim();
-              return <Line key={spec.role} spec={spec} text={typed || PAID_PLACEHOLDER[spec.role]} />;
+              return <Line key={spec.role} spec={spec} text={typed || PAID_PLACEHOLDER[spec.role]} slotH={slot.h} />;
             })}
 
           {slot.cta && (
+            /* The pill hugs its label past the design width. Centred layouts
+               grow from the middle (the design box's centre), left layouts from
+               their left edge — matching how the copy above them is anchored. */
             <div
               style={{
                 position: 'absolute',
-                left: slot.cta.x,
+                left: slot.text.find(t2 => t2.role === 'headline')?.align === 'center'
+                  ? slot.cta.x + slot.cta.w / 2
+                  : slot.cta.x,
                 top: slot.cta.y,
-                width: slot.cta.w,
+                minWidth: slot.cta.w,
+                width: 'fit-content',
+                padding: `0 ${Math.round(slot.cta.h * 0.46)}px`,
+                boxSizing: 'border-box',
                 height: slot.cta.h,
                 borderRadius: slot.cta.radius,
                 background: CTA_COLOR,
@@ -176,6 +222,9 @@ export function PaidSlotPreview({
                 fontSize: ctaSpec ? ctaSpec.size : Math.round(slot.cta.h * 0.38),
                 color: '#fff',
                 whiteSpace: 'nowrap',
+                transform: slot.text.find(t2 => t2.role === 'headline')?.align === 'center'
+                  ? 'translateX(-50%)'
+                  : undefined,
               }}
             >
               {ctaLabel}

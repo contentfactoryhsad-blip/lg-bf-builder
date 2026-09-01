@@ -33,7 +33,7 @@
  * left pair top-to-bottom then right pair for the 002 columns. Product 1 fills
  * the first plate in that order.
  */
-import type { PaidArt, PaidMask } from './paidSlots';
+import type { PaidArt, PaidMask, PaidSlot } from './paidSlots';
 
 /** What a board says about one size. */
 export interface BoardPlacement {
@@ -330,6 +330,67 @@ export const DEAL_AD_PLACEMENT: Record<string, BoardPlacement> = {
   'meta-398x208': { art: { x: 102, y: -72, size: 413 }, mask: { angle: 90, stops: [[0, 0], [0.36, 0], [0.51, 1], [1, 1]] } },
   'meta-1080x1920': { art: { x: -1041, y: -431, size: 3204 } },
 };
+
+/* ==================================================================== */
+/* Dynamic                                                              */
+/* ==================================================================== */
+
+/**
+ * `External Banner Black Friday_Key Visual_Dynamic` (`6255:145194`).
+ *
+ * The Dynamic (motion) asset does not run the standard 41-size paid set — its
+ * board defines its own per-channel video sizes (16:9 / 1:1 / 9:16, plus 4:5
+ * on Meta). One layout per ratio, shared by every channel (fingerprinted
+ * identical on the board): logo, headline, subcopy, CTA and disclaimer ride
+ * over the artwork exactly as on the other paid sizes. Every dimension is
+ * even, which H.264 requires — these ship as mp4 with the copy layers
+ * rasterised over the cut.
+ *
+ * Shaped as `PaidSlot`s so `PaidSlotPreview` renders them with no special
+ * casing.
+ */
+export const DYNAMIC_PAID_SLOTS: Record<string, PaidSlot[]> = (() => {
+  const T = (role: PaidSlot['text'][number]['role'], x: number, y: number, w: number, h: number,
+             size: number, face: 'headline' | 'text', lineHeightPct: number | null,
+             trackingPct: number, align: 'left' | 'center' | 'right') =>
+    ({ role, x, y, w, h, size, face, lineHeightPct, trackingPct, align });
+
+  /** 1920×1080 — the left-hand layout (logo top-right). */
+  const L_16_9 = {
+    art: { x: -22, y: -825, size: 2730 },
+    logo: { x: 1733, y: 75, w: 114, h: 50 },
+    cta: { x: 90, y: 408, w: 136, h: 54, radius: 11.09 },
+    text: [
+      T('headline', 90, 80, 778, 138, 65, 'headline', 106, 0, 'left'),
+      T('subcopy', 90, 232, 778, 68, 35, 'text', 106, -2, 'left'),
+      T('disclaimer', 90, 979, 486, 23, 20, 'text', null, 0, 'left'),
+      T('cta', 115, 425, 86, 21, 20.79, 'text', 100, 0, 'center'),
+    ],
+  };
+  /** The centred 1080-wide layout, at three heights. */
+  const L_1080 = (h: number, headY: number, subY: number, ctaY: number, discY: number) => ({
+    logo: { x: 33, y: 33, w: 114, h: 50 },
+    cta: { x: 447, y: ctaY, w: 196, h: 78, radius: 16 },
+    text: [
+      T('headline', 145, headY, 800, 144, 68, 'headline', 106, 0, 'center'),
+      T('subcopy', 145, subY, 800, 60, 28, 'text', 106, 0, 'center'),
+      T('disclaimer', 30, discY, 1020, 23, 20, 'text', null, 0, 'left'),
+      T('cta', 483, ctaY + 24, 124, 30, 30, 'text', 100, 0, 'center'),
+    ],
+  });
+  const L_1_1 = { art: { x: -360, y: -157, size: 1810 }, ...L_1080(1080, 95, 251, 347, 1015) };
+  const L_9_16 = { art: { x: -1006, y: -400, size: 3130 }, ...L_1080(1920, 137, 293, 389, 1855) };
+  const L_4_5 = { art: { x: -614, y: -254, size: 2318 }, ...L_1080(1350, 109, 265, 361, 1285) };
+
+  const slot = (ch: string, w: number, h: number, layout: typeof L_1_1): PaidSlot =>
+    ({ key: `${ch}-${w}x${h}`, w, h, ...layout });
+  return {
+    criteo: [slot('criteo', 1920, 1080, L_16_9 as never), slot('criteo', 1080, 1080, L_1_1), slot('criteo', 1080, 1920, L_9_16)],
+    dv360: [slot('dv360', 1920, 1080, L_16_9 as never), slot('dv360', 1080, 1920, L_9_16)],
+    pmax: [slot('pmax', 1920, 1080, L_16_9 as never), slot('pmax', 1080, 1920, L_9_16), slot('pmax', 1080, 1080, L_1_1)],
+    meta: [slot('meta', 1080, 1080, L_1_1), slot('meta', 1080, 1920, L_9_16), slot('meta', 1080, 1350, L_4_5)],
+  };
+})();
 
 /* ==================================================================== */
 /* Lookup                                                               */

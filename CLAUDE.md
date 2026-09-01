@@ -36,6 +36,17 @@ GitHub: `https://github.com/contentfactoryhsad-blip/lg-retail-obs-content-builde
 (화면 이름은 2026-08-31부터 Content Banner Builder. 코드 폴더·내부 키는 `contenttemplate` 그대로다.
 DYNAMIC 그룹 = 구 AD CREATIVE의 Teasing Content 타일이 독립한 것 — 모션 에셋 `ad-teasing` 하나뿐이고,
 Key Visual 행처럼 캡션 없이 행 제목이 이름을 댄다. 목업 판 `miJcDQgz0yJMskLE5a5HHj`의 `6068:45105`도 같은 구조.
+UPLOAD 그룹(2026-09-01) = 운영자가 3000×3000 정방형을 올리는 자리 — `CUSTOM_ASSET_ID`('custom-upload'),
+파일은 object URL로 `setCustomArt`에 실리고 URL 헬퍼들이 그걸 우선 반환한다(blob URL엔 `?v=` 스탬프 금지).
+배치는 전 채널에서 **Key Visual _Main 뼈대 그대로**(`artFor`/`gradFor`의 kv-main 폴백 + `PAID_ASSETS` 등록).
+비정방형은 업로드 시 alert로 거부(±1%). 세션 한정 — 드래프트 저장 없음.
+Dynamic의 유료매체는 표준 41종이 아니라 **자기 보드의 영상 사이즈 세트**를 쓴다(`DYNAMIC_PAID_SLOTS`,
+보드 `6255:145194`): Criteo 16:9/1:1/9:16 · DV360 16:9/9:16 · Pmax 16:9/9:16/1:1 · Meta 1:1/9:16/**4:5(1080×1350)**.
+프레임은 bare가 아니다 — 사이즈 컴포넌트 안에 **로고/헤드라인/서브카피/CTA/디스클레이머가 들어있다**
+(비율당 레이아웃 한 벌, 채널 공통). 캔버스는 `PaidSlotPreview`가 **모션을 video로 재생**하며 카피를 얹고
+(`motionSrc` prop), **전부 mp4로 익스포트**된다(짝수 픽셀 ✓) — 카피 레이어는 `hideArt` 모드의
+PaidSlotPreview를 투명 배경으로 래스터해 컷 위에 합성(`renderPaidOverlaySlot` 호스트).
+배치 4벌: 16:9=-22,-825,2730 · 1:1=-360,-157,1810 · 9:16=-1006,-400,3130 · 4:5=-614,-254,2318.
 Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlotsFor(assetId)`가 `hero` 플래그로 거르고,
 `LG.com — Dynamic` 보드(`6210:73073`, 구 Teasing Content)도 그 4칸을 숨겨놨다. 캔버스·ZIP 둘 다 이 필터를 탄다.)
 - `components/contenttemplate/` — `ContentTemplateBuilder.tsx`(옆 빌더와 같은 4분할 셸)가
@@ -77,9 +88,13 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   (KV y −107 → −67). `SLOT_BOXES`는 아트 기준 비율이라 둘이 같이 내려가 값이 그대로고, `ART`의 y만 바뀐다. 오른쪽 바는 카피를 쓰는 곳이지
   레이아웃을 조립하는 곳이 아니다. 구버전의 `SlotLayers`/`DEFAULT_LAYERS`(요소별 on/off 7개)는 2026-08-28에
   불린 하나로 접었으니 되살리지 말 것. 아이콘 로우 체크박스 UI 자체도 LG.com 채널에서만 나온다
-  (`showIconRowToggle`); 유료매체는 완성본 출고라 필요 없다. 파일은 `public/content-template/overlay/`. 아이콘 로우 PNG 2장은 MCP export가
-  캔버스 회색(107)을 합성해버려서 **역합성으로 알파를 복원한 것**이다(흰색은 `a=(v-107)/148`, 검정 글리프는
-  `a=(107-v)/107`) — 글리프 경계 1px은 근사값이니 완벽 원본이 필요하면 Figma에서 손으로 export해 교체할 것.
+  (`showIconRowToggle`); 유료매체는 완성본 출고라 필요 없다. 🔴 **아이콘 로우는 2026-09-01부터 라이브 렌더다** — promotion-banner-variation에서 포트
+  (`contenttemplate/icons/`: IconRegistry 36종 + IconCombobox(radix popover) + IconRowInline).
+  패널은 None/Solid/Line × Black/White × 개수(1–3) × 그룹별 콤보박스; solid와 line은 선택을 따로 기억한다.
+  비례는 전부 row 높이 기준(소스의 IconRowGroup 그대로)이라 PC(424×60)/MO(510×72)가 수치 없이 스케일된다.
+  mp4 합성은 숨김 호스트에서 IconRowInline만 투명 배경으로 `toPng` 래스터해 objectURL로 넘긴다
+  (`renderIconRowSlot` 상태). 구 오버레이 PNG 4장(`overlay/icon-row-*.png`)과 `ICON_ROW_STYLES`
+  스와치는 이제 미사용 — indicator PNG는 여전히 overlay에서 온다.
 - 🔴 **Figma 보드의 박스는 읽기만 한다.** 사용자가 직접 그리는 것이라 스크립트로 지우거나 다시 그리지 말 것(두 번 사고 났다).
   옮길 땐 각 프레임의 `Slot n` 사각형을 그 프레임 `KV` 인스턴스 기준 비율로 환산해서 가져온다.
 

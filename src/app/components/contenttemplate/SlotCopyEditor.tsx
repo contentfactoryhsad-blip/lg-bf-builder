@@ -7,7 +7,9 @@
  * placeholder so a slot never renders blank while you are still filling it in.
  */
 import { useT } from '../../i18n/LanguageContext';
-import { ICON_ROW_STYLES, type IconRowStyle } from './lgcomSlots';
+import type { IconRowStyle } from './lgcomSlots';
+import { ICON_LIST, splitLabel } from './icons/IconRegistry';
+import { IconCombobox } from './icons/IconCombobox';
 
 export interface SlotCopy {
   eyebrow: string;
@@ -40,33 +42,79 @@ const FIELDS: {
   hint?: string;
   multiline?: boolean;
   rows?: number;
+  maxLength?: number;
 }[] = [
   { key: 'eyebrow', label: 'Eyebrow', hint: 'Optional' },
   { key: 'headline', label: 'Headline', hint: 'Required', multiline: true, rows: 2 },
   { key: 'subcopy', label: 'Subcopy', hint: 'Optional', multiline: true, rows: 2 },
-  { key: 'cta', label: 'CTA button' },
-  { key: 'disclaimer', label: 'Disclaimer', hint: 'Optional' },
+  // The pill hugs its label, so length is the one thing that must be bounded.
+  { key: 'cta', label: 'CTA button', maxLength: 15 },
+  // sizes under 1000px are locked to the short version — see longDisclaimer
+  { key: 'disclaimer', label: 'Disclaimer', hint: 'Sizes over 1000px · Max 180', maxLength: 180 },
 ];
+
+/**
+ * Custom icon captions may not render wider than ~11 average Latin characters
+ * per line, or the row's groups start colliding. The check measures the widest
+ * wrapped line (explicit newline, else the split-at-first-space rule the
+ * renderer uses) in the row's own face — so the cap is about rendered width,
+ * not character count, and CJK captions hit it sooner than Latin ones,
+ * correctly (about 7 KO characters). "Zero-interest", the registry's widest
+ * line, still fits under it.
+ */
+const LABEL_CAP = 'nnnnnnnnnnn'; // 11 × the average-width Latin glyph
+const LABEL_FONT = '600 24px "LG EI Text", sans-serif';
+let measureCtx: CanvasRenderingContext2D | null = null;
+function widestLinePx(text: string): number {
+  if (!measureCtx) {
+    measureCtx = document.createElement('canvas').getContext('2d');
+    if (!measureCtx) return 0;
+  }
+  measureCtx.font = LABEL_FONT;
+  // an explicit newline is the operator's own break; otherwise the renderer
+  // splits at the first space, so measure the same way
+  const lines = text.includes('\n') ? text.split('\n') : splitLabel(text.trim());
+  return Math.max(...lines.map(l => (l ? measureCtx!.measureText(l).width : 0)));
+}
+const fitsLabelCap = (text: string) => widestLinePx(text) <= widestLinePx(LABEL_CAP) + 0.5;
 
 export function SlotCopyEditor({
   channelLabel,
   copy,
   onChange,
   onReset,
-  showIconRow,
-  onShowIconRowChange,
+  iconKind,
+  onIconKind,
+  iconColor,
+  onIconColor,
+  iconCount,
+  onIconCount,
+  iconIds,
+  onIconId,
+  iconLabels,
+  onIconLabel,
   iconStyle,
-  onIconStyleChange,
   showIconRowToggle,
 }: {
   channelLabel: string;
   copy: SlotCopy;
   onChange: (next: SlotCopy) => void;
   onReset: () => void;
-  showIconRow: boolean;
-  onShowIconRowChange: (next: boolean) => void;
+  /** ICONS controls, ported from promotion-banner-variation's editor panel. */
+  iconKind: 'none' | 'solid' | 'line';
+  onIconKind: (next: 'none' | 'solid' | 'line') => void;
+  iconColor: 'black' | 'white';
+  onIconColor: (next: 'black' | 'white') => void;
+  iconCount: 1 | 2 | 3;
+  onIconCount: (next: 1 | 2 | 3) => void;
+  /** The full pick list for the active kind (not yet cut to the count). */
+  iconIds: string[];
+  onIconId: (index: number, id: string) => void;
+  /** Caption overrides per slot — typed in the operator's own language. */
+  iconLabels: (string | null)[];
+  onIconLabel: (index: number, label: string | null) => void;
+  /** The resolved `kind-color` key the previews and comboboxes render with. */
   iconStyle: IconRowStyle;
-  onIconStyleChange: (next: IconRowStyle) => void;
   /**
    * LG.com only. The icon row exists on the two hero sizes of that channel and
    * nowhere else, so the paid channels get the copy fields alone. Every other
@@ -108,6 +156,7 @@ export function SlotCopyEditor({
               value={copy[f.key]}
               onChange={e => field(f.key, e.target.value)}
               placeholder={COPY_PLACEHOLDER[f.key]}
+              maxLength={f.maxLength}
               className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300"
             />
           )}
@@ -115,34 +164,104 @@ export function SlotCopyEditor({
       ))}
 
       {showIconRowToggle && (
-      <div className="border-t border-gray-100 pt-4 flex flex-col gap-2">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showIconRow}
-            onChange={e => onShowIconRowChange(e.target.checked)}
-            className="w-4 h-4 accent-[#FD312E]"
-          />
-          <span className="text-xs font-medium text-gray-700">{t('Icon row')}</span>
+      <div className="border-t border-gray-100 pt-4 flex flex-col gap-2.5">
+        <div className="flex items-baseline gap-2">
+          <span className="text-xs font-medium text-gray-700">{t('Icons')}</span>
           <span className="text-[10px] text-gray-400">{t('1920×720 · 720×960')}</span>
-        </label>
-        {showIconRow && (
-          <div className="flex flex-wrap gap-1.5 pl-6">
-            {ICON_ROW_STYLES.map(st => (
-              <button
-                key={st.key}
-                type="button"
-                onClick={() => onIconStyleChange(st.key)}
-                className={`px-2.5 py-1 rounded-full border text-[11px] transition-colors ${
-                  iconStyle === st.key
-                    ? 'border-[#FD312E] bg-[#FD312E]/8 text-[#FD312E]'
-                    : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                }`}
-              >
-                {t(st.label)}
-              </button>
-            ))}
-          </div>
+        </div>
+
+        {/* None / Solid / Line */}
+        <div className="flex gap-2">
+          {([['none', 'None'], ['solid', 'Solid Icon'], ['line', 'Line Icon']] as const).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => onIconKind(k)}
+              className={`flex-1 h-9 rounded-lg border-2 text-xs font-medium transition-colors ${
+                iconKind === k
+                  ? 'border-[#FD312E] bg-[#FD312E]/5 text-gray-900'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              {t(label)}
+            </button>
+          ))}
+        </div>
+
+        {iconKind !== 'none' && (
+          <>
+            {/* Black / White */}
+            <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+              {(['black', 'white'] as const).map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => onIconColor(c)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-medium transition-colors ${
+                    iconColor === c ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                  }`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-gray-300"
+                    style={{ background: c === 'black' ? '#141414' : '#FFFFFF' }}
+                  />
+                  {t(c === 'black' ? 'Black' : 'White')}
+                </button>
+              ))}
+            </div>
+
+            {/* Count */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 shrink-0">{t('Number of icons')}</span>
+              <div className="flex gap-1.5 ml-auto">
+                {([1, 2, 3] as const).map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => onIconCount(n)}
+                    className={`w-9 h-8 rounded-lg border-2 text-xs font-medium transition-colors ${
+                      iconCount === n
+                        ? 'border-[#FD312E] bg-[#FD312E]/5 text-gray-900'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* One combobox per group, with an editable caption beneath —
+                operators localise the label without touching the icon */}
+            <div className="flex flex-col gap-2.5">
+              {Array.from({ length: iconCount }).map((_, i) => {
+                const fallback = ICON_LIST.find(x => x.id === iconIds[i])?.label ?? '';
+                return (
+                  <div key={i} className="flex flex-col gap-1">
+                    <IconCombobox
+                      value={iconIds[i] ?? ''}
+                      onSelect={id => onIconId(i, id)}
+                      icons={ICON_LIST}
+                      iconStyle={iconStyle}
+                    />
+                    <textarea
+                      rows={2}
+                      value={iconLabels[i] ?? ''}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v.split('\n').length > 2) return; // the row draws two lines, no more
+                        if (v !== '' && !fitsLabelCap(v)) return; // wider than the cap — keep what fits
+                        onIconLabel(i, v === '' ? null : v);
+                      }}
+                      placeholder={fallback}
+                      aria-label={t('Icon label')}
+                      className="w-full text-xs leading-snug text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 resize-none"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
       )}

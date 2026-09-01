@@ -18,9 +18,11 @@ import { artUrl, fullUrl, motionUrl, type ContentAsset } from './contentTemplate
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
+import { IconRowInline } from './icons/IconRowInline';
 import {
-  CTA_COLOR,
-  iconRowStyle,
+
+  SHORT_DISCLAIMER,
+  longDisclaimer,  CTA_COLOR,
   overlayUrl,
   type IconRowStyle,
   SLOT_BG,
@@ -36,7 +38,7 @@ import {
 /** Figma reports tracking as a % of font size; CSS wants an em value. */
 const tracking = (pct: number) => `${pct / 100}em`;
 
-function SlotLine({ spec, text }: { spec: SlotText; text: string }) {
+function SlotLine({ spec, text, slotH }: { spec: SlotText; text: string; slotH?: number }) {
   const type = {
     margin: 0,
     fontFamily: spec.face === 'headline' ? 'var(--obs-font)' : 'var(--obs-font-text)',
@@ -50,21 +52,23 @@ function SlotLine({ spec, text }: { spec: SlotText; text: string }) {
   };
 
   // Figma gives the disclaimer a fixed box and bottom-aligns the copy in it.
+  // Anchoring by the bottom edge (not a fixed-height flex box) lets a long
+  // disclaimer grow upward instead of spilling past the frame.
   if (spec.h && spec.vAlign === 'bottom') {
     return (
-      <div
+      <p
         style={{
+          ...type,
           position: 'absolute',
           left: spec.x,
-          top: spec.y,
           width: spec.w,
-          height: spec.h,
-          display: 'flex',
-          alignItems: 'flex-end',
+          ...(slotH != null
+            ? { bottom: slotH - (spec.y + spec.h) }
+            : { top: spec.y }),
         }}
       >
-        <p style={{ ...type, width: '100%' }}>{text}</p>
-      </div>
+        {text}
+      </p>
     );
   }
 
@@ -84,6 +88,8 @@ export function LgcomSlotPreview({
   plateColor = PD_PLATE_FILL,
   showIconRow,
   iconStyle,
+  iconIds,
+  iconLabels,
   bare = false,
 }: {
   slot: LgcomSlot;
@@ -107,6 +113,10 @@ export function LgcomSlotPreview({
    */
   showIconRow: boolean;
   iconStyle: IconRowStyle;
+  /** Which benefit each group shows, already cut to the chosen count. */
+  iconIds: string[];
+  /** Caption overrides aligned with `iconIds`; null falls back to the registry. */
+  iconLabels?: (string | null)[];
   /**
    * Artwork and benefit icons only — no eyebrow, headline, subcopy, CTA,
    * disclaimer or carousel indicator. The two ST0001 hero placements ship this
@@ -234,33 +244,32 @@ export function LgcomSlotPreview({
           )}
 
           {showIconRow && slot.iconRow && (
-            <img
-              src={overlayUrl(iconRowStyle(iconStyle).file)}
-              alt=""
-              style={{
-                position: 'absolute',
-                left: slot.iconRow.x,
-                top: slot.iconRow.y,
-                width: slot.iconRow.w,
-                height: slot.iconRow.h,
-                maxWidth: 'none',
-              }}
-              draggable={false}
-            />
+            <IconRowInline box={slot.iconRow} style={iconStyle} iconIds={iconIds} labels={iconLabels} />
           )}
 
           {!bare && slot.text.map(spec => {
+            // small sizes lock the disclaimer to the short version
+            if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
+              return <SlotLine key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} />;
+            }
             const typed = copy[spec.role].trim();
-            return <SlotLine key={spec.role} spec={spec} text={typed || COPY_PLACEHOLDER[spec.role]} />;
+            return <SlotLine key={spec.role} spec={spec} text={typed || COPY_PLACEHOLDER[spec.role]} slotH={slot.h} />;
           })}
 
           {!bare && (
             <div
               style={{
                 position: 'absolute',
-                left: slot.cta.x,
+                /* The two ST0044 placements centre their copy, so a growing
+                   pill grows from its middle; the four left-anchored layouts
+                   keep their left edge and grow rightward. */
+                left: slot.code === 'ST0044' ? slot.cta.x + slot.cta.w / 2 : slot.cta.x,
+                transform: slot.code === 'ST0044' ? 'translateX(-50%)' : undefined,
                 top: slot.cta.y,
-                width: slot.cta.w,
+                minWidth: slot.cta.w,
+                width: 'fit-content',
+                padding: `0 ${Math.round(slot.cta.h * 0.46)}px`,
+                boxSizing: 'border-box',
                 height: slot.cta.h,
                 borderRadius: slot.cta.radius,
                 background: CTA_COLOR,
