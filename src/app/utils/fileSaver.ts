@@ -3,28 +3,19 @@ export interface SaveFileType {
   accept: Record<string, string[]>;
 }
 
-const DEFAULT_TYPES: SaveFileType[] = [
-  { description: 'PNG Image', accept: { 'image/png': ['.png'] } },
-  { description: 'ZIP Archive', accept: { 'application/zip': ['.zip'] } },
-];
-
-export async function saveBlob(blob: Blob, fileName: string, types: SaveFileType[] = DEFAULT_TYPES): Promise<void> {
-  if (typeof (window as any).showSaveFilePicker === 'function') {
-    try {
-      const fh = await (window as any).showSaveFilePicker({
-        suggestedName: fileName,
-        types,
-      });
-      const w = await fh.createWritable();
-      await w.write(blob);
-      await w.close();
-      return;
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return;
-      console.warn('showSaveFilePicker failed, falling back:', e);
-    }
-  }
-
+/**
+ * Save through the browser's own download flow — an anchor click on an object
+ * URL. This asks for a location at most ONCE (only when Chrome's "ask where to
+ * save each file" is on) and never leaves partial files behind.
+ *
+ * The File System Access API (`showSaveFilePicker`) is deliberately NOT used
+ * any more: its deferred `createWritable` write failed on the machines this
+ * app targets, leaving the picked file at 0 bytes, and every fallback layer
+ * stacked another save prompt on top (users saw two, then three dialogs for
+ * one download). The plain download flow is the one path that has always
+ * produced a complete file.
+ */
+export async function saveBlob(blob: Blob, fileName: string, _types?: SaveFileType[]): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -39,34 +30,14 @@ export async function saveBlob(blob: Blob, fileName: string, types: SaveFileType
 }
 
 /**
- * Ask for the save location NOW and write later.
- *
- * `showSaveFilePicker` needs transient user activation, which Chrome forgets a
- * few seconds after the click — so calling it after a long export throws, the
- * anchor fallback kicks in, and the browser asks for a location all over again.
- * Acquiring the handle at click time keeps it to one question, asked while the
- * activation is still live.
- *
- * Returns a writer, or null when the user cancelled the picker (the caller
- * should abort). Without picker support the writer falls back to `saveBlob`,
- * which asks once, at write time, through the browser's own download flow.
+ * Kept for API compatibility with callers that acquire the target at click
+ * time and write after a long export. With the picker gone there is nothing
+ * to acquire early — the returned writer simply hands the blob to `saveBlob`,
+ * so the browser asks (at most once) when the file is actually ready.
  */
 export async function acquireSaveTarget(
   fileName: string,
-  types: SaveFileType[] = DEFAULT_TYPES,
+  types?: SaveFileType[],
 ): Promise<((blob: Blob) => Promise<void>) | null> {
-  if (typeof (window as any).showSaveFilePicker === 'function') {
-    try {
-      const fh = await (window as any).showSaveFilePicker({ suggestedName: fileName, types });
-      return async (blob: Blob) => {
-        const w = await fh.createWritable();
-        await w.write(blob);
-        await w.close();
-      };
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return null;
-      console.warn('showSaveFilePicker failed, will fall back to a plain download:', e);
-    }
-  }
   return async (blob: Blob) => saveBlob(blob, fileName, types);
 }

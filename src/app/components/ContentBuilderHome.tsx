@@ -122,7 +122,7 @@ export function ContentBuilderHome({ onSelectContentTemplate, onSelectPromotionP
                     {t('Promotion Page Builder')}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5" style={{ lineHeight: '16px' }}>
-                    {t('Hero, deal cards, promotion banners and product grids for the www.lg.com Deal Page.')}
+                    {t('Hero, deal cards, promotion banners and product grids for the www.lg.com page.')}
                   </p>
                 </div>
                 <Chevron />

@@ -101,6 +101,17 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
 - 선택 상태는 **그룹당 하나**(`Selection = Partial<Record<AssetGroupKey, string>>`)고, 같은 걸 다시 누르면 해제된다.
   미리보기는 **마지막으로 누른 것**(`focused`)을 따라가며, 없으면 key visual로 폴백한다.
 
+- 🔴 **카피 스택은 Figma 오토레이아웃을 실측으로 흉내 낸다** (2026-09-02). Figma는 headline → (subcopy) → CTA를
+  세로 오토레이아웃으로 묶어 두므로, 카피가 디자인 박스보다 짧아지면 아래 레이어가 그만큼 당겨 올라와야 한다.
+  `PaidSlotPreview`·`LgcomSlotPreview` 둘 다: headline/subcopy `<p>`의 `offsetHeight`를 `useLayoutEffect`로 실측하고,
+  **그 텍스트의 디자인 박스 아래에서 시작하는 레이어만** `pullUp(y)`만큼 위로 민다(길어지면 반대로 밀려 내려간다).
+  - 옆에 앉은 CTA(가로 스택: 468x60·728x90·970x90·320x50)는 y 조건에 안 걸려 안 움직인다 — 의도된 것.
+  - **LG.com ST0044 두 칸(656×436·342×228)은 예외**: Figma 스택이 `primary=MAX`(아래 정렬)라 CTA가 고정이고
+    headline이 `vAlign:'bottom'`으로 아래에 매달린다(`lgcomSlots.ts`에 `h`+`vAlign` 기록). 나머지 LG.com 4칸과
+    유료매체 세로 스택 전부는 `primary=MIN`(위 정렬)이라 pullUp 대상.
+  - disclaimer는 Figma에서 스택 밖 프레임 하단 고정 — 절대 안 움직인다.
+  - pullUp 판정에는 텍스트 spec의 `h`(Figma 박스 높이)가 필요하다. 새 사이즈를 옮길 때 headline/subcopy에 `h`를 같이 적을 것.
+
 ### 1.5) Deal Page Builder — www.lg.com Deal Page, 2280px 고정 폭
 - `components/dealpage/` — `DealPageBuilder.tsx`(3분할 셸: 팔레트 / 드래그 캔버스 / 편집 패널)가
   `dealModuleRegistry.ts`(9개 모듈 — 콘텐츠 7 + 공홈 크롬 2) + `dealEditStates.ts` + `DealModuleRenderer.tsx` + `DealModuleEditPanel.tsx`를 물고 있다.
@@ -155,6 +166,18 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   같은 자리 박스를 **덧그려서**(Content Banner Builder의 LG.com 미리보기와 같은 레시피) 리컬러를 가능하게 했고,
   패널은 `ProductSlotsEditor`의 내장 `color`/`onColorChange`(Slot Color 필드)를 그대로 쓴다. 헤더의
   로고·타이틀은 `AppHeader onHome`으로 홈으로 간다(unsaved guard 통과).
+- 🔴 **PC/모바일 두 캔버스다**(2026-09-02, `DealDevice`) — Figma가 `BF Page_PC`(6080:50977 개정)와
+  `BF Page_MO`(6287:150182, 360폭 신규)로 갈라졌고, 빌더는 Quick Start 아래 PC/Mobile 토글로 **같은 모듈·
+  같은 상태를 두 렌더러로 그린다**(`DealModuleRenderer device` prop → `DealModuleRendererMo.tsx`).
+  모바일 섹션은 풀블리드로 맞닿는다(웜 밴드 패딩 없음). MO 보드 수치는 전부 소수(12.743, 19.115…)인데
+  스케일된 소스에서 조립된 것이라 **정수로 "정리"하지 말 것**. 모바일 캔버스는 스케일 캡 1(1:1),
+  export 파일명에 `-mobile` 태그, 드래프트에 `device` 저장. 딜 배너 MO는 PC의 와이드 크롭 jpg가 아니라
+  **3000² 정사각 아트를 직접** 그린다(`MO_DEAL_ART`); 히어로/배너 MO 카피는 flow 컬럼이고 PC 헤드라인의
+  명시적 줄바꿈은 모바일에서 공백으로 접는다.
+- **PC 딜 카드는 2026-09-02 보드 개정판이다**(ST0044_PC 6290:158826, 밴드 561→812) — 카드 464×600 r28,
+  타이틀 56/60 **Semibold** + 서브타이틀 24/28(신규 `sectionSubtitle`), 카드 안 좌하단 텍스트셋
+  (36/42 Light + 화이트 아웃라인 버튼). 아트는 deal-type 정사각을 카드별 실측 크롭으로 건다(`DEAL_CARD_ART`,
+  이전 스크림 방식 폐기). 보드의 새 blur 화살표 SVG는 export가 못 담아 구 링 PNG를 유지 중.
 - **Membership CTA 모듈은 삭제됐다**(2026-08-30) — 레지스트리/상태/렌더러/패널/프리셋에서 전부 걷어냈고,
   구 드래프트의 membership 아이템은 복원에서 조용히 스킵된다(unknown type 경로). `banner-membership.png`는
   public 원칙대로 남겨뒀다.

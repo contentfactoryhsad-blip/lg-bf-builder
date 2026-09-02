@@ -20,9 +20,10 @@ import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
 import { IconRowInline } from './icons/IconRowInline';
 import {
-
   SHORT_DISCLAIMER,
-  longDisclaimer,  CTA_COLOR,
+  disclaimerMaxChars,
+  lgcomDisclaimerEditable,
+  CTA_COLOR,
   overlayUrl,
   type IconRowStyle,
   SLOT_BG,
@@ -38,7 +39,14 @@ import {
 /** Figma reports tracking as a % of font size; CSS wants an em value. */
 const tracking = (pct: number) => `${pct / 100}em`;
 
-function SlotLine({ spec, text, slotH }: { spec: SlotText; text: string; slotH?: number }) {
+function SlotLine({ spec, text, slotH, dy = 0, pRef }: {
+  spec: SlotText;
+  text: string;
+  slotH?: number;
+  /** How far the Figma auto-layout pulls this line up (see `pullUp`). */
+  dy?: number;
+  pRef?: React.Ref<HTMLParagraphElement>;
+}) {
   const type = {
     margin: 0,
     fontFamily: spec.face === 'headline' ? 'var(--obs-font)' : 'var(--obs-font-text)',
@@ -62,6 +70,12 @@ function SlotLine({ spec, text, slotH }: { spec: SlotText; text: string; slotH?:
           position: 'absolute',
           left: spec.x,
           width: spec.w,
+          ...(spec.maxLines
+            ? {
+                maxHeight: Math.ceil(spec.size * (spec.lineHeightPct / 100) * spec.maxLines),
+                overflow: 'hidden',
+              }
+            : null),
           ...(slotH != null
             ? { bottom: slotH - (spec.y + spec.h) }
             : { top: spec.y }),
@@ -73,7 +87,7 @@ function SlotLine({ spec, text, slotH }: { spec: SlotText; text: string; slotH?:
   }
 
   return (
-    <p style={{ position: 'absolute', left: spec.x, top: spec.y, width: spec.w, ...type }}>
+    <p ref={pRef} style={{ position: 'absolute', left: spec.x, top: spec.y - dy, width: spec.w, ...type }}>
       {text}
     </p>
   );
@@ -90,6 +104,8 @@ export function LgcomSlotPreview({
   iconStyle,
   iconIds,
   iconLabels,
+  showDisclaimer = true,
+  showIndicator = true,
   bare = false,
 }: {
   slot: LgcomSlot;
@@ -117,6 +133,10 @@ export function LgcomSlotPreview({
   iconIds: string[];
   /** Caption overrides aligned with `iconIds`; null falls back to the registry. */
   iconLabels?: (string | null)[];
+  /** Panel toggle — off drops the disclaimer from every size. */
+  showDisclaimer?: boolean;
+  /** Panel toggle — off drops the carousel indicator from the two hero sizes. */
+  showIndicator?: boolean;
   /**
    * Artwork and benefit icons only — no eyebrow, headline, subcopy, CTA,
    * disclaimer or carousel indicator. The two ST0001 hero placements ship this
@@ -136,6 +156,34 @@ export function LgcomSlotPreview({
   const plates = asset && art ? slotBoxesFor(asset.id, slot.id) : [];
   // this size may call for the asset's other artwork — see Placement.src
   const stillUrl = asset ? (art?.src ? artUrl(art.src) : fullUrl(asset)) : null;
+
+  // Figma stacks headline → subcopy → CTA in a vertical auto-layout. The four
+  // ST0001 sizes top-pack it (primary=MIN), so shorter copy pulls everything
+  // below it up by the difference against the Figma box height. The two ST0044
+  // sizes bottom-pack (primary=MAX) — their headline is bottom-anchored via
+  // `vAlign` instead and the CTA never moves, so they are excluded here.
+  const flowRef = React.useRef<Record<string, HTMLParagraphElement | null>>({});
+  const [flowH, setFlowH] = React.useState<Record<string, number>>({});
+  React.useLayoutEffect(() => {
+    const next: Record<string, number> = {};
+    for (const [role, el] of Object.entries(flowRef.current)) {
+      if (el) next[role] = el.offsetHeight;
+    }
+    setFlowH(prev =>
+      Object.keys(next).length === Object.keys(prev).length &&
+      Object.entries(next).every(([k, v]) => prev[k] === v)
+        ? prev
+        : next,
+    );
+  });
+  const flowSpecs = slot.text.filter(
+    s => (s.role === 'headline' || s.role === 'subcopy') && s.h != null && s.vAlign !== 'bottom',
+  );
+  const pullUp = (y: number) =>
+    flowSpecs.reduce((acc, s) => {
+      const h = flowH[s.role];
+      return h != null && y >= s.y + (s.h ?? 0) - 1 ? acc + ((s.h ?? 0) - h) : acc;
+    }, 0);
 
   return (
     <div className="flex flex-col gap-2">
@@ -248,12 +296,24 @@ export function LgcomSlotPreview({
           )}
 
           {!bare && slot.text.map(spec => {
+            if (spec.role === 'disclaimer' && !showDisclaimer) return null;
             // small sizes lock the disclaimer to the short version
-            if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
+            if (spec.role === 'disclaimer' && !lgcomDisclaimerEditable(slot)) {
               return <SlotLine key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} />;
             }
-            const typed = copy[spec.role].trim();
-            return <SlotLine key={spec.role} spec={spec} text={typed || COPY_PLACEHOLDER[spec.role]} slotH={slot.h} />;
+            let typed = copy[spec.role].trim();
+            if (spec.role === 'disclaimer') typed = typed.slice(0, disclaimerMaxChars(slot.id));
+            const flows = flowSpecs.some(fs => fs.role === spec.role);
+            return (
+              <SlotLine
+                key={spec.role}
+                spec={spec}
+                text={typed || COPY_PLACEHOLDER[spec.role]}
+                slotH={slot.h}
+                dy={pullUp(spec.y)}
+                pRef={flows ? el => { flowRef.current[spec.role] = el; } : undefined}
+              />
+            );
           })}
 
           {!bare && (
@@ -264,8 +324,8 @@ export function LgcomSlotPreview({
                    pill grows from its middle; the four left-anchored layouts
                    keep their left edge and grow rightward. */
                 left: slot.code === 'ST0044' ? slot.cta.x + slot.cta.w / 2 : slot.cta.x,
+                top: slot.cta.y - pullUp(slot.cta.y),
                 transform: slot.code === 'ST0044' ? 'translateX(-50%)' : undefined,
-                top: slot.cta.y,
                 minWidth: slot.cta.w,
                 width: 'fit-content',
                 padding: `0 ${Math.round(slot.cta.h * 0.46)}px`,
@@ -286,7 +346,7 @@ export function LgcomSlotPreview({
             </div>
           )}
 
-          {!bare && slot.indicator && (
+          {!bare && showIndicator && slot.indicator && (
             <img
               // topmost, matching Figma: the indicator is the layout's last child
               src={overlayUrl(slot.indicator)}

@@ -130,6 +130,10 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
    * solid and line keep separate picks, matching the source app.
    */
   const [iconKind, setIconKind] = useState<'none' | 'solid' | 'line'>('none');
+  /** Panel checkbox — off drops the disclaimer from every size. */
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
+  /** Panel checkbox — the hero sizes' carousel indicator. */
+  const [showIndicator, setShowIndicator] = useState(true);
   const [iconColor, setIconColor] = useState<'black' | 'white'>('white');
   const [iconCount, setIconCount] = useState<1 | 2 | 3>(3);
   const [solidIconIds, setSolidIconIds] = useState<string[]>(['free-delivery', 'free-disposal', 'free-installation']);
@@ -217,6 +221,15 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     }
   };
 
+  /** What one channel ships for the chosen asset — 'all' concatenates every channel. */
+  function slotsForChannel(chKey: string): (LgcomSlot | PaidSlot)[] {
+    if (!asset) return [];
+    if (chKey === 'all') return CHANNELS.flatMap(c => slotsForChannel(c.key));
+    if (chKey === 'lgcom') return lgcomSlotsFor(asset.id);
+    if (asset.id === 'ad-teasing') return DYNAMIC_PAID_SLOTS[chKey] ?? [];
+    return PAID_ASSETS.has(asset.id) ? paidSlotsFor(chKey) : [];
+  }
+
   /**
    * One ZIP for the chosen key visual on the chosen channel. Sizes render one at
    * a time through the hidden host so each gets a full layout pass at its true
@@ -224,12 +237,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
    */
   async function handleDownload() {
     if (!asset || !channelKey || exportedCount !== null) return;
-    const list: (LgcomSlot | PaidSlot)[] =
-      channelKey === 'lgcom'
-        ? lgcomSlotsFor(asset.id)
-        : asset.id === 'ad-teasing'
-          ? (DYNAMIC_PAID_SLOTS[channelKey] ?? [])
-          : (PAID_ASSETS.has(asset.id) ? paidSlotsFor(channelKey) : []);
+    const list = slotsForChannel(channelKey);
     if (list.length === 0) return;
 
     // ask for the save location first, while the click still counts as a user
@@ -250,7 +258,11 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         await new Promise(r => setTimeout(r, 220));
         // video goes out wherever the asset has a motion cut and the frame is
         // bare: LG.com's two hero placements, and every Dynamic paid size
-        const dynamicPaid = channelKey !== 'lgcom' && asset.id === 'ad-teasing';
+        const dynamicPaid = !('id' in slot) && asset.id === 'ad-teasing';
+        // paid slot keys already carry their channel; LG.com sizes name it
+        const fileStem = 'id' in slot
+          ? `${asset.id}-lgcom-${slot.w}x${slot.h}`
+          : `${asset.id}-${(slot as PaidSlot).key}`;
         const asMotion = !!asset.motion && (dynamicPaid || ('id' in slot && bareOnExport(slot.id)));
         if (asMotion) {
           const lg = dynamicPaid ? null : (slot as LgcomSlot);
@@ -290,7 +302,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 art: { x: art.x, y: art.y, size: art.size },
                 iconRow: overlayUrl && overlayBox ? { url: overlayUrl, ...overlayBox } : undefined,
               });
-              entries.push({ name: `${asset.id}-${channelKey}-${slot.w}x${slot.h}.mp4`, blob });
+              entries.push({ name: `${fileStem}.mp4`, blob });
             } finally {
               if (overlayUrl) URL.revokeObjectURL(overlayUrl);
             }
@@ -302,7 +314,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           const host = exportHost.current;
           if (host) {
             const blob = await captureBox(host, slot.w, slot.h);
-            if (blob) entries.push({ name: `${asset.id}-${channelKey}-${slot.w}x${slot.h}.png`, blob });
+            if (blob) entries.push({ name: `${fileStem}.png`, blob });
           }
         }
         setExportedCount(i + 1);
@@ -356,7 +368,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   strokeLinejoin="round"
                 />
               </svg>
-              {exporting ? `${exportedCount} / ${channelKey === 'lgcom' ? lgcomSlotsFor(asset?.id ?? '').length : asset?.id === 'ad-teasing' ? (DYNAMIC_PAID_SLOTS[channelKey ?? ''] ?? []).length : paidSlotsFor(channelKey ?? '').length}` : t('Download ZIP')}
+              {exporting ? `${exportedCount} / ${slotsForChannel(channelKey ?? '').length}` : t('Download ZIP')}
             </button>
           </>
         }
@@ -370,6 +382,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           className="shrink-0 bg-white border-r border-gray-200 overflow-y-auto overflow-x-hidden flex flex-col"
           style={{ width: left.w }}
         >
+          <div className="px-5 pt-4 pb-3 border-b border-gray-100 shrink-0">
+            <p className="font-lgei font-bold text-[17px] text-gray-900">{t('Select Visual Type')}</p>
+          </div>
           <div className="p-4 flex flex-col gap-5">
             {visibleRows().map(row => (
               <section key={row.key} className="flex flex-col gap-2">
@@ -425,6 +440,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   e.target.value = '';
                 }}
               />
+              {/* relative so the hover card anchors to the row, not the icon —
+                  the palette clips horizontal overflow */}
+              <div className="relative flex items-center gap-3">
               {uploadUrl ? (
                 <div className="flex flex-col gap-1" style={{ width: 140 }}>
                   <button
@@ -460,6 +478,23 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   <span className="text-[10px] leading-none">3000×3000</span>
                 </button>
               )}
+              {/* What "finished" means — explained on hover */}
+              <div className="group/uhelp flex items-center gap-1.5">
+                <span className="flex items-center justify-center w-7 h-7 shrink-0 rounded-full border-2 border-gray-400 text-gray-400 cursor-help select-none">
+                  <span className="font-bold text-[15px] leading-none">!</span>
+                </span>
+                <span className="text-[11px] text-gray-500 cursor-help select-none">{t('Creation Guide')}</span>
+                {/* the title's single line sets the card width; the body wraps to it */}
+                <div className="hidden group-hover/uhelp:block absolute bottom-full left-0 mb-2 z-50 w-max bg-white border border-gray-200 rounded-xl shadow-xl p-3">
+                  <p className="text-[11px] font-semibold text-gray-800 mb-0.5 whitespace-nowrap">
+                    {t('Safe Area (center 1080 × 1080px of 3000 × 3000px)')}
+                  </p>
+                  <p className="text-[11px] leading-snug text-gray-600 w-0 min-w-full">
+                    {t('Keep the main visual inside the Safe Area so the image is not cropped when varied across sizes.')}
+                  </p>
+                </div>
+              </div>
+              </div>
             </section>
           </div>
 
@@ -485,17 +520,16 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           ) : asset.blank ? (
             <div className="flex-1 flex items-center justify-center px-12">
               <div className="flex flex-col items-center gap-3">
+                {/* no size picked yet → preview the lead size (1080×1920) */}
                 <div
                   className="rounded-lg bg-black"
                   style={{
-                    width: shortsSize ? Math.round(220 * shortsSize.width / shortsSize.height) : 160,
-                    height: 220,
+                    height: 'min(1100px, 60vh)',
+                    aspectRatio: `${(shortsSize ?? SHORTS_SIZES[0]).width} / ${(shortsSize ?? SHORTS_SIZES[0]).height}`,
                   }}
                 />
                 <p className="text-sm text-center" style={{ color: '#8A8078' }}>
-                  {shortsSize
-                    ? `${shortsSize.label} — ${t('artwork not delivered yet')}`
-                    : t('Pick a size below to see the output.')}
+                  {`${(shortsSize ?? SHORTS_SIZES[0]).label} — ${t('artwork not delivered yet')}`}
                 </p>
                 <OutputPicker
                   outputKind={outputKind}
@@ -515,18 +549,23 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 sizeKey={sizeKey}
                 onSize={setSizeKey}
               />
-              <ChannelSlots
-                channelKey={channelKey!}
-                channelLabel={channel ? channel.label : ''}
-                asset={asset}
-                copy={copy}
-                products={assetProducts}
-                plateColor={plateColor}
-                showIconRow={showIconRow && iconRowAvailable}
-                iconStyle={iconStyle}
-                iconIds={iconIds}
-                iconLabels={iconLabels}
-              />
+              {(channelKey === 'all' ? CHANNELS.map(c => ({ key: c.key, label: c.label })) : [{ key: channelKey!, label: channel ? channel.label : '' }]).map(ch => (
+                <ChannelSlots
+                  key={ch.key}
+                  channelKey={ch.key}
+                  channelLabel={ch.label}
+                  asset={asset}
+                  copy={copy}
+                  products={assetProducts}
+                  plateColor={plateColor}
+                  showIconRow={showIconRow && iconRowAvailable}
+                  iconStyle={iconStyle}
+                  iconIds={iconIds}
+                  iconLabels={iconLabels}
+                  showDisclaimer={showDisclaimer}
+                  showIndicator={showIndicator}
+                />
+              ))}
             </>
           ) : (
             <>
@@ -546,16 +585,14 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
 
         {/* Right — the source frame while studying it, the copy once banners are up */}
         <aside className="shrink-0 bg-white border-l border-gray-200 overflow-y-auto flex flex-col" style={{ width: right.w }}>
+          <div className="px-5 pt-4 pb-3 border-b border-gray-100 shrink-0">
+            <p className="font-lgei font-bold text-[17px] text-gray-900">{t('Edit panel')}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {t('You can modify the elements included in the banner.')}
+            </p>
+          </div>
           {!asset ? (
-            /* Gone the moment an asset is picked — same treatment as the canvas */
-            <div className="flex-1 flex items-center justify-center px-12">
-              <div className="text-center">
-                <p className="font-lgei font-bold text-[15px] text-gray-700 mb-1">{t('Edit')}</p>
-                <p className="text-sm text-gray-400">
-                  {t('You can modify the elements included in the banner.')}
-                </p>
-              </div>
-            </div>
+            <div className="flex-1" />
           ) : asset.blank ? (
             <div className="h-full flex items-center justify-center px-12">
               <p className="text-sm text-gray-400 text-center">
@@ -589,7 +626,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   setL(prev => { const next = prev.slice(); next[i] = label; return next; });
                 }}
                 iconStyle={iconStyle}
-                showIconRowToggle={channelKey === 'lgcom' && iconRowAvailable}
+                showDisclaimer={showDisclaimer}
+                onShowDisclaimer={setShowDisclaimer}
+                showIndicator={showIndicator}
+                onShowIndicator={setShowIndicator}
+                showIndicatorToggle={channelKey === 'lgcom' || channelKey === 'all'}
+                showIconRowToggle={(channelKey === 'lgcom' || channelKey === 'all') && iconRowAvailable}
               />
               {plateCount > 0 && assetProducts && (
                 <ProductSlotsEditor
@@ -634,7 +676,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           aria-hidden
         >
           <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
-          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt />
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} />
         </div>
       )}
       {!renderPaidOverlaySlot && renderIconRowSlot && (
@@ -682,6 +724,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               iconStyle={iconStyle}
               iconIds={iconIds}
               iconLabels={iconLabels}
+              showDisclaimer={showDisclaimer}
+              showIndicator={showIndicator}
               bare={bareOnExport(renderSlot.id)}
             />
           ) : (
@@ -692,6 +736,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               copy={copy}
               products={assetProducts}
               plateColor={plateColor}
+              showDisclaimer={showDisclaimer}
+              showIndicator={showIndicator}
             />
           )}
         </div>
@@ -844,9 +890,9 @@ function OutputPicker({
                 {sz.label}
               </button>
             ))
-          : CHANNELS.map(c => (
+          : [{ key: 'all', label: 'ALL' }, ...CHANNELS].map(c => (
               <button key={c.key} type="button" onClick={() => onChannel(channelKey === c.key ? null : c.key)} className={pill(channelKey === c.key)}>
-                {c.label}
+                {c.key === 'all' ? t('ALL') : c.label}
               </button>
             ))}
       </div>
@@ -946,6 +992,8 @@ function ChannelSlots({
   iconStyle,
   iconIds,
   iconLabels,
+  showDisclaimer,
+  showIndicator,
 }: {
   channelKey: string;
   channelLabel: string;
@@ -957,6 +1005,8 @@ function ChannelSlots({
   iconStyle: IconRowStyle;
   iconIds: string[];
   iconLabels: (string | null)[];
+  showDisclaimer: boolean;
+  showIndicator: boolean;
 }) {
   const t = useT();
   const slots = channelKey === 'lgcom' && asset ? lgcomSlotsFor(asset.id) : [];
@@ -996,6 +1046,8 @@ function ChannelSlots({
               products={products}
               plateColor={plateColor}
               motionSrc={paidMotion}
+              showDisclaimer={showDisclaimer}
+              showIndicator={showIndicator}
             />
           ))}
         </div>
@@ -1022,6 +1074,8 @@ function ChannelSlots({
               iconStyle={iconStyle}
               iconIds={iconIds}
               iconLabels={iconLabels}
+              showDisclaimer={showDisclaimer}
+              showIndicator={showIndicator}
             />
           ))}
         </div>

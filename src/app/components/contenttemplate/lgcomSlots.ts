@@ -46,6 +46,11 @@ export interface SlotText {
   lineHeightPct: number;
   /** Letter-spacing as a percentage of font size, as Figma reports it. */
   trackingPct: number;
+  /**
+   * Cap on rendered lines for a growing (bottom-anchored) text — lines beyond
+   * it clip. The two ST0001 hero disclaimers carry one (2).
+   */
+  maxLines?: number;
   weight: 400 | 600;
   /**
    * Fixed box height, when Figma gave the node one. The disclaimer sits in such
@@ -101,9 +106,9 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     hero: true,
     text: [
       { role: 'eyebrow',    x: 240, y: 72,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 240, y: 94,  w: 542, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
-      { role: 'subcopy',    x: 240, y: 218, w: 542, size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
+      { role: 'headline',   x: 240, y: 94,  w: 542, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
+      { role: 'subcopy',    x: 240, y: 218, w: 542, h: 18,  size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
+      { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, maxLines: 2, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
     cta: { x: 240, y: 265, w: 110.6, h: 44, radius: 9.03, size: 16.93, label: 'Shop now' },
   },  {
@@ -117,9 +122,9 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     hero: true,
     text: [
       { role: 'eyebrow',    x: 32, y: 50,  w: 656, size: 32,   lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 32, y: 101, w: 656, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
-      { role: 'subcopy',    x: 32, y: 241, w: 656, size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 32, y: 884, w: 656, h: 44, vAlign: 'bottom', size: 24.02, lineHeightPct: 117, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
+      { role: 'headline',   x: 32, y: 101, w: 656, h: 124, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
+      { role: 'subcopy',    x: 32, y: 241, w: 656, h: 70,  size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
+      { role: 'disclaimer', x: 32, y: 884, w: 656, h: 44, vAlign: 'bottom', maxLines: 2, size: 18, lineHeightPct: 156, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
     cta: { x: 32, y: 339, w: 181.7, h: 72.2, radius: 14.81, size: 27.77, label: 'Shop now' },
   },  {
@@ -130,8 +135,8 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     h: 400,
     text: [
       { role: 'eyebrow',    x: 80, y: 48,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 80, y: 70,  w: 542, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
-      { role: 'subcopy',    x: 80, y: 196, w: 542, size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
+      { role: 'headline',   x: 80, y: 70,  w: 542, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
+      { role: 'subcopy',    x: 80, y: 196, w: 542, h: 18,  size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
       { role: 'disclaimer', x: 80, y: 322, w: 542, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
     cta: { x: 80, y: 238, w: 110.6, h: 44, radius: 9.03, size: 16.93, label: 'Shop now' },
@@ -143,8 +148,8 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     h: 830,
     text: [
       { role: 'eyebrow',    x: 32, y: 50,  w: 656, size: 32,    lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 32, y: 101, w: 656, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
-      { role: 'subcopy',    x: 32, y: 241, w: 656, size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
+      { role: 'headline',   x: 32, y: 101, w: 656, h: 124, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
+      { role: 'subcopy',    x: 32, y: 241, w: 656, h: 70,  size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
       { role: 'disclaimer', x: 32, y: 754, w: 656, h: 44, vAlign: 'bottom', size: 24.02, lineHeightPct: 117, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
     cta: { x: 32, y: 339, w: 181.7, h: 72.2, radius: 14.81, size: 27.77, label: 'Shop now' },
@@ -155,9 +160,9 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     w: 656,
     h: 436,
     text: [
-      { role: 'headline', x: 32, y: 236, w: 592, size: 36, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: 'Lorem ipsum dolor sit ametap consectetur' },
+      { role: 'headline', x: 32, y: 236, w: 592, h: 80, vAlign: 'bottom', size: 36, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: 'Lorem ipsum dolor sit ametap consectetur' },
     ],
-    cta: { x: 238, y: 344, w: 180, h: 72, radius: 14.81, size: 27.77, label: 'Shop now' },
+    cta: { x: 238, y: 337, w: 180, h: 72, radius: 14.81, size: 27.77, label: 'Shop now' },
   },  {
     id: 'ST0044-pc-342x228',
     code: 'ST0044',
@@ -165,9 +170,9 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     w: 342,
     h: 228,
     text: [
-      { role: 'headline', x: 32, y: 104, w: 278, size: 24, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: 'Lorem ipsum dolor sit ametap consectetur' },
+      { role: 'headline', x: 32, y: 104, w: 278, h: 52, vAlign: 'bottom', size: 24, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: 'Lorem ipsum dolor sit ametap consectetur' },
     ],
-    cta: { x: 126, y: 176, w: 90.6, h: 36, radius: 7.38, size: 13.85, label: 'Shop now' },
+    cta: { x: 126, y: 172, w: 90.6, h: 36, radius: 7.38, size: 13.85, label: 'Shop now' },
   },
 ];
 
@@ -462,7 +467,23 @@ export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device}`;
  * field does not reach it.
  */
 export const longDisclaimer = (w: number, h: number) => w >= 1000 || h >= 1000;
+
+/**
+ * Which LG.com slots take the typed disclaimer. The ≥1000px rule, plus the
+ * 720×960 hero — editable by exception, capped at two lines via the spec's
+ * `maxLines`.
+ */
+export const lgcomDisclaimerEditable = (slot: { id: string; w: number; h: number }) =>
+  longDisclaimer(slot.w, slot.h) || slot.id === 'ST0001-mo-720x960';
 export const SHORT_DISCLAIMER = '*T&C\u2019s apply';
+
+/**
+ * How much of the typed disclaimer a size renders. Only the widened 1920×720
+ * takes the full 400-character field; every other long-disclaimer size cuts at
+ * 180 — the field accepts 400 so the wide hero keeps its tail.
+ */
+export const disclaimerMaxChars = (slotId?: string) =>
+  slotId === 'ST0001-pc-1920x720' ? 400 : 180;
 
 export const bareOnExport = (slotId: string) =>
   slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960';

@@ -175,10 +175,9 @@ export const CONTENT_ASSETS: ContentAsset[] = [
   { id: 'ad-joy-ryder', label: 'Joy & Ryder', group: 'ad-creative', src: 'ad-creative-a-1' },
   { id: 'ad-benefit', label: 'Benefit', group: 'ad-creative', src: 'ad-creative-b-1' },
 
-  // SHORTS — vertical cuts. No art delivered yet; both tiles are captioned "01"
-  // on the Figma board, so they are numbered here rather than renamed.
-  { id: 'shorts-01', label: '01', group: 'shorts', blank: true },
-  { id: 'shorts-02', label: '01', group: 'shorts', blank: true },
+  // SHORTS — vertical cuts. No art delivered yet.
+  { id: 'shorts-01', label: 'LGNESS', group: 'shorts', blank: true },
+  { id: 'shorts-02', label: 'CUBE', group: 'shorts', blank: true },
 
   // UPLOAD — the operator's own 3000×3000 square, laid out with the Key Visual
   // _Main skeleton on every channel. The file itself lives in `customArtUrl`
@@ -290,8 +289,8 @@ export const CHANNELS: Channel[] = [
 export interface ShortsSize { key: string; label: string; width: number; height: number }
 
 export const SHORTS_SIZES: ShortsSize[] = [
-  { key: '1080x1080', label: '1080x1080', width: 1080, height: 1080 },
-  { key: '1080x1920', label: '1080x1920', width: 1080, height: 1920 },
+  { key: '1080x1920', label: '1080x1920 (9:16)', width: 1080, height: 1920 },
+  { key: '1080x1440', label: '1080x1440 (3:4)', width: 1080, height: 1440 },
 ];
 
 /** Which output picker this asset takes below the divider. */

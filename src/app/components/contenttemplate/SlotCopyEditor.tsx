@@ -7,6 +7,7 @@
  * placeholder so a slot never renders blank while you are still filling it in.
  */
 import { useT } from '../../i18n/LanguageContext';
+import { useRef } from 'react';
 import type { IconRowStyle } from './lgcomSlots';
 import { ICON_LIST, splitLabel } from './icons/IconRegistry';
 import { IconCombobox } from './icons/IconCombobox';
@@ -50,7 +51,7 @@ const FIELDS: {
   // The pill hugs its label, so length is the one thing that must be bounded.
   { key: 'cta', label: 'CTA button', maxLength: 15 },
   // sizes under 1000px are locked to the short version — see longDisclaimer
-  { key: 'disclaimer', label: 'Disclaimer', hint: 'Sizes over 1000px · Max 180', maxLength: 180 },
+  { key: 'disclaimer', label: 'Disclaimer', hint: '1920×720 Max 400 · Others Max 180 or *T&C\u2019s apply', maxLength: 400 },
 ];
 
 /**
@@ -94,6 +95,11 @@ export function SlotCopyEditor({
   iconLabels,
   onIconLabel,
   iconStyle,
+  showDisclaimer,
+  onShowDisclaimer,
+  showIndicator,
+  onShowIndicator,
+  showIndicatorToggle,
   showIconRowToggle,
 }: {
   channelLabel: string;
@@ -115,6 +121,13 @@ export function SlotCopyEditor({
   onIconLabel: (index: number, label: string | null) => void;
   /** The resolved `kind-color` key the previews and comboboxes render with. */
   iconStyle: IconRowStyle;
+  /** Checkbox before the Disclaimer field — off drops it from every size. */
+  showDisclaimer: boolean;
+  onShowDisclaimer: (next: boolean) => void;
+  /** Checkbox for the hero-size carousel indicator; shown on LG.com only. */
+  showIndicator: boolean;
+  onShowIndicator: (next: boolean) => void;
+  showIndicatorToggle: boolean;
   /**
    * LG.com only. The icon row exists on the two hero sizes of that channel and
    * nowhere else, so the paid channels get the copy fields alone. Every other
@@ -124,6 +137,9 @@ export function SlotCopyEditor({
 }) {
   const t = useT();
   const touched = Object.values(copy).some(v => v.trim() !== '');
+  /** What the Icons checkbox re-enables — the kind in use before it went off. */
+  const lastIconKind = useRef<'solid' | 'line'>(iconKind === 'line' ? 'line' : 'solid');
+  if (iconKind !== 'none') lastIconKind.current = iconKind;
 
   const field = (key: keyof SlotCopy, value: string) => onChange({ ...copy, [key]: value });
 
@@ -138,10 +154,26 @@ export function SlotCopyEditor({
 
       {FIELDS.map(f => (
         <div key={f.key} className="flex flex-col gap-1">
+          {/* the disclaimer's hint is long — it sits under the label, not beside it */}
           <span className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-700">{t(f.label)}</span>
-            {f.hint && <span className="text-[10px] text-gray-400">{t(f.hint)}</span>}
+            <span className="flex items-center gap-2 text-xs font-medium text-gray-700">
+              {f.key === 'disclaimer' && (
+                <input
+                  type="checkbox"
+                  checked={showDisclaimer}
+                  onChange={e => onShowDisclaimer(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-[#FD312E]"
+                />
+              )}
+              {t(f.label)}
+            </span>
+            {f.hint && f.key !== 'disclaimer' && (
+              <span className="text-[10px] text-gray-400">{t(f.hint)}</span>
+            )}
           </span>
+          {f.hint && f.key === 'disclaimer' && (
+            <span className="text-[10px] text-gray-400 -mt-1">{t(f.hint)}</span>
+          )}
           {f.multiline ? (
             <textarea
               value={copy[f.key]}
@@ -157,36 +189,61 @@ export function SlotCopyEditor({
               onChange={e => field(f.key, e.target.value)}
               placeholder={COPY_PLACEHOLDER[f.key]}
               maxLength={f.maxLength}
-              className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300"
+              disabled={f.key === 'disclaimer' && !showDisclaimer}
+              className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40"
             />
           )}
         </div>
       ))}
 
+      {showIndicatorToggle && (
+        <div className="flex items-baseline gap-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={showIndicator}
+              onChange={e => onShowIndicator(e.target.checked)}
+              className="w-3.5 h-3.5 accent-[#FD312E]"
+            />
+            {t('Indicator')}
+          </label>
+          <span className="text-[10px] text-gray-400">{t('1920×720 · 720×960')}</span>
+        </div>
+      )}
+
       {showIconRowToggle && (
       <div className="border-t border-gray-100 pt-4 flex flex-col gap-2.5">
         <div className="flex items-baseline gap-2">
-          <span className="text-xs font-medium text-gray-700">{t('Icons')}</span>
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={iconKind !== 'none'}
+              onChange={e => onIconKind(e.target.checked ? lastIconKind.current : 'none')}
+              className="w-3.5 h-3.5 accent-[#FD312E]"
+            />
+            {t('Icons')}
+          </label>
           <span className="text-[10px] text-gray-400">{t('1920×720 · 720×960')}</span>
         </div>
 
-        {/* None / Solid / Line */}
-        <div className="flex gap-2">
-          {([['none', 'None'], ['solid', 'Solid Icon'], ['line', 'Line Icon']] as const).map(([k, label]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => onIconKind(k)}
-              className={`flex-1 h-9 rounded-lg border-2 text-xs font-medium transition-colors ${
-                iconKind === k
-                  ? 'border-[#FD312E] bg-[#FD312E]/5 text-gray-900'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              {t(label)}
-            </button>
-          ))}
-        </div>
+        {iconKind !== 'none' && (
+          <div className="flex gap-2">
+            {([['solid', 'Solid Icon'], ['line', 'Line Icon']] as const).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => onIconKind(k)}
+                className={`flex-1 h-9 rounded-lg border-2 text-xs font-medium transition-colors ${
+                  iconKind === k
+                    ? 'border-[#FD312E] bg-[#FD312E]/5 text-gray-900'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {t(label)}
+              </button>
+            ))}
+          </div>
+        )}
 
         {iconKind !== 'none' && (
           <>
