@@ -18,6 +18,7 @@
 import React from 'react';
 import {
   DEAL_PAGE_WIDTH,
+  type DealDevice,
   DEAL_HERO_WIDTH,
   DEAL_BANNER_WIDTH,
   DEAL_CONTENT_WIDTH,
@@ -40,6 +41,7 @@ import type {
   DealTabNavState,
   DealPromoBannerState,
   DealBannerSize,
+  DealCardItem,
   CountdownFields,
   DealProductListState,
   DealProductItem,
@@ -49,8 +51,9 @@ import { DEAL_SOCIAL_ICONS, DEAL_BANNER_HEIGHT } from './dealEditStates';
 import { artOf, artUrl, getAsset, previewUrl } from '../contenttemplate/contentTemplateAssets';
 import { slotBoxesFor } from '../contenttemplate/lgcomSlots';
 import { PD_PLATE_FILL } from '../contenttemplate/paidBoards';
+import { DealModuleRendererMo } from './DealModuleRendererMo';
 import { heroArtFor, HERO_SCRIM, HERO_SCRIM_X, HERO_SLOT_ID, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
-import { PROMO_ART, PROMO_SLOT, promoArtHasSlots, promoArtStem, dealBannerArtFor, DEAL_BANNER_SCRIM } from './dealBannerArt';
+import { PROMO_ART, PROMO_SLOT, promoArtStem, dealBannerArtFor, DEAL_BANNER_SCRIM } from './dealBannerArt';
 
 const FONT = 'var(--obs-font)';
 const FONT_TEXT = 'var(--obs-font-text, var(--obs-font))';
@@ -262,11 +265,13 @@ function DealSiteHeaderTemplate({ data }: { data: DealSiteHeaderState }) {
 
 // ── 1. Hero KV (Figma 6080:51044 — 2280×720) ──────────────────────────────────
 
-function DealHeroTemplate({ data }: { data: DealHeroState }) {
+function DealHeroTemplate({ data, artOnly }: { data: DealHeroState; artOnly?: boolean }) {
   // Motion is not a registry asset — it plays kv-main's animated master over
   // Main's static art (which doubles as the frame a PNG export can capture).
   const motion = data.kvAsset === HERO_MOTION_ID;
-  const kv = getAsset(motion ? 'kv-main' : data.kvAsset);
+  // The operator's uploaded square, laid out with Main's framing.
+  const custom = data.kvAsset === 'custom-upload' ? data.customImage : null;
+  const kv = data.kvAsset === 'custom-upload' ? undefined : getAsset(motion ? 'kv-main' : data.kvAsset);
   // Every key visual has its own framing on the board; the nudge rides on top.
   // Scale is about the artwork's centre, so zooming does not also shift it.
   const base = heroArtFor(data.kvAsset);
@@ -281,14 +286,33 @@ function DealHeroTemplate({ data }: { data: DealHeroState }) {
   // fractions of that square, so they follow the art wherever it is placed.
   const plates = kv ? slotBoxesFor(kv.id, HERO_SLOT_ID) : [];
 
-  return (
-    <Band height={720}>
-      {/* The plate is the 1920 video rail (6130:67434), not the full page. */}
-      <div style={{ position: 'absolute', left: HERO_INSET, top: 0, width: DEAL_HERO_WIDTH, height: 720, background: BLACK, overflow: 'hidden' }}>
+  // Export mode ("artOnly") captures ONLY the composed image — the plate with
+  // its artwork, product plates and scrim, cropped at the art size. Copy,
+  // countdown and every other overlay stay in the on-canvas mockup.
+  const plate = (
+      <div style={artOnly
+        ? { position: 'relative', width: DEAL_HERO_WIDTH, height: 720, background: BLACK, overflow: 'hidden' }
+        : { position: 'absolute', left: HERO_INSET, top: 0, width: DEAL_HERO_WIDTH, height: 720, background: BLACK, overflow: 'hidden' }}>
         {kv && (
           <img
             src={artUrl(artOf(kv))}
             alt={kv.label}
+            draggable={false}
+            style={{
+              position: 'absolute',
+              left: art.x,
+              top: art.y,
+              width: art.size,
+              height: art.size,
+              display: 'block',
+              maxWidth: 'none',
+            }}
+          />
+        )}
+        {custom && (
+          <img
+            src={custom}
+            alt=""
             draggable={false}
             style={{
               position: 'absolute',
@@ -366,6 +390,14 @@ function DealHeroTemplate({ data }: { data: DealHeroState }) {
           }}
         />
       </div>
+  );
+
+  if (artOnly) return plate;
+
+  return (
+    <Band height={720}>
+      {/* The plate is the 1920 video rail (6130:67434), not the full page. */}
+      {plate}
 
       {/* Copy hangs off the 420 content rail, not off the plate. */}
       {data.showEyebrow && (
@@ -394,93 +426,143 @@ function DealHeroTemplate({ data }: { data: DealHeroState }) {
   );
 }
 
-// ── 2. Deal cards (Figma 6149:67786 — 2280×561) ───────────────────────────────
+// ── 2. Deal cards (Figma 6290:158826 "ST0044_PC" — 2280×812, 2026-09-02) ──────
 
 const DEAL_CARD_W = 464;
-const DEAL_CARD_H = 368;
+const DEAL_CARD_H = 600;
 /** 488 pitch − 464 card. */
 const DEAL_CARD_GAP = 24;
 
 /**
- * Deal-type artwork placement inside a card — PER ASSET, because the baked
- * Figma cards NORMALISE the objects: on the board every object reads ~187px
- * tall centred at (232, 125), but in the 1960×928 previews the raw objects
- * range from 640px (clock) down to 491px (gift box). One shared scale renders
- * the clock a third larger than the board. Each entry is
- * scale = 187 / <object px height in preview>, then x/y place the measured
- * object centre at (232, 125). The plate always overflows the card's sides
- * and top; its bottom edge (y 264–308 depending on scale) must sit below the
- * scrim's full-black line or it shows as a hairline seam.
+ * Deal-type artwork placement inside a 464×600 card — PER ASSET, read off the
+ * three cards on the revised board (the square art is drawn oversized and
+ * hung off the top-left so the object floats upper-centre). The gift artwork
+ * has no card on the board yet; its numbers interpolate the other three.
  */
-const DEAL_CARD_ART: Record<string, { w: number; x: number; y: number }> = {
-  // object bbox in preview: x 712–1250, y 132–772 → centre (981, 452), h 640
-  'deal-type-time-sale': { w: 573, x: -55, y: -7 },
-  // x 712–1255, y 176–754 → centre (983.5, 465), h 578
-  'deal-type-hot-deal':  { w: 634, x: -86, y: -25 },
-  // x 710–1234, y 192–732 → centre (972, 462), h 540
-  'deal-type-bundle':    { w: 679, x: -105, y: -35 },
-  // x 659–1300, y 200–691 → centre (979.5, 445.5), h 491
-  'deal-type-gift':      { w: 747, x: -141, y: -45 },
+const DEAL_CARD_ART: Record<string, { size: number; x: number; y: number }> = {
+  // img w 234.48% / left −67.24% / top −49.83% of 464×600
+  'deal-type-time-sale': { size: 1088, x: -312, y: -299 },
+  // 241.38% / −70.69% / −54.08%
+  'deal-type-hot-deal':  { size: 1120, x: -328, y: -324 },
+  // 235.34% / −67.67% / −50.48%
+  'deal-type-bundle':    { size: 1092, x: -314, y: -303 },
+  'deal-type-gift':      { size: 1100, x: -318, y: -309 },
 };
-/** A future fifth artwork renders mid-range until it gets measured in. */
-const DEAL_CARD_ART_FALLBACK = { w: 647, x: -91, y: -24 };
-/**
- * Bottom scrim over the artwork — fades the plate into black under the copy
- * and CTA, standing in for the scrim the old baked renders carried. Fully
- * black by y 262: above the highest plate bottom edge (time sale, y 264).
- */
-const DEAL_CARD_SCRIM =
-  'linear-gradient(to bottom, rgba(0,0,0,0) 205px, rgba(0,0,0,1) 262px)';
+const DEAL_CARD_ART_FALLBACK = { size: 1100, x: -318, y: -309 };
 
 /**
- * The two round carousel arrows (6149:68180 / 6149:68181).
- *
- * ⚠️ The board carries TWO overlapping pairs — this one, and the slider
- * component's own prev/next 3px right and 10px down. Only this pair paints, and
- * it is centred on the 60-tall title box (49 + (60 − 64) / 2 = 47), so both
- * arrows and the "1 / 2" counter sit on the title's centre line.
- *
- * Exported whole rather than redrawn: the two rings carry different greys
- * (#CBC8C2 disabled, #646464 active) and different glyphs (chevron vs arrow).
+ * The two round carousel arrows — kept from the previous board render
+ * (64px rings, #CBC8C2 disabled / #646464 active). The revised board swaps
+ * them for a blur-backed component the SVG export can't carry, so the old
+ * exports stand in until the new ones are delivered as flat assets.
  */
-function CarouselArrow({ x, dir }: { x: number; dir: 'prev' | 'next' }) {
+function CarouselArrow({ x, y, dir }: { x: number; y: number; dir: 'prev' | 'next' }) {
   return (
     <img
       src={`/deal-page/icons/carousel-${dir}.png`}
       alt=""
       draggable={false}
-      style={{ position: 'absolute', left: x, top: 47, width: 64, height: 64, display: 'block', maxWidth: 'none' }}
+      style={{ position: 'absolute', left: x, top: y, width: 64, height: 64, display: 'block', maxWidth: 'none' }}
     />
   );
 }
 
-function DealCardsTemplate({ data }: { data: DealCardsState }) {
+/** The card's artwork layer alone — shared by the canvas card and the export crop. */
+function DealCardArtLayer({ card }: { card: DealCardItem }) {
+  const custom = card.asset === 'custom-upload' ? card.image : null;
+  const art = card.asset === 'custom-upload' ? undefined : getAsset(card.asset ?? null);
+  const place = (card.asset && DEAL_CARD_ART[card.asset]) || DEAL_CARD_ART_FALLBACK;
+  if (custom)
+    return (
+      <img
+        src={custom}
+        alt=""
+        draggable={false}
+        style={{
+          position: 'absolute',
+          left: place.x,
+          top: place.y,
+          width: place.size,
+          height: place.size,
+          display: 'block',
+          maxWidth: 'none',
+        }}
+      />
+    );
+  if (art)
+    return (
+      <img
+        src={artUrl(artOf(art))}
+        alt=""
+        draggable={false}
+        style={{
+          position: 'absolute',
+          left: place.x,
+          top: place.y,
+          width: place.size,
+          height: place.size,
+          display: 'block',
+          maxWidth: 'none',
+        }}
+      />
+    );
+  if (card.image)
+    // Drafts saved before the asset picker carry a baked render.
+    return (
+      <img
+        src={card.image}
+        alt=""
+        draggable={false}
+        style={{ width: DEAL_CARD_W, height: DEAL_CARD_H, objectFit: 'cover', display: 'block', maxWidth: 'none' }}
+      />
+    );
+  return null;
+}
+
+function DealCardsTemplate({ data, artOnly, artIndex }: { data: DealCardsState; artOnly?: boolean; artIndex?: number }) {
+  // Export mode — ONE card's artwork at the 464×600 crop, nothing else. The
+  // corner rounding is the page's, not the asset's, so the crop stays square.
+  if (artOnly) {
+    const card = data.cards[artIndex ?? 0];
+    if (!card) return null;
+    return (
+      <div style={{ position: 'relative', width: DEAL_CARD_W, height: DEAL_CARD_H, background: BLACK, overflow: 'hidden' }}>
+        <DealCardArtLayer card={card} />
+      </div>
+    );
+  }
+
   return (
-    <Band height={561}>
+    <Band height={812}>
+      {/* Title block — 56/60 Semibold headline over a 24/28 subtitle, the pair
+          centred in the 96-tall title row on the 420 content rail. */}
       {data.showSectionTitle && (
-        <At x={CONTENT_INSET} y={49} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: BLACK }}>
+        <At x={CONTENT_INSET} y={48} w={1216} style={{ ...T_HEAD, fontWeight: 600, letterSpacing: 'var(--obs-tracking-head)', color: BLACK }}>
           {data.sectionTitle}
+        </At>
+      )}
+      {data.showSectionSubtitle && (
+        <At x={CONTENT_INSET} y={116} w={1216} style={{ fontFamily: FONT_TEXT, ...T_COUNTER, color: TEXT_DARK }}>
+          {data.sectionSubtitle}
         </At>
       )}
 
       {data.showCarousel && (
         <>
-          <At x={1670} y={65} style={{ fontFamily: FONT, ...T_COUNTER, color: TEXT_STRIKE }}>
+          <At x={1600} y={82} w={92} style={{ fontFamily: FONT_TEXT, ...T_COUNTER, color: TEXT_STRIKE, textAlign: 'right' }}>
             {`1 / ${data.slideCount}`}
           </At>
-          <CarouselArrow x={1723} dir="prev" />
-          <CarouselArrow x={1795} dir="next" />
+          <CarouselArrow x={1724} y={64} dir="prev" />
+          <CarouselArrow x={1796} y={64} dir="next" />
         </>
       )}
 
-      {/* Card row — 464×368 at a 488 pitch. The rail is a 1440-wide window that
-          CLIPS (Figma "Slider Label Title" 6149:67807): three cards show and a
-          fourth waits off-stage as the carousel's next slide. */}
+      {/* Card row — 464×600 at a 488 pitch on the 1440 rail. */}
       <div
         style={{
           position: 'absolute',
           left: CONTENT_INSET,
-          top: 137,
+          top: 164,
           width: DEAL_CONTENT_WIDTH,
           height: DEAL_CARD_H,
           overflow: 'hidden',
@@ -488,8 +570,6 @@ function DealCardsTemplate({ data }: { data: DealCardsState }) {
       >
         <div style={{ display: 'flex', gap: DEAL_CARD_GAP }}>
         {data.cards.map((card, i) => {
-          const art = getAsset(card.asset ?? null);
-          const place = (card.asset && DEAL_CARD_ART[card.asset]) || DEAL_CARD_ART_FALLBACK;
           return (
           <div
             key={i}
@@ -503,72 +583,47 @@ function DealCardsTemplate({ data }: { data: DealCardsState }) {
               flexShrink: 0,
             }}
           >
-            {art ? (
-              <>
-                <img
-                  src={previewUrl(art)}
-                  alt=""
-                  draggable={false}
-                  style={{
-                    position: 'absolute',
-                    left: place.x,
-                    top: place.y,
-                    width: place.w,
-                    display: 'block',
-                    maxWidth: 'none',
-                  }}
-                />
-                <div style={{ position: 'absolute', inset: 0, background: DEAL_CARD_SCRIM }} />
-              </>
-            ) : card.image ? (
-              // Drafts saved before the asset picker carry a baked 464×368 render.
-              <img
-                src={card.image}
-                alt=""
-                draggable={false}
-                style={{ width: DEAL_CARD_W, height: DEAL_CARD_H, objectFit: 'cover', display: 'block', maxWidth: 'none' }}
-              />
-            ) : null}
-            {/* Copy sits inside a 32 pad, bottom-aligned and CENTRED across the
-                card — the 400-wide box is the 464 card minus its 32 pads. */}
-            <p
+            <DealCardArtLayer card={card} />
+
+            {/* Text set (Figma "D_Text set_Small_36") — bottom-left, 32 pad:
+                36/42 Light title, 24 gap, white outlined button. */}
+            <div
               style={{
                 position: 'absolute',
-                left: 32,
-                top: 232,
-                width: 400,
-                margin: 0,
-                fontFamily: FONT_TEXT,
-                ...T_CARD_TITLE,
-                color: WHITE,
-                textAlign: 'center',
-                ...DESCENDER,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                padding: 32,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 24,
               }}
             >
-              {card.title}
-            </p>
-            {data.showCta && (
-              <span
+              <p
                 style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 292,
-                  height: 44,
-                  display: 'flex',
-                  justifyContent: 'center',
+                  margin: 0,
+                  width: '100%',
+                  fontFamily: FONT_TEXT,
+                  fontSize: 36,
+                  lineHeight: '42px',
+                  fontWeight: 300,
+                  color: WHITE,
+                  ...DESCENDER,
                 }}
               >
+                {card.title}
+              </p>
+              {data.showCta && (
                 <span
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minWidth: 111,
-                    height: 44,
-                    padding: '0 20px',
+                    padding: '14px 20px',
                     borderRadius: R_SM,
                     background: WHITE,
+                    border: '1px solid #94928D',
                     boxSizing: 'border-box',
                     color: BLACK,
                     fontFamily: FONT_TEXT,
@@ -580,8 +635,8 @@ function DealCardsTemplate({ data }: { data: DealCardsState }) {
                 >
                   {card.ctaText}
                 </span>
-              </span>
-            )}
+              )}
+            </div>
           </div>
           );
         })}
@@ -749,7 +804,7 @@ function CountdownRow({ x, y, data }: { x: number; y: number; data: CountdownFie
   );
 }
 
-function DealPromoBannerTemplate({ data, size }: { data: DealPromoBannerState; size: DealBannerSize }) {
+function DealPromoBannerTemplate({ data, size, artOnly }: { data: DealPromoBannerState; size: DealBannerSize; artOnly?: boolean }) {
   const bannerH = DEAL_BANNER_HEIGHT[size] ?? 400;
   // The countdown only ever runs on the deal banner — the panel gates the
   // toggle, this guard keeps a stray flag off the 400 promotion banner.
@@ -758,25 +813,24 @@ function DealPromoBannerTemplate({ data, size }: { data: DealPromoBannerState; s
   const ink = WHITE;
   // Promotion banner (400) key-visual art — takes precedence over the legacy
   // uploaded image; PD Slot variants also draw the four product plates.
-  const kvStem = size === 'Large' ? promoArtStem(data.kvAsset) : null;
-  const slots = kvStem !== null && promoArtHasSlots(data.kvAsset);
+  // The operator's uploaded square rides on the banner's own art skeleton.
+  const customArt = data.kvAsset === 'custom-upload' ? data.image : null;
+  const kvStem = size === 'Large' && data.kvAsset !== 'custom-upload' ? promoArtStem(data.kvAsset) : null;
+  // Art nudge + scale — the plates and scrim stay put; only the artwork
+  // moves, scaling about its centre like the hero.
+  const nx = data.kvNudgeX ?? 0;
+  const ny = data.kvNudgeY ?? 0;
+  const kvs = data.kvScale || 1;
+  // Plates are the frame's own boxes, so any variant can carry them — the
+  // toggle decides, not the artwork.
+  const slots = kvStem !== null && data.showSlots !== false;
   // Deal banner (350) type art — the four Deal Banner_* frames, art + scrim.
-  const dealArt = size === 'Standard' ? dealBannerArtFor(data.kvAsset) : null;
+  const dealArt = size === 'Standard' && data.kvAsset !== 'custom-upload' ? dealBannerArtFor(data.kvAsset) : null;
 
-  return (
-    <Band height={48 + bannerH + m.padBottom}>
-      <div
-        style={{
-          position: 'absolute',
-          left: BANNER_INSET,
-          top: 48,
-          width: DEAL_BANNER_WIDTH,
-          height: bannerH,
-          borderRadius: R_LG,
-          background: BLACK,
-          overflow: 'hidden',
-        }}
-      >
+  // Export mode captures the composed image alone — art, product plates and
+  // scrim at the 1600-wide banner crop; copy, links, CTA and countdown are
+  // the mockup's, and the corner rounding is the page's.
+  const artLayer = (
         <div style={{ position: 'absolute', inset: 0, transform: data.layout === 'Art left' ? 'scaleX(-1)' : undefined }}>
           {kvStem !== null ? (
             <>
@@ -786,10 +840,10 @@ function DealPromoBannerTemplate({ data, size }: { data: DealPromoBannerState; s
                 draggable={false}
                 style={{
                   position: 'absolute',
-                  left: PROMO_ART.x,
-                  top: PROMO_ART.y,
-                  width: PROMO_ART.size,
-                  height: PROMO_ART.size,
+                  left: PROMO_ART.x + nx - (PROMO_ART.size * (kvs - 1)) / 2,
+                  top: PROMO_ART.y + ny - (PROMO_ART.size * (kvs - 1)) / 2,
+                  width: PROMO_ART.size * kvs,
+                  height: PROMO_ART.size * kvs,
                   display: 'block',
                   maxWidth: 'none',
                 }}
@@ -842,10 +896,10 @@ function DealPromoBannerTemplate({ data, size }: { data: DealPromoBannerState; s
                 draggable={false}
                 style={{
                   position: 'absolute',
-                  left: dealArt.x,
-                  top: dealArt.y,
-                  width: dealArt.w,
-                  height: dealArt.h,
+                  left: dealArt.x + nx - (dealArt.w * (kvs - 1)) / 2,
+                  top: dealArt.y + ny - (dealArt.h * (kvs - 1)) / 2,
+                  width: dealArt.w * kvs,
+                  height: dealArt.h * kvs,
                   display: 'block',
                   maxWidth: 'none',
                 }}
@@ -862,10 +916,64 @@ function DealPromoBannerTemplate({ data, size }: { data: DealPromoBannerState; s
                 }}
               />
             </>
+          ) : customArt ? (
+            // Uploaded square — promo uses the shared square skeleton, the
+            // deal banner a right-of-centre square; nudge/scale apply.
+            <img
+              src={customArt}
+              alt=""
+              draggable={false}
+              style={
+                size === 'Large'
+                  ? {
+                      position: 'absolute',
+                      left: PROMO_ART.x + nx - (PROMO_ART.size * (kvs - 1)) / 2,
+                      top: PROMO_ART.y + ny - (PROMO_ART.size * (kvs - 1)) / 2,
+                      width: PROMO_ART.size * kvs,
+                      height: PROMO_ART.size * kvs,
+                      display: 'block',
+                      maxWidth: 'none',
+                    }
+                  : {
+                      position: 'absolute',
+                      left: 650 + nx - (1010 * (kvs - 1)) / 2,
+                      top: -330 + ny - (1010 * (kvs - 1)) / 2,
+                      width: 1010 * kvs,
+                      height: 1010 * kvs,
+                      display: 'block',
+                      maxWidth: 'none',
+                    }
+              }
+            />
           ) : (
             <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={bannerH} />
           )}
         </div>
+  );
+
+  if (artOnly) {
+    return (
+      <div style={{ position: 'relative', width: DEAL_BANNER_WIDTH, height: bannerH, background: BLACK, overflow: 'hidden' }}>
+        {artLayer}
+      </div>
+    );
+  }
+
+  return (
+    <Band height={48 + bannerH + m.padBottom}>
+      <div
+        style={{
+          position: 'absolute',
+          left: BANNER_INSET,
+          top: 48,
+          width: DEAL_BANNER_WIDTH,
+          height: bannerH,
+          borderRadius: R_LG,
+          background: BLACK,
+          overflow: 'hidden',
+        }}
+      >
+        {artLayer}
 
         {/* Copy — 80 in from the banner edge, which is the 420 content rail. */}
         <At x={80} y={m.headTop} w={860} style={{ ...T_HEAD, letterSpacing: 'var(--obs-tracking-head)', color: ink }}>
@@ -1443,14 +1551,28 @@ function DealSiteFooterTemplate({ data }: { data: DealSiteFooterState }) {
 
 // ── Router ────────────────────────────────────────────────────────────────────
 
-export function DealModuleRenderer({ editState }: { editState: DealEditState }) {
+export function DealModuleRenderer({
+  editState,
+  device = 'pc',
+  artOnly,
+  artIndex,
+}: {
+  editState: DealEditState;
+  device?: DealDevice;
+  /** ZIP export: render only the composed image at its art crop (hero /
+      cards / banners — everything else renders as usual). `artIndex` picks
+      the card on a deal-cards module. */
+  artOnly?: boolean;
+  artIndex?: number;
+}) {
+  if (device === 'mo') return <DealModuleRendererMo editState={editState} artOnly={artOnly} artIndex={artIndex} />;
   switch (editState.type) {
     case 'deal-site-header':  return <DealSiteHeaderTemplate data={editState.data} />;
-    case 'deal-hero':         return <DealHeroTemplate data={editState.data} />;
-    case 'deal-cards':        return <DealCardsTemplate data={editState.data} />;
+    case 'deal-hero':         return <DealHeroTemplate data={editState.data} artOnly={artOnly} />;
+    case 'deal-cards':        return <DealCardsTemplate data={editState.data} artOnly={artOnly} artIndex={artIndex} />;
     case 'deal-tab-nav':      return <DealTabNavTemplate data={editState.data} />;
-    case 'deal-promo-banner': return <DealPromoBannerTemplate data={editState.data} size="Large" />;
-    case 'deal-banner':       return <DealPromoBannerTemplate data={editState.data} size="Standard" />;
+    case 'deal-promo-banner': return <DealPromoBannerTemplate data={editState.data} size="Large" artOnly={artOnly} />;
+    case 'deal-banner':       return <DealPromoBannerTemplate data={editState.data} size="Standard" artOnly={artOnly} />;
     case 'deal-product-list': return <DealProductListTemplate data={editState.data} />;
     case 'deal-category-nav': return <DealCategoryNavTemplate data={editState.data} />;
     case 'deal-site-footer':  return <DealSiteFooterTemplate data={editState.data} />;

@@ -62,6 +62,13 @@ export interface DealHeroState extends CountdownFields {
   products: { url: string; image: string | null }[];
   /** PD Slot plate fill — drawn over the baked plates so it can be recoloured. */
   plateColor: string;
+  /**
+   * Operator-uploaded 3000×3000 square (data URL), drawn with Main's framing
+   * when `kvAsset` is 'custom-upload' — the deal-page counterpart of the
+   * Content Banner Builder's UPLOAD group. Banners and deal cards reuse their
+   * legacy `image` field for the same purpose instead.
+   */
+  customImage: string | null;
   // + CountdownFields: the digit row under the copy (Figma 6236:143805),
   //   sitting on the content rail at y 294.
 }
@@ -84,6 +91,9 @@ export interface DealCardItem {
 export interface DealCardsState {
   sectionTitle: string;
   showSectionTitle: boolean;
+  /** Subtitle under the section title (new on the 2026-09-02 board revision). */
+  sectionSubtitle: string;
+  showSectionSubtitle: boolean;
   showCta: boolean;
   /**
    * The row is a carousel on lg.com: the counter and the two round arrows sit
@@ -168,10 +178,18 @@ export interface DealPromoBannerState extends CountdownFields {
    * `image`; null keeps a legacy draft's uploaded art.
    */
   kvAsset: string | null;
+  /** Art nudge in plate px — arrows in the panel; plates stay anchored. */
+  kvNudgeX: number;
+  kvNudgeY: number;
+  /** Multiplier on the board's art size, applied about the artwork's centre. */
+  kvScale: number;
   /**
    * Product cutouts for the PD Slot variants' four plates — same shape and
-   * crawl + background-removal flow as the hero's PD Slot products.
+   * crawl + background-removal flow as the hero's PD Slot products. The row
+   * itself can be switched off (`showSlots`): the slot001 art carries no baked
+   * plates, so hiding the drawn row leaves a clean banner.
    */
+  showSlots: boolean;
   products: { url: string; image: string | null }[];
   /** PD Slot plate fill (the four boxes the frame draws over the art). */
   plateColor: string;
@@ -479,7 +497,7 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           showDisclaimers: true,
           moreLabel: t('More'),
           columns: dealFooterColumnDefaults(t),
-          localeLabel: t('Peru, English'),
+          localeLabel: t('English'),
           showSocial: true,
           legalLinks: [
             'Beneficial Ownership Declaration', 'Site Map', 'Legal', 'LGE Service Terms of Use',
@@ -505,6 +523,7 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           kvScale: 1,
           products: [],
           plateColor: PD_PLATE_FILL,
+          customImage: null,
           ...countdownDefaults(t),
         },
       };
@@ -514,6 +533,8 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
         data: {
           sectionTitle: t('Discover exclusive deals'),
           showSectionTitle: true,
+          sectionSubtitle: t('Make life better with our tips.'),
+          showSectionSubtitle: true,
           showCta: true,
           showCarousel: true,
           slideCount: '2',
@@ -546,6 +567,10 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           showCta: false,
           image: null,
           kvAsset: 'kv-product-slot',
+          kvNudgeX: 0,
+          kvNudgeY: 0,
+          kvScale: 1,
+          showSlots: true,
           products: PROMO_DEFAULT_PRODUCTS.map(p => ({ url: '', image: p })),
           plateColor: PD_PLATE_FILL,
           ...countdownDefaults(t),
@@ -567,8 +592,13 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           showCta: false,
           image: null,
           kvAsset: 'deal-type-hot-deal',
+          kvNudgeX: 0,
+          kvNudgeY: 0,
+          kvScale: 1,
+          showSlots: true,
           products: [],
           plateColor: PD_PLATE_FILL,
+          customImage: null,
           ...countdownDefaults(t),
         },
       };

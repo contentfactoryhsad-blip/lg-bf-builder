@@ -17,7 +17,7 @@ import { assetsInGroup, getAsset, thumbUrl, visibleRows } from '../contenttempla
 import { productSlotCount } from '../contenttemplate/lgcomSlots';
 import { ProductSlotsEditor, emptyProductSlots } from '../contenttemplate/ProductSlotsEditor';
 import { HERO_MOTION_ID, HERO_NUDGE_LIMIT, HERO_SCALE_MAX, HERO_SCALE_MIN, HERO_SCALE_STEP } from './dealHeroArt';
-import { PROMO_KV_ROWS, PROMO_SLOT, promoArtHasSlots, DEAL_KV_TILES } from './dealBannerArt';
+import { PROMO_KV_ROWS, PROMO_SLOT, DEAL_KV_TILES } from './dealBannerArt';
 import {
   type DealEditState,
   type DealSiteHeaderState,
@@ -258,6 +258,92 @@ function CountSelector({
 }
 
 /**
+ * UPLOAD IMAGE — the operator's own 3000×3000 square, same flow as the
+ * Content Banner Builder's upload group. The file lands as a data URL so it
+ * survives drafts; non-square files are refused (±1%) since every module
+ * lays the square out with its own fixed skeleton.
+ */
+function UploadArtSection({
+  value,
+  selected,
+  onUpload,
+  onSelect,
+}: {
+  value: string | null;
+  selected: boolean;
+  onUpload: (dataUrl: string) => void;
+  onSelect: () => void;
+}) {
+  const t = useT();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        if (Math.abs(img.width - img.height) > img.width * 0.01) {
+          window.alert(t('Please upload a square image (3000×3000).'));
+          return;
+        }
+        onUpload(dataUrl);
+      };
+      img.onerror = () => window.alert(t('That file could not be read as an image.'));
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="mt-3">
+      <p className="text-[11px] text-gray-400">{t('UPLOAD IMAGE')}</p>
+      <p className="text-[10px] text-gray-400 mb-1.5">{t('Please upload your finished image.')}</p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = '';
+        }}
+      />
+      {value ? (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSelect}
+            className={`block w-24 rounded overflow-hidden bg-[#111] transition-shadow shrink-0 ${
+              selected ? 'ring-2 ring-[#FD312E]' : 'ring-1 ring-transparent hover:ring-gray-300'
+            }`}
+            style={{ aspectRatio: '1 / 1' }}
+          >
+            <img src={value} alt={t('Uploaded image')} className="w-full h-full object-cover" draggable={false} />
+          </button>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-[11px] text-gray-400 hover:text-gray-700"
+          >
+            {t('Replace')}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full h-9 rounded-md border border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+        >
+          {t('Upload')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
  * The countdown unit editor (value + label per row) — shared by the hero and
  * the deal banner, whose states both carry `CountdownFields`. Mount it inside
  * a ToggleField bound to `showCountdown`.
@@ -320,9 +406,13 @@ function resizeList<T>(list: T[], count: number, defaultAt: (i: number) => T): T
 function KeyVisualField({
   value,
   onChange,
+  customImage,
+  onUploadCustom,
 }: {
   value: string | null;
   onChange: (id: string) => void;
+  customImage: string | null;
+  onUploadCustom: (dataUrl: string) => void;
 }) {
   const t = useT();
   const rows = visibleRows().filter(r => r.key.startsWith('kv-'));
@@ -406,6 +496,13 @@ function KeyVisualField({
             </button>
           </div>
         </div>
+
+        <UploadArtSection
+          value={customImage}
+          selected={value === 'custom-upload'}
+          onUpload={onUploadCustom}
+          onSelect={() => onChange('custom-upload')}
+        />
       </div>
     </div>
   );
@@ -449,7 +546,7 @@ function NudgeField({
   return (
     <div className="mb-4">
       <div className="flex items-center mb-1">
-        <FieldLabel>{t('Position')}</FieldLabel>
+        <FieldLabel>{t('Image Position')}</FieldLabel>
         <button
           type="button"
           onClick={() => onChange({ x: 0, y: 0, scale: 1 })}
@@ -459,39 +556,18 @@ function NudgeField({
           {t('Reset')}
         </button>
       </div>
-      <div className="flex items-center gap-2">
-        {/* 20px per click — a visible step at hero scale without overshooting. */}
-        <div className="grid grid-cols-3 gap-1 w-[92px] shrink-0">
-          <span />
-          <Arrow dx={0} dy={-20} label="↑" />
-          <span />
-          <Arrow dx={-20} dy={0} label="←" />
-          <span />
-          <Arrow dx={20} dy={0} label="→" />
-          <span />
-          <Arrow dx={0} dy={20} label="↓" />
-          <span />
-        </div>
-        <div className="flex-1 grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-1.5">
-            <span className="text-[10px] text-gray-400 w-2">X</span>
-            <input
-              type="number"
-              value={x}
-              onChange={e => onChange({ x: clamp(Number(e.target.value)), y, scale })}
-              className={`${INPUT_CLASS} tabular-nums`}
-            />
-          </label>
-          <label className="flex items-center gap-1.5">
-            <span className="text-[10px] text-gray-400 w-2">Y</span>
-            <input
-              type="number"
-              value={y}
-              onChange={e => onChange({ x, y: clamp(Number(e.target.value)), scale })}
-              className={`${INPUT_CLASS} tabular-nums`}
-            />
-          </label>
-        </div>
+      {/* 20px per click — a visible step at hero scale without overshooting.
+          Arrows only; the X/Y number inputs were dropped by request. */}
+      <div className="grid grid-cols-3 gap-1 w-[92px]">
+        <span />
+        <Arrow dx={0} dy={-20} label="↑" />
+        <span />
+        <Arrow dx={-20} dy={0} label="←" />
+        <span />
+        <Arrow dx={20} dy={0} label="→" />
+        <span />
+        <Arrow dx={0} dy={20} label="↓" />
+        <span />
       </div>
 
       {/* Scale — a slider so the framing can be felt, with the multiplier shown
@@ -522,7 +598,12 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
   const plateCount = data.kvAsset ? productSlotCount(data.kvAsset) : 0;
   return (
     <div>
-      <KeyVisualField value={data.kvAsset} onChange={id => set({ kvAsset: id })} />
+      <KeyVisualField
+        value={data.kvAsset}
+        onChange={id => set({ kvAsset: id })}
+        customImage={data.customImage ?? null}
+        onUploadCustom={dataUrl => set({ customImage: dataUrl, kvAsset: 'custom-upload' })}
+      />
       <NudgeField
         x={data.kvNudgeX}
         y={data.kvNudgeY}
@@ -585,9 +666,13 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
 function DealArtField({
   value,
   onChange,
+  customImage,
+  onUploadCustom,
 }: {
   value: string | null | undefined;
   onChange: (id: string) => void;
+  customImage: string | null;
+  onUploadCustom: (dataUrl: string) => void;
 }) {
   const t = useT();
   const assets = assetsInGroup('deal-type');
@@ -623,6 +708,12 @@ function DealArtField({
           );
         })}
       </div>
+      <UploadArtSection
+        value={customImage}
+        selected={value === 'custom-upload'}
+        onUpload={onUploadCustom}
+        onSelect={() => onChange('custom-upload')}
+      />
     </div>
   );
 }
@@ -640,6 +731,9 @@ function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d
     <div>
       <ToggleField label={t('Section title')} shown={data.showSectionTitle} onShownChange={v => set({ showSectionTitle: v })}>
         <input type="text" value={data.sectionTitle} onChange={e => set({ sectionTitle: e.target.value })} className={INPUT_CLASS} />
+      </ToggleField>
+      <ToggleField label={t('Section subtitle')} shown={data.showSectionSubtitle} onShownChange={v => set({ showSectionSubtitle: v })}>
+        <input type="text" value={data.sectionSubtitle} onChange={e => set({ sectionSubtitle: e.target.value })} className={INPUT_CLASS} />
       </ToggleField>
       <div className="flex items-center mb-3">
         <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{t('Card button')}</p>
@@ -664,7 +758,12 @@ function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d
           </p>
           {/* Picking an artwork clears any legacy uploaded/baked image so the
               old render can't linger underneath the new selection. */}
-          <DealArtField value={card.asset} onChange={id => updateCard(i, { ...card, asset: id, image: null })} />
+          <DealArtField
+            value={card.asset}
+            onChange={id => updateCard(i, { ...card, asset: id, image: id === 'custom-upload' ? card.image : null })}
+            customImage={card.asset === 'custom-upload' ? card.image : null}
+            onUploadCustom={dataUrl => updateCard(i, { ...card, asset: 'custom-upload', image: dataUrl })}
+          />
           <TextField label={t('Title')} value={card.title} onChange={v => updateCard(i, { ...card, title: v })} />
           {data.showCta && (
             <TextField label={t('Button text')} value={card.ctaText} onChange={v => updateCard(i, { ...card, ctaText: v })} />
@@ -715,6 +814,76 @@ function DealTabNavPanel({ data, onUpdate }: { data: DealTabNavState; onUpdate: 
 }
 
 // ── 4. Promotion banner ───────────────────────────────────────────────────────
+
+/** Art nudge + scale for the banners — same 20px steps and range as the hero. */
+function BannerNudgeField({
+  x,
+  y,
+  scale,
+  onChange,
+}: {
+  x: number;
+  y: number;
+  scale: number;
+  onChange: (n: { x: number; y: number; scale: number }) => void;
+}) {
+  const t = useT();
+  const clamp = (v: number) => Math.max(-HERO_NUDGE_LIMIT, Math.min(HERO_NUDGE_LIMIT, Math.round(v) || 0));
+  const clampScale = (v: number) =>
+    Math.round(Math.max(HERO_SCALE_MIN, Math.min(HERO_SCALE_MAX, v || 1)) * 100) / 100;
+  const step = (dx: number, dy: number) => onChange({ x: clamp(x + dx), y: clamp(y + dy), scale });
+  const Arrow = ({ dx, dy, label }: { dx: number; dy: number; label: string }) => (
+    <button
+      type="button"
+      onClick={() => step(dx, dy)}
+      className="h-7 rounded-md border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-800 transition-colors"
+      aria-label={label}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="mb-3">
+      <div className="flex items-center mb-1">
+        <FieldLabel>{t('Image Position')}</FieldLabel>
+        <button
+          type="button"
+          onClick={() => onChange({ x: 0, y: 0, scale: 1 })}
+          disabled={x === 0 && y === 0 && scale === 1}
+          className="ml-auto -mt-1 text-[10px] font-medium text-gray-400 hover:text-[#FD312E] disabled:text-gray-300 disabled:cursor-default transition-colors"
+        >
+          {t('Reset')}
+        </button>
+      </div>
+      <div className="grid grid-cols-3 gap-1 w-[92px]">
+        <span />
+        <Arrow dx={0} dy={-20} label="↑" />
+        <span />
+        <Arrow dx={-20} dy={0} label="←" />
+        <span />
+        <Arrow dx={20} dy={0} label="→" />
+        <span />
+        <Arrow dx={0} dy={20} label="↓" />
+        <span />
+      </div>
+      <div className="flex items-center gap-2 mt-2.5">
+        <span className="text-[10px] text-gray-400 w-[38px] shrink-0">{t('Scale')}</span>
+        <input
+          type="range"
+          min={HERO_SCALE_MIN}
+          max={HERO_SCALE_MAX}
+          step={HERO_SCALE_STEP}
+          value={scale}
+          onChange={e => onChange({ x, y, scale: clampScale(Number(e.target.value)) })}
+          className="flex-1 accent-[#FD312E]"
+        />
+        <span className="text-[10px] text-gray-500 tabular-nums w-[38px] text-right shrink-0">
+          {scale.toFixed(2)}×
+        </span>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Shared by the 400-tall promotion banner and the 350-tall deal banner — the
@@ -783,6 +952,12 @@ function DealPromoBannerPanel({
                 </div>
               </div>
             ))}
+            <UploadArtSection
+              value={data.kvAsset === 'custom-upload' ? data.image : null}
+              selected={data.kvAsset === 'custom-upload'}
+              onUpload={dataUrl => set({ kvAsset: 'custom-upload', image: dataUrl })}
+              onSelect={() => set({ kvAsset: 'custom-upload' })}
+            />
           </div>
         </div>
       ) : (
@@ -821,8 +996,20 @@ function DealPromoBannerPanel({
               );
             })}
           </div>
+          <UploadArtSection
+            value={data.kvAsset === 'custom-upload' ? data.image : null}
+            selected={data.kvAsset === 'custom-upload'}
+            onUpload={dataUrl => set({ kvAsset: 'custom-upload', image: dataUrl })}
+            onSelect={() => set({ kvAsset: 'custom-upload' })}
+          />
         </div>
       )}
+      <BannerNudgeField
+        x={data.kvNudgeX ?? 0}
+        y={data.kvNudgeY ?? 0}
+        scale={data.kvScale ?? 1}
+        onChange={n => set({ kvNudgeX: n.x, kvNudgeY: n.y, kvScale: n.scale })}
+      />
       <TextAreaField label={t('Headline')} value={data.headline} onChange={v => set({ headline: v })} rows={2} />
       <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
         <textarea value={data.subCopy} onChange={e => set({ subCopy: e.target.value })} rows={2} className={`${INPUT_CLASS} resize-none`} />
@@ -848,17 +1035,22 @@ function DealPromoBannerPanel({
       )}
 
       {/* The PD Slot variants' four product plates — the same crawl + cutout
-          flow as the hero's PD Slot products. `-mx-5` cancels the panel's own
-          padding, since the editor brings its own. */}
-      {size === 'Large' && promoArtHasSlots(data.kvAsset) && (
-        <div className="-mx-5 mt-2 pt-4 border-t border-gray-100">
-          <ProductSlotsEditor
-            count={PROMO_SLOT.count}
-            slots={data.products.length === PROMO_SLOT.count ? data.products : emptyProductSlots(PROMO_SLOT.count)}
-            onChange={next => set({ products: next })}
-            color={data.plateColor}
-            onColorChange={v => set({ plateColor: v })}
-          />
+          flow as the hero's PD Slot products, behind an on/off switch: with
+          the row off the slot001 art reads as a clean banner (no plates are
+          baked into it). `-mx-5` cancels the panel's own padding. */}
+      {size === 'Large' && (
+        <div className="mt-2 pt-3 border-t border-gray-100">
+          <ToggleField label={t('Product plates')} shown={data.showSlots !== false} onShownChange={v => set({ showSlots: v })}>
+            <div className="-mx-5">
+              <ProductSlotsEditor
+                count={PROMO_SLOT.count}
+                slots={data.products.length === PROMO_SLOT.count ? data.products : emptyProductSlots(PROMO_SLOT.count)}
+                onChange={next => set({ products: next })}
+                color={data.plateColor}
+                onColorChange={v => set({ plateColor: v })}
+              />
+            </div>
+          </ToggleField>
         </div>
       )}
     </div>
@@ -889,6 +1081,7 @@ function DealProductListPanel({ data, onUpdate }: { data: DealProductListState; 
           and the count are the only knobs the grid needs. */}
       <div className="mb-3">
         <FieldLabel>{t('Product set')}</FieldLabel>
+        <p className="text-[11px] text-[#FD312E] mb-1.5 leading-snug">{t('These product sets are examples.')}</p>
         <div className="flex gap-1">
           {(Object.keys(DEAL_PRODUCT_SETS) as DealProductSetKey[]).map(key => {
             const selected = activeSet === key;

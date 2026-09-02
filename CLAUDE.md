@@ -216,6 +216,29 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
 - 편집 패널의 필드 atom은 `ModuleEditPanel.tsx`에서 import하지 않고 재선언했다(lazy 청크 분리 목적).
   `ShowToggle`(`bigPromoCommon.tsx`)과 `ImageCropModal`은 공용이라 그대로 쓴다.
 
+#### 2026-09-02 — 업로드 아트 / 아트-온리 ZIP / 저장 플로우
+- **UPLOAD IMAGE**(히어로·딜카드(카드별)·프로모션/딜 배너 피커 최하단, `UploadArtSection` in
+  `DealModuleEditPanel.tsx`) — CBB의 업로드 그룹과 같은 3000² 정방형 검증(±1% 초과 alert). CBB와 달리
+  **모듈별 dataURL로 상태에 저장**되어 드래프트에도 남는다. 센티널은 `kvAsset`/`asset`='custom-upload';
+  히어로는 새 `customImage` 필드, 배너/카드는 레거시 `image` 필드를 재사용한다. 각 모듈의 폴백 배치
+  골격으로 깔리고 Image Position/Scale로 보정한다.
+- 🔴 **ZIP은 이미지 소재만 나간다**(`DealModuleRenderer`의 `artOnly`/`artIndex` prop) — deal-hero /
+  deal-cards(**카드 수만큼 1장씩**) / deal-promo-banner / deal-banner만, 각자 아트 크롭 사이즈로
+  (PC 1920×720 / 464×600 / 1600×400 / 1600×350; MO 360×480 / 310×400 / 360×480·420). 아트+제품
+  플레이트+스크림만 담기고 카피·CTA·카운트다운·코너 라운딩은 캔버스 목업 몫이다. 나머지 모듈
+  (header/tabs/product list/category nav/footer)은 export 대상이 아니다. 파일명은 `NN-모듈명[-카드번호]-…`.
+- **Motion 히어로는 mp4도 함께 나간다** — CBB의 `renderMotionCutLive`(WebCodecs, `exportMotion.ts`)로
+  히어로 크롭·배치(nudge/scale 반영)에 맞춰 실시간 컷(`…-motion-…mp4`). 실패는 alert로 보고하고
+  이미지는 계속 나간다.
+- 다운로드 버튼은 CBB처럼 **"N / M" 진행 카운터**(`exportProgress`, 모션 mp4는 +1로 센다).
+- 🔴 **`fileSaver.ts`는 앵커 다운로드 단일 경로다**(전 빌더 공통) — `showSaveFilePicker`의 지연 write가
+  실사용 Chrome에서 계속 실패해 0바이트 파일을 남겼고, 폴백이 겹치며 저장 다이얼로그가 2~3번 떴다.
+  **픽커를 되살리지 말 것.** `acquireSaveTarget`은 API 호환용 래퍼로만 남아 있다.
+- 프로모션 배너 제품 플레이트는 **모든 변형에서 토글**(`showSlots`, PD Centric 포함)이고, 배너류도
+  Image Position(화살표)+Scale을 단다(`BannerNudgeField`). 캔버스 모듈 툴바는 휴지통만(복사 버튼·
+  `duplicateModule` 삭제). MO 푸터는 보드 그대로 9행 내비+Libro 배지행+윤리핫라인행으로 재작성,
+  푸터 locale 기본값은 `t('English')`.
+
 ### 2) Brand Shop Page Builder — 가변 사이즈
 - `components/BrandShopBuilder.tsx`(Profile Settings / Store Page Modules 진입 라우터) → 콘텐츠 섹션 편집은 전부 `components/brandshop/StorePageModulesBuilder.tsx`(10개 모듈)로 통합됨.
   - 구 개별 섹션 라우팅(`BigPromotionEditor`/`BrandTrustEditor`/`MembershipEditor`/`MustHaveLGEditor` + 전용 템플릿들)은 미사용 확인 후 삭제됨(2026-07-15). `OtherPromotionsEditor`(Lifestyle/Theme)는 `ModuleEditPanel.tsx`의 banner 모듈에서 재사용 중이라 유지.

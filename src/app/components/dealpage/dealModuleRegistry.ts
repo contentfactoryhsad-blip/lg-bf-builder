@@ -34,6 +34,17 @@ export type DealModuleType =
  * Four rails sit inside it, each with its own inset:
  */
 export const DEAL_PAGE_WIDTH = 2280;
+
+/**
+ * The two canvases the builder renders (2026-09-02): the 2280 PC page and the
+ * 360 mobile page (`BF Page_MO`, Figma 6287:150182). Same modules, same edit
+ * state — only the rendering differs, so the device is a view switch, not
+ * part of any module's data.
+ */
+export type DealDevice = 'pc' | 'mo';
+export const DEAL_MO_WIDTH = 360;
+export const dealPageWidthFor = (device: DealDevice): number =>
+  device === 'mo' ? DEAL_MO_WIDTH : DEAL_PAGE_WIDTH;
 /** Hero video plate (Figma 6130:67434, x=180). */
 export const DEAL_HERO_WIDTH = 1920;
 /** Banner rail — every promo/time-sale/membership banner (x=340). */
@@ -60,6 +71,12 @@ export interface DealModuleDef {
   maxCount: number;
   zipName: string;
   /**
+   * The Figma component code the module reproduces (the board names its
+   * sections `ST0001_PC`, `PD002_PC`, …). Shown under the palette title and
+   * in the edit panel header; chrome sections carry none.
+   */
+  component?: string;
+  /**
    * The artwork box the operator has to supply, NOT the module's own band. The
    * band is always 2280 and telling someone to prepare a 2280-wide image is
    * wrong — what goes in is the plate inside it.
@@ -73,17 +90,17 @@ export interface DealModuleDef {
 
 export const DEAL_MODULE_DEFS: DealModuleDef[] = [
   { type: 'deal-site-header',  label: 'Site header',      section: 'LG.com global header',        width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 134,  maxCount: 1, zipName: 'site-header'   },
-  { type: 'deal-hero',         label: 'Hero KV',          section: 'Page hero',                   width: DEAL_PAGE_WIDTH, height: 720,    placeholderHeight: 720,  maxCount: 1, zipName: 'hero',         artSize: { w: DEAL_HERO_WIDTH, h: 720 } },
-  { type: 'deal-cards',        label: 'Deal cards',       section: 'Discover exclusive deals',    width: DEAL_PAGE_WIDTH, height: 561,    placeholderHeight: 561,  maxCount: 2, zipName: 'deal-cards',   artSize: { w: 464, h: 368 } },
+  { type: 'deal-hero',         label: 'Hero KV',          section: 'Page hero',                   width: DEAL_PAGE_WIDTH, height: 720,    placeholderHeight: 720,  maxCount: 1, component: 'ST0001', zipName: 'hero',         artSize: { w: DEAL_HERO_WIDTH, h: 720 } },
+  { type: 'deal-cards',        label: 'Deal cards',       section: 'Discover exclusive deals',    width: DEAL_PAGE_WIDTH, height: 812,    placeholderHeight: 812,  maxCount: 2, component: 'ST0044', zipName: 'deal-cards',   artSize: { w: 464, h: 600 } },
   // One banner family, two palette entries: the 400-tall promotion banner and
   // the 350-tall deal banner (the height is the module type now, not a size
   // picker in the panel).
-  { type: 'deal-promo-banner', label: 'Promotion banner', section: 'Exclusive offer',              width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 496, maxCount: 4, zipName: 'promo-banner', artSize: { w: DEAL_BANNER_WIDTH, h: 400 } },
-  { type: 'deal-banner',       label: 'Deal banner',      section: 'Hot Deals / Bundles / Gifts',  width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 398, maxCount: 6, zipName: 'deal-banner',  artSize: { w: DEAL_BANNER_WIDTH, h: 350 } },
+  { type: 'deal-promo-banner', label: 'Promotion banner', section: 'Exclusive offer',              width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 496, maxCount: 4, component: 'ST0001', zipName: 'promo-banner', artSize: { w: DEAL_BANNER_WIDTH, h: 400 } },
+  { type: 'deal-banner',       label: 'Deal banner',      section: 'Hot Deals / Bundles / Gifts',  width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 398, maxCount: 6, component: 'ST0001', zipName: 'deal-banner',  artSize: { w: DEAL_BANNER_WIDTH, h: 350 } },
   // (Time Sale is no longer its own module — it is the deal banner's
   //  countdown toggle. Old deal-time-sale drafts migrate on restore.)
-  { type: 'deal-tab-nav',      label: 'Deal tabs',        section: 'Deal-type tab bar',           width: DEAL_PAGE_WIDTH, height: 98,     placeholderHeight: 98,   maxCount: 2, zipName: 'tab-nav'       },
-  { type: 'deal-product-list', label: 'Product list',     section: 'Deal product grid',           width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 796,  maxCount: 8, zipName: 'product-list'  },
+  { type: 'deal-tab-nav',      label: 'Deal tabs',        section: 'Deal-type tab bar',           width: DEAL_PAGE_WIDTH, height: 98,     placeholderHeight: 98,   maxCount: 2, component: 'ST0002', zipName: 'tab-nav'       },
+  { type: 'deal-product-list', label: 'Product list',     section: 'Deal product grid',           width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 796,  maxCount: 8, component: 'PD002', zipName: 'product-list'  },
   { type: 'deal-category-nav', label: 'Category nav',     section: 'Category filter + results',   width: DEAL_PAGE_WIDTH, height: 353,    placeholderHeight: 353,  maxCount: 1, zipName: 'category-nav'  },
   { type: 'deal-site-footer',  label: 'Site footer',      section: 'LG.com global footer',        width: DEAL_PAGE_WIDTH, height: 848,    placeholderHeight: 848,  maxCount: 1, zipName: 'site-footer'   },
 ];

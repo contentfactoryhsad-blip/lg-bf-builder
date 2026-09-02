@@ -33,21 +33,30 @@ import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import {
   artSizeLabel,
+  DEAL_HERO_WIDTH,
+  DEAL_MO_WIDTH,
   DEAL_MODULE_DEFS,
   DEAL_PAGE_WIDTH,
+  dealPageWidthFor,
   getDealModuleDef,
+  type DealDevice,
   type DealModuleDef,
   type DealModuleType,
 } from './dealModuleRegistry';
 import {
   createDealDefaultState,
   dealProductSetItems,
+  type DealCardsState,
   type DealEditState,
+  type DealHeroState,
   type DealProductSetKey,
 } from './dealEditStates';
+import { heroArtFor, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
+import { MO_HERO_ART } from './DealModuleRendererMo';
+import { renderMotionCutLive } from '../contenttemplate/exportMotion';
 import { DealModuleRenderer } from './DealModuleRenderer';
 import { DealModuleEditPanel } from './DealModuleEditPanel';
-import { saveBlob } from '../../utils/fileSaver';
+import { acquireSaveTarget } from '../../utils/fileSaver';
 import { useT, type TFunction } from '../../i18n/LanguageContext';
 import { AppHeader } from '../AppHeader';
 import { NavRail, type NavRailKey } from '../NavRail';
@@ -56,7 +65,7 @@ import { useDraftSave } from '../../hooks/useDraftSave';
 import { useApplyBrandFont } from '../../fonts/useApplyBrandFont';
 import { ensureBrandFontLoaded } from '../../fonts/brandFonts';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
-import { SaveForLaterButton, SaveDraftModal } from '../SaveForLaterButton';
+import { SaveDraftModal } from '../SaveForLaterButton';
 import { UnsavedChangesModal } from '../UnsavedChangesModal';
 import { ConfirmModal } from '../ConfirmModal';
 import { restoreDealCanvasItems, type DealPagePayloadV1 } from '../../drafts/dealPagePayload';
@@ -149,11 +158,12 @@ function timeSaleOverride(): PresetOverride {
   };
 }
 
-/** Promotion banners: the opener runs PD Centric art, the closer PD Slot. */
+/** Promotion banners: the opener runs PD Centric art with its plates off
+ *  (the board draws none there); the closer keeps the PD Slot standard set. */
 function promoBannerOverride(kvAsset: string): PresetOverride {
   return (_t, state) => {
     if (state.type !== 'deal-promo-banner') return state;
-    return { type: 'deal-promo-banner', data: { ...state.data, kvAsset } };
+    return { type: 'deal-promo-banner', data: { ...state.data, kvAsset, showSlots: false } };
   };
 }
 
@@ -263,7 +273,7 @@ function PaletteCard({ def, disabled, count }: { def: DealModuleDef; disabled: b
             {count}/{def.maxCount}
           </span>
         </div>
-        <p className="text-[11px] text-gray-500 leading-tight">{t(def.section)}</p>
+        {def.component && <p className="text-[11px] text-gray-500 leading-tight">{def.component}</p>}
         {artSizeLabel(def) && <p className="text-[9px] text-gray-400 mt-0.5">{artSizeLabel(def)}</p>}
       </div>
     </div>
@@ -275,22 +285,20 @@ function PaletteCard({ def, disabled, count }: { def: DealModuleDef; disabled: b
 function SortableCanvasItem({
   item,
   scale,
+  device,
   isSelected,
-  canDuplicate,
   indicator,
   onSelect,
   onRemove,
-  onDuplicate,
 }: {
   item: DealCanvasItem;
   scale: number;
+  device: DealDevice;
   isSelected: boolean;
-  canDuplicate: boolean;
   /** Palette-drag insertion marker — which edge the new module would land on. */
   indicator: 'above' | 'below' | null;
   onSelect: () => void;
   onRemove: () => void;
-  onDuplicate: () => void;
 }) {
   const t = useT();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -311,7 +319,7 @@ function SortableCanvasItem({
     return () => ro.disconnect();
   }, []);
 
-  const boxW = DEAL_PAGE_WIDTH * scale;
+  const boxW = dealPageWidthFor(device) * scale;
 
   return (
     <div
@@ -361,9 +369,9 @@ function SortableCanvasItem({
         >
           <div
             ref={innerRef}
-            style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: DEAL_PAGE_WIDTH, position: 'absolute', top: 0, left: 0 }}
+            style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: dealPageWidthFor(device), position: 'absolute', top: 0, left: 0 }}
           >
-            <DealModuleRenderer editState={item.editState} />
+            <DealModuleRenderer editState={item.editState} device={device} />
           </div>
         </div>
 
@@ -391,31 +399,6 @@ function SortableCanvasItem({
             overflow: 'hidden',
           }}
         >
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              onDuplicate();
-            }}
-            disabled={!canDuplicate}
-            title={t('Duplicate')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              background: 'none',
-              border: 'none',
-              color: canDuplicate ? '#374151' : '#d1d5db',
-              cursor: canDuplicate ? 'pointer' : 'not-allowed',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect x="4.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M9.5 4.5V3A1.5 1.5 0 008 1.5H3A1.5 1.5 0 001.5 3v5A1.5 1.5 0 003 9.5h1.5" stroke="currentColor" strokeWidth="1.3" />
-            </svg>
-          </button>
-          <div style={{ width: 1, alignSelf: 'stretch', background: '#e5e7eb' }} />
           <button
             onClick={e => {
               e.stopPropagation();
@@ -471,25 +454,40 @@ interface Props {
 
 export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNavigate, onOpenDraft }: Props) {
   const t = useT();
+  // A fresh session opens ON the Black Friday preset (PC) — the quick-start
+  // button is gone, the template IS the starting state. Reset clears to blank.
+  const buildPresetItems = useCallback(
+    (): DealCanvasItem[] =>
+      BLACK_FRIDAY_PAGE_PRESET.map((type, idx) => {
+        const base = createDealDefaultState(type, t);
+        const override = PRESET_OVERRIDES[idx];
+        return { id: crypto.randomUUID(), type, editState: override ? override(t, base) : base };
+      }),
+    [t],
+  );
   const [canvasItems, setCanvasItems] = useState<DealCanvasItem[]>(() =>
-    initialDraft ? restoreDealCanvasItems(initialDraft.payload, t) : [],
+    initialDraft ? restoreDealCanvasItems(initialDraft.payload, t) : buildPresetItems(),
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  /** Which canvas the page renders on — PC (2280) or mobile (360). Same
+   *  modules and edit state either way; this is a view switch. */
+  const [device, setDevice] = useState<DealDevice>(initialDraft?.payload.device === 'mo' ? 'mo' : 'pc');
+  // Export progress — `{done, total}` while a ZIP is being produced (the
+  // button reads "N / M" like the Content Template Builder's), null when idle.
+  const [exportProgress, setExportProgress] = useState<{ done: number; total: number } | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [pendingPreset, setPendingPreset] = useState(false);
   const [pendingReset, setPendingReset] = useState(false);
 
   // lg.com pages are always set in the LG brand face — no picker here.
   useApplyBrandFont('lg');
 
-  const draftState = useMemo(() => ({ canvasItems }), [canvasItems]);
+  const draftState = useMemo(() => ({ canvasItems, device }), [canvasItems, device]);
   const draft = useDraftSave({
     builder: 'deal-page',
     initialDraftId: initialDraft?.id,
     state: draftState,
     title: initialDraft?.title ?? DRAFT_TITLE,
-    serialize: st => ({ canvasItems: st.canvasItems }),
+    serialize: st => ({ canvasItems: st.canvasItems, device: st.device }),
   });
   const defaultDraftName = initialDraft?.title ?? DRAFT_TITLE;
   const {
@@ -512,13 +510,16 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
   useLayoutEffect(() => {
     const el = canvasContainerRef.current;
     if (!el) return;
+    const pageW = dealPageWidthFor(device);
+    // Mobile renders near 1:1 — a 360 page at the PC cap would be a stamp.
+    const cap = device === 'mo' ? 1 : 0.42;
     const ro = new ResizeObserver(entries => {
-      const w = entries[0].contentRect.width;
-      setScale(Math.min(w / DEAL_PAGE_WIDTH, 0.42));
+      const w = entries[0].contentRect.width - 48;
+      setScale(Math.min(w / pageW, cap));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [device]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -612,21 +613,12 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
     setSelectedId(prev => (prev === id ? null : prev));
   }, []);
 
-  const applyPreset = useCallback(() => {
-    setCanvasItems(
-      BLACK_FRIDAY_PAGE_PRESET.map((type, idx) => {
-        const base = createDealDefaultState(type, t);
-        const override = PRESET_OVERRIDES[idx];
-        return { id: crypto.randomUUID(), type, editState: override ? override(t, base) : base };
-      }),
-    );
-    setSelectedId(null);
-  }, [t]);
 
-  const handlePresetClick = useCallback(() => {
-    if (canvasItems.length > 0) setPendingPreset(true);
-    else applyPreset();
-  }, [canvasItems.length, applyPreset]);
+  /** Re-fill the canvas with the Black Friday template. */
+  const applyPreset = useCallback(() => {
+    setCanvasItems(buildPresetItems());
+    setSelectedId(null);
+  }, [buildPresetItems]);
 
   /** Back to an empty canvas — the way out of a session of poking at modules. */
   const clearCanvas = useCallback(() => {
@@ -634,33 +626,32 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
     setSelectedId(null);
   }, []);
 
-  const duplicateModule = useCallback(
-    (id: string) => {
-      const idx = canvasItems.findIndex(i => i.id === id);
-      if (idx === -1) return;
-      const item = canvasItems[idx];
-      const def = getDealModuleDef(item.type);
-      if (canvasItems.filter(i => i.type === item.type).length >= def.maxCount) return;
-      const newItem: DealCanvasItem = {
-        id: crypto.randomUUID(),
-        type: item.type,
-        editState: { ...item.editState, data: { ...(item.editState as { data: object }).data } } as DealEditState,
-      };
-      const next = [...canvasItems];
-      next.splice(idx + 1, 0, newItem);
-      setCanvasItems(next);
-      setSelectedId(newItem.id);
-    },
-    [canvasItems],
-  );
-
   const updateEditState = useCallback((id: string, newState: DealEditState) => {
     setCanvasItems(prev => prev.map(item => (item.id === id ? { ...item, editState: newState } : item)));
   }, []);
 
   const handleDownload = async () => {
     if (canvasItems.length === 0 || !hiddenRenderRef.current) return;
-    setDownloading(true);
+    // Only the image-bearing modules export — the rest of the canvas is a
+    // mockup. Each exports its composed image cropped at the art size
+    // ("artOnly"); a deal-cards module produces one file per configured card.
+    const exportItems = canvasItems.filter(item =>
+      (['deal-hero', 'deal-cards', 'deal-promo-banner', 'deal-banner'] as DealModuleType[]).includes(item.type),
+    );
+    if (exportItems.length === 0) return;
+    const save = await acquireSaveTarget(device === 'mo' ? 'LG-deal-page-modules-mobile.zip' : 'LG-deal-page-modules.zip', [
+      { description: 'ZIP Archive', accept: { 'application/zip': ['.zip'] } },
+    ]);
+    if (!save) return; // cancelled
+    // Files the ZIP will hold — one per module, one per configured deal card,
+    // plus the mp4 the motion hero adds. The button counts these down.
+    const totalFiles = exportItems.reduce((sum, item) => {
+      if (item.type === 'deal-cards') return sum + (item.editState.data as DealCardsState).cards.length;
+      if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) return sum + 2;
+      return sum + 1;
+    }, 0);
+    let doneFiles = 0;
+    setExportProgress({ done: 0, total: totalFiles });
     const container = hiddenRenderRef.current;
     const root = createRoot(container);
     try {
@@ -672,35 +663,77 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       const d = new Date();
       const date6 = `${String(d.getFullYear()).slice(-2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 
-      for (let i = 0; i < canvasItems.length; i++) {
-        const item = canvasItems[i];
+      let n = 0;
+      for (const item of exportItems) {
         const def = getDealModuleDef(item.type);
-        const index = String(i + 1).padStart(2, '0');
+        const cardCount = item.type === 'deal-cards' ? (item.editState.data as DealCardsState).cards.length : 1;
 
-        await new Promise<void>(resolve => {
-          root.render(<DealModuleRenderer editState={item.editState} />);
-          setTimeout(resolve, 250);
-        });
+        for (let j = 0; j < cardCount; j++) {
+          n += 1;
+          await new Promise<void>(resolve => {
+            root.render(<DealModuleRenderer editState={item.editState} device={device} artOnly artIndex={j} />);
+            setTimeout(resolve, 250);
+          });
 
-        const el = container.firstElementChild as HTMLElement | null;
-        if (!el) continue;
+          const el = container.firstElementChild as HTMLElement | null;
+          if (!el) continue;
 
-        const size = `${Math.round(el.offsetWidth)}x${Math.round(el.offsetHeight)}`;
-        // Schema: NN-module name-WxH-deal page-date, e.g.
-        // "01-hero kv-1713x642-deal page-260821.png".
-        const fileName = `${index}-${def.label.toLowerCase()}-${size}-deal page-${date6}.png`;
+          const size = `${Math.round(el.offsetWidth)}x${Math.round(el.offsetHeight)}`;
+          // Schema: NN-module name-device-WxH-deal page-date, e.g.
+          // "01-hero kv-pc-1920x720-deal page-260902.png"; cards number the
+          // module name ("02-deal cards-1-…").
+          const deviceTag = device === 'mo' ? 'mobile' : 'pc';
+          const index = String(n).padStart(2, '0');
+          const cardTag = item.type === 'deal-cards' ? `-${j + 1}` : '';
+          const fileName = `${index}-${def.label.toLowerCase()}${cardTag}-${deviceTag}-${size}-deal page-${date6}.png`;
 
-        await toPng(el);
-        await toPng(el);
-        const dataUrl = await toPng(el, { cacheBust: true });
-        zip.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
+          await toPng(el);
+          await toPng(el);
+          const dataUrl = await toPng(el, { cacheBust: true });
+          zip.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
+          doneFiles += 1;
+          setExportProgress({ done: doneFiles, total: totalFiles });
+
+          // Motion hero — the PNG above is the static frame; the video itself
+          // goes out too, cut live to the same crop and placement (nudge and
+          // scale included), the way the Content Template Builder ships its
+          // hero motion. A failed cut is reported, never silently dropped.
+          if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) {
+            const hd = item.editState.data as DealHeroState;
+            const base = device === 'mo' ? MO_HERO_ART : heroArtFor(hd.kvAsset);
+            const kvs = hd.kvScale || 1;
+            const artSize = base.size * kvs;
+            const dims = device === 'mo' ? { w: DEAL_MO_WIDTH, h: 480 } : { w: DEAL_HERO_WIDTH, h: 720 };
+            try {
+              const mp4 = await renderMotionCutLive(HERO_MOTION_SRC, {
+                ...dims,
+                art: {
+                  x: base.x + hd.kvNudgeX - (artSize - base.size) / 2,
+                  y: base.y + hd.kvNudgeY - (artSize - base.size) / 2,
+                  size: artSize,
+                },
+              });
+              zip.file(`${index}-${def.label.toLowerCase()}-motion-${deviceTag}-${dims.w}x${dims.h}-deal page-${date6}.mp4`, mp4);
+              doneFiles += 1;
+              setExportProgress({ done: doneFiles, total: totalFiles });
+            } catch (err) {
+              console.error('[DealPage] motion cut failed', err);
+              window.alert(t('The motion video could not be rendered and was left out of the ZIP.'));
+            }
+          }
+        }
       }
 
       root.unmount();
       const blob = await zip.generateAsync({ type: 'blob' });
-      saveBlob(blob, 'LG-deal-page-modules.zip');
+      await save(blob);
+    } catch (err) {
+      // Without this the error vanished into the click handler and the picked
+      // file stayed at 0 bytes with no clue why.
+      console.error('[DealPage] export failed', err);
+      window.alert(`${t('The download could not be completed.')}\n${String(err)}`);
     } finally {
-      setDownloading(false);
+      setExportProgress(null);
     }
   };
 
@@ -716,18 +749,22 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
         title={t('Promotion Page Builder')}
         onBack={() => guard(onBack)}
         onHome={() => guard(() => onRailNavigate('home'))}
+        center={
+          <p className="text-xs text-gray-400 whitespace-nowrap">
+            {t('Downloads include only the images composed in the components (disclaimers included when used — everything else is excluded).')}
+          </p>
+        }
         right={
           <>
-            <SaveForLaterButton draft={draft} defaultName={defaultDraftName} disabled={canvasItems.length === 0} />
             <button
               onClick={handleDownload}
-              disabled={canvasItems.length === 0 || downloading}
+              disabled={canvasItems.length === 0 || exportProgress !== null}
               className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border transition-colors border-[#FD312E] text-[#FD312E] hover:bg-[#FD312E] hover:text-white disabled:opacity-40 disabled:pointer-events-none"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              {downloading ? t('Preparing…') : t('Download ZIP')}
+              {exportProgress ? `${exportProgress.done} / ${exportProgress.total}` : t('Download ZIP')}
             </button>
           </>
         }
@@ -746,26 +783,41 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
 
           {/* Left — Palette */}
           <aside className="w-64 shrink-0 bg-white border-r border-gray-200 overflow-y-auto flex flex-col gap-1 p-3">
-            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide px-1 pb-1">{t('Quick Start')}</p>
-            <div className="flex flex-col gap-1.5 pb-3 mb-2 border-b border-gray-100">
-              <button
-                type="button"
-                onClick={handlePresetClick}
-                className="text-left text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-[#FD312E] border border-gray-200 rounded-lg px-3 py-2 transition-colors"
-              >
-                {t('Template for Black Friday Page')}
-              </button>
-            </div>
-            <div className="flex items-center px-1 pb-1">
-              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">{t('Modules')}</p>
+            {/* PC ↔ mobile canvas switch — the quick-start button is gone
+                since the preset IS the page's starting state, and picking a
+                device on an empty canvas brings the template back. */}
+            <div className="flex flex-col gap-1 pb-2 mb-2 border-b border-gray-100">
+              <div className="flex gap-1">
+                {(['pc', 'mo'] as DealDevice[]).map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => {
+                      setDevice(d);
+                      if (canvasItems.length === 0) applyPreset();
+                    }}
+                    className={`flex-1 h-8 rounded-md border text-xs font-medium transition-colors ${
+                      device === d ? 'bg-[#FD312E] border-[#FD312E] text-white' : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                    }`}
+                  >
+                    {d === 'pc' ? t('PC') : t('Mobile')}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={() => setPendingReset(true)}
                 disabled={canvasItems.length === 0}
-                className="ml-auto text-[11px] font-medium text-gray-400 hover:text-[#FD312E] disabled:text-gray-300 disabled:cursor-default transition-colors"
+                className="self-end text-[11px] font-medium text-gray-400 hover:text-[#FD312E] disabled:text-gray-300 disabled:cursor-default transition-colors px-1"
               >
                 {t('Reset')}
               </button>
+            </div>
+            <div className="px-1 pb-1">
+              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">{t('Modules')}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
+                {t('Drag and drop a module from the left onto the canvas to use it.')}
+              </p>
             </div>
             {DEAL_MODULE_DEFS.map(def => {
               const count = countOnCanvas(def.type);
@@ -783,8 +835,15 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
             <SortableContext items={canvasItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
               <CanvasDropZone isEmpty={canvasItems.length === 0}>
                 {canvasItems.length === 0 ? (
-                  <div className="flex items-center justify-center h-64">
-                    <p className="text-gray-400 text-sm">{t('Drag a module from the left to get started.')}</p>
+                  /* Centred in the visible canvas, matching the Edit panel's
+                     empty state (100vh − header − canvas padding). */
+                  <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 112px)' }}>
+                    <div className="text-center">
+                      <p className="font-lgei font-bold text-[15px] text-gray-700 mb-1">{t('Canvas')}</p>
+                      <p className="text-sm" style={{ color: '#8A8078' }}>
+                        {t('Drag a module from the left to get started.')}
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   canvasItems.map((item, i) => (
@@ -792,8 +851,8 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
                       key={item.id}
                       item={item}
                       scale={scale}
+                      device={device}
                       isSelected={item.id === selectedId}
-                      canDuplicate={countOnCanvas(item.type) < getDealModuleDef(item.type).maxCount}
                       indicator={
                         dragInsertIndex === null
                           ? null
@@ -805,7 +864,6 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
                       }
                       onSelect={() => setSelectedId(item.id)}
                       onRemove={() => removeModule(item.id)}
-                      onDuplicate={() => duplicateModule(item.id)}
                     />
                   ))
                 )}
@@ -823,9 +881,10 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
                 const size = artSizeLabel(def);
                 return (
                   <div className="p-5">
-                    <p className={`font-lgei font-bold text-[15px] text-gray-900 ${size ? 'mb-0.5' : 'mb-5'}`}>
+                    <p className={`font-lgei font-bold text-[15px] text-gray-900 ${def.component || size ? 'mb-0.5' : 'mb-5'}`}>
                       {t(def.label)}
                     </p>
+                    {def.component && <p className={`text-xs text-gray-500 ${size ? 'mb-0.5' : 'mb-5'}`}>{def.component}</p>}
                     {size && <p className="text-xs text-gray-400 mb-5">{size}</p>}
                     <DealModuleEditPanel
                       editState={selectedItem.editState}
@@ -836,7 +895,10 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
               })()
             ) : (
               <div className="flex items-center justify-center h-full p-5">
-                <p className="text-sm text-gray-400 text-center">{t('Click a module on the canvas to edit.')}</p>
+                <div className="text-center">
+                  <p className="font-lgei font-bold text-[15px] text-gray-700 mb-1">{t('Edit')}</p>
+                  <p className="text-sm text-gray-400">{t('Click a module on the canvas to edit.')}</p>
+                </div>
               </div>
             )}
           </aside>
@@ -888,19 +950,6 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           checkNameTaken={draft.checkNameTaken}
           onSave={handleUnsavedNameConfirm}
           onCancel={handleUnsavedNameCancel}
-        />
-      )}
-      {pendingPreset && (
-        <ConfirmModal
-          title={t('Replace current modules?')}
-          message={t('This will replace all modules currently on the canvas.')}
-          confirmLabel={t('Replace')}
-          cancelLabel={t('Cancel')}
-          onConfirm={() => {
-            applyPreset();
-            setPendingPreset(false);
-          }}
-          onCancel={() => setPendingPreset(false)}
         />
       )}
       {pendingReset && (

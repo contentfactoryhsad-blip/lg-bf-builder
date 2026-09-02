@@ -14,6 +14,8 @@ export const DEAL_PAGE_SCHEMA_VERSION = 1;
 
 export interface DealPagePayloadV1 {
   canvasItems: DealCanvasItem[];
+  /** Which canvas the draft was authored on (missing in old drafts → 'pc'). */
+  device?: 'pc' | 'mo';
 }
 
 function isKnownDealModuleType(type: unknown): type is DealModuleType {
