@@ -665,18 +665,18 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
     const exportItems = canvasItems.filter(item =>
       (['deal-hero', 'deal-cards', 'deal-promo-banner', 'deal-banner'] as DealModuleType[]).includes(item.type),
     );
-    if (exportItems.length === 0) return;
     const save = await acquireSaveTarget(device === 'mo' ? 'LG-deal-page-modules-mobile.zip' : 'LG-deal-page-modules.zip', [
       { description: 'ZIP Archive', accept: { 'application/zip': ['.zip'] } },
     ]);
     if (!save) return; // cancelled
     // Files the ZIP will hold — one per module, one per configured deal card,
-    // plus the mp4 the motion hero adds. The button counts these down.
+    // the mp4 the motion hero adds, plus ONE tall full-page mockup shot of
+    // the whole canvas. The button counts these down.
     const totalFiles = exportItems.reduce((sum, item) => {
       if (item.type === 'deal-cards') return sum + (item.editState.data as DealCardsState).cards.length;
       if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) return sum + 2;
       return sum + 1;
-    }, 0);
+    }, 0) + 1;
     let doneFiles = 0;
     setExportProgress({ done: 0, total: totalFiles });
     const container = hiddenRenderRef.current;
@@ -687,8 +687,6 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       await ensureBrandFontLoaded('lg');
 
       const zip = new JSZip();
-      const d = new Date();
-      const date6 = `${String(d.getFullYear()).slice(-2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 
       let n = 0;
       for (const item of exportItems) {
@@ -706,13 +704,13 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           if (!el) continue;
 
           const size = `${Math.round(el.offsetWidth)}x${Math.round(el.offsetHeight)}`;
-          // Schema: NN-module name-device-WxH-deal page-date, e.g.
-          // "01-hero kv-pc-1920x720-deal page-260902.png"; cards number the
-          // module name ("02-deal cards-1-…").
-          const deviceTag = device === 'mo' ? 'mobile' : 'pc';
+          // Schema (per request 2026-09-03): NN-component code-module name-WxH-device,
+          // e.g. "01-ST0001-hero kv-1920x720-pc.png"; cards number the module
+          // name ("02-ST0044-benefit summary-1-…").
+          const deviceTag = device === 'mo' ? 'mo' : 'pc';
           const index = String(n).padStart(2, '0');
           const cardTag = item.type === 'deal-cards' ? `-${j + 1}` : '';
-          const fileName = `${index}-${def.label.toLowerCase()}${cardTag}-${deviceTag}-${size}-deal page-${date6}.png`;
+          const fileName = `${index}-${def.component ?? 'page'}-${def.label.toLowerCase()}${cardTag}-${size}-${deviceTag}.png`;
 
           await toPng(el);
           await toPng(el);
@@ -740,7 +738,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
                   size: artSize,
                 },
               });
-              zip.file(`${index}-${def.label.toLowerCase()}-motion-${deviceTag}-${dims.w}x${dims.h}-deal page-${date6}.mp4`, mp4);
+              zip.file(`${index}-${def.component ?? 'page'}-${def.label.toLowerCase()}-motion-${dims.w}x${dims.h}-${deviceTag}.mp4`, mp4);
               doneFiles += 1;
               setExportProgress({ done: doneFiles, total: totalFiles });
             } catch (err) {
@@ -748,6 +746,35 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
               window.alert(t('The motion video could not be rendered and was left out of the ZIP.'));
             }
           }
+        }
+      }
+
+      // Full-page mockup — the whole canvas as one tall shot, copy and all,
+      // exactly as the page reads on screen (carousels at their resting
+      // position). Numbered after the art crops.
+      {
+        n += 1;
+        await new Promise<void>(resolve => {
+          root.render(
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: dealPageWidthFor(device) }}>
+              {canvasItems.map(item => (
+                <DealModuleRenderer key={item.id} editState={item.editState} device={device} />
+              ))}
+            </div>,
+          );
+          setTimeout(resolve, 500);
+        });
+        const el = container.firstElementChild as HTMLElement | null;
+        if (el) {
+          const size = `${Math.round(el.offsetWidth)}x${Math.round(el.offsetHeight)}`;
+          const deviceTag = device === 'mo' ? 'mo' : 'pc';
+          const fileName = `${String(n).padStart(2, '0')}-full page mockup-${size}-${deviceTag}.png`;
+          await toPng(el);
+          await toPng(el);
+          const dataUrl = await toPng(el, { cacheBust: true });
+          zip.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
+          doneFiles += 1;
+          setExportProgress({ done: doneFiles, total: totalFiles });
         }
       }
 

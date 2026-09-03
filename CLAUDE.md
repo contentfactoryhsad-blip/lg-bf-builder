@@ -242,7 +242,10 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   deal-cards(**카드 수만큼 1장씩**) / deal-promo-banner / deal-banner만, 각자 아트 크롭 사이즈로
   (PC 1920×720 / 464×600 / 1600×400 / 1600×350; MO 360×480 / 310×400 / 360×480·420). 아트+제품
   플레이트+스크림만 담기고 카피·CTA·카운트다운·코너 라운딩은 캔버스 목업 몫이다. 나머지 모듈
-  (header/tabs/product list/category nav/footer)은 export 대상이 아니다. 파일명은 `NN-모듈명[-카드번호]-…`.
+  (header/tabs/product list/category nav/footer)은 크롭 export 대상이 아니다. 파일명 스키마(2026-09-03):
+  `NN-컴포넌트코드-모듈명[-카드번호]-WxH-pc|mo.png`(예: `01-ST0001-hero kv-1920x720-pc.png`) — 날짜/"deal page"
+  태그 없음. ZIP 마지막엔 **캔버스 전체를 쌓은 세로 목업 한 장**이 카피까지 포함해 통짜로 들어간다
+  (`NN-full page mockup-WxH-pc.png`, 컴포넌트 코드 없음; 진행 카운터에 +1).
 - **Motion 히어로는 mp4도 함께 나간다** — CBB의 `renderMotionCutLive`(WebCodecs, `exportMotion.ts`)로
   히어로 크롭·배치(nudge/scale 반영)에 맞춰 실시간 컷(`…-motion-…mp4`). 실패는 alert로 보고하고
   이미지는 계속 나간다.
