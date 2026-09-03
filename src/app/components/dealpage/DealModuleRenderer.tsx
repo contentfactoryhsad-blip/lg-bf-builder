@@ -455,16 +455,82 @@ const DEAL_CARD_ART_FALLBACK = { size: 1100, x: -318, y: -309 };
  * (64px rings, #CBC8C2 disabled / #646464 active). The revised board swaps
  * them for a blur-backed component the SVG export can't carry, so the old
  * exports stand in until the new ones are delivered as flat assets.
+ *
+ * Only two ring exports exist (grey LEFT `carousel-prev.png`, dark RIGHT
+ * `carousel-next.png`), so the other two states borrow the opposite file
+ * rotated half a turn: grey = disabled, dark = active, whichever way the
+ * chevron points.
  */
-function CarouselArrow({ x, y, dir }: { x: number; y: number; dir: 'prev' | 'next' }) {
+function CarouselArrow({
+  x, y, size = 64, dir, disabled, onClick,
+}: { x: number; y: number; size?: number; dir: 'prev' | 'next'; disabled: boolean; onClick: () => void }) {
+  const flip = (dir === 'prev') !== disabled;
   return (
-    <img
-      src={`/deal-page/icons/carousel-${dir}.png`}
-      alt=""
-      draggable={false}
-      style={{ position: 'absolute', left: x, top: y, width: 64, height: 64, display: 'block', maxWidth: 'none' }}
-    />
+    <button
+      type="button"
+      disabled={disabled}
+      onPointerDown={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      style={{
+        position: 'absolute', left: x, top: y, width: size, height: size,
+        padding: 0, border: 'none', background: 'none',
+        cursor: disabled ? 'default' : 'pointer',
+      }}
+    >
+      <img
+        src={`/deal-page/icons/carousel-${disabled ? 'prev' : 'next'}.png`}
+        alt=""
+        draggable={false}
+        style={{ width: size, height: size, display: 'block', maxWidth: 'none', transform: flip ? 'rotate(180deg)' : undefined }}
+      />
+    </button>
   );
+}
+
+/**
+ * OBS-style floating side arrow — the white circle at the row's vertical
+ * centre, OUTSIDE the module frame on the canvas backdrop, like the Shop in
+ * Shop builder's banner carousel. The templates clip everything (Band and the
+ * canvas capture box are overflow:hidden), so `SortableCanvasItem` in
+ * DealPageBuilder draws these around the frame — canvas chrome only, never in
+ * a ZIP.
+ */
+export function CarouselSideArrow({
+  x, y, size = 44, dir, onClick,
+}: { x: number; y: number; size?: number; dir: 'prev' | 'next'; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onPointerDown={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      style={{
+        position: 'absolute', left: x, top: y, width: size, height: size,
+        borderRadius: '50%', background: WHITE, border: 'none',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.18)', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 0, zIndex: 5,
+      }}
+    >
+      <svg width={Math.round(size * 0.32)} height={Math.round(size * 0.32)} viewBox="0 0 20 20" fill="none">
+        <path
+          d={dir === 'prev' ? 'M12.5 4l-6 6 6 6' : 'M7.5 4l6 6-6 6'}
+          stroke="#333"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
+/**
+ * Controlled carousel position — the canvas item owns the state so the side
+ * arrows outside the frame and the ring arrows inside it move the same row.
+ */
+export interface CarouselControl {
+  pos: number;
+  onPos: (n: number) => void;
 }
 
 /** The card's artwork layer alone — shared by the canvas card and the export crop. */
@@ -519,7 +585,18 @@ function DealCardArtLayer({ card }: { card: DealCardItem }) {
   return null;
 }
 
-function DealCardsTemplate({ data, artOnly, artIndex }: { data: DealCardsState; artOnly?: boolean; artIndex?: number }) {
+function DealCardsTemplate({ data, artOnly, artIndex, carousel }: { data: DealCardsState; artOnly?: boolean; artIndex?: number; carousel?: CarouselControl }) {
+  // Carousel position — view state, not edit state: three cards show at a
+  // time and the arrows slide a fourth in (counter reads "2 / 2"). The canvas
+  // item passes a controlled position (so its outside-the-frame side arrows
+  // stay in sync); standalone renders fall back to local state. Clamped so
+  // dropping back to 3 cards can't strand the row offstage.
+  const [internalPos, setInternalPos] = React.useState(0);
+  const rawPos = carousel ? carousel.pos : internalPos;
+  const setPos = carousel ? carousel.onPos : setInternalPos;
+  const maxPos = Math.max(0, data.cards.length - 3);
+  const pos = Math.min(rawPos, maxPos);
+
   // Export mode — ONE card's artwork at the 464×600 crop, nothing else. The
   // corner rounding is the page's, not the asset's, so the crop stays square.
   if (artOnly) {
@@ -550,14 +627,15 @@ function DealCardsTemplate({ data, artOnly, artIndex }: { data: DealCardsState; 
       {data.showCarousel && (
         <>
           <At x={1600} y={82} w={92} style={{ fontFamily: FONT_TEXT, ...T_COUNTER, color: TEXT_STRIKE, textAlign: 'right' }}>
-            {`1 / ${data.slideCount}`}
+            {`${pos + 1} / ${maxPos + 1}`}
           </At>
-          <CarouselArrow x={1724} y={64} dir="prev" />
-          <CarouselArrow x={1796} y={64} dir="next" />
+          <CarouselArrow x={1724} y={64} dir="prev" disabled={pos === 0} onClick={() => setPos(pos - 1)} />
+          <CarouselArrow x={1796} y={64} dir="next" disabled={pos >= maxPos} onClick={() => setPos(pos + 1)} />
         </>
       )}
 
-      {/* Card row — 464×600 at a 488 pitch on the 1440 rail. */}
+      {/* Card row — 464×600 at a 488 pitch on the 1440 rail; the carousel
+          slides the row one pitch per step. */}
       <div
         style={{
           position: 'absolute',
@@ -568,7 +646,14 @@ function DealCardsTemplate({ data, artOnly, artIndex }: { data: DealCardsState; 
           overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', gap: DEAL_CARD_GAP }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: DEAL_CARD_GAP,
+            transform: `translateX(${-pos * (DEAL_CARD_W + DEAL_CARD_GAP)}px)`,
+            transition: 'transform 300ms ease',
+          }}
+        >
         {data.cards.map((card, i) => {
           return (
           <div
@@ -1556,6 +1641,7 @@ export function DealModuleRenderer({
   device = 'pc',
   artOnly,
   artIndex,
+  carousel,
 }: {
   editState: DealEditState;
   device?: DealDevice;
@@ -1564,12 +1650,14 @@ export function DealModuleRenderer({
       the card on a deal-cards module. */
   artOnly?: boolean;
   artIndex?: number;
+  /** Controlled deal-cards carousel position (canvas side arrows live outside the frame). */
+  carousel?: CarouselControl;
 }) {
-  if (device === 'mo') return <DealModuleRendererMo editState={editState} artOnly={artOnly} artIndex={artIndex} />;
+  if (device === 'mo') return <DealModuleRendererMo editState={editState} artOnly={artOnly} artIndex={artIndex} carousel={carousel} />;
   switch (editState.type) {
     case 'deal-site-header':  return <DealSiteHeaderTemplate data={editState.data} />;
     case 'deal-hero':         return <DealHeroTemplate data={editState.data} artOnly={artOnly} />;
-    case 'deal-cards':        return <DealCardsTemplate data={editState.data} artOnly={artOnly} artIndex={artIndex} />;
+    case 'deal-cards':        return <DealCardsTemplate data={editState.data} artOnly={artOnly} artIndex={artIndex} carousel={carousel} />;
     case 'deal-tab-nav':      return <DealTabNavTemplate data={editState.data} />;
     case 'deal-promo-banner': return <DealPromoBannerTemplate data={editState.data} size="Large" artOnly={artOnly} />;
     case 'deal-banner':       return <DealPromoBannerTemplate data={editState.data} size="Standard" artOnly={artOnly} />;

@@ -101,30 +101,44 @@ export interface DealCardsState {
    * content, so they are one switch rather than four editable fields.
    */
   showCarousel: boolean;
-  /** Right-hand number in the "1 / 2" counter. */
+  /**
+   * ⚠️ Legacy — the counter is computed from the card count now (the carousel
+   * actually slides, 2026-09-03). Kept only so old drafts keep parsing.
+   */
   slideCount: string;
   cards: DealCardItem[];
 }
 
 /**
- * Card count is FIXED at 3 — the three cards fill the 1440 rail exactly
- * (3×464 + 2×24), and the section no longer offers a count control.
+ * Card count is 3 or 4 — three cards fill the 1440 rail exactly (3×464 +
+ * 2×24); a fourth sits offstage and the carousel arrows slide it in (the
+ * counter reads "2 / 2" on the second position, like the OBS builder's
+ * banner carousel).
  */
-export const DEAL_CARD_COUNT = 3;
+export const DEAL_CARD_MIN = 3;
+export const DEAL_CARD_MAX = 4;
 
 /**
  * Card art comes from the four deal-type campaign artworks (the same registry
- * tiles the Content Template Builder shows). Three cards, four artworks — the
- * spare (Gift by default) stays available in each card's picker.
+ * tiles the Content Template Builder shows). The first three are the default
+ * row; the Gift seed is what a fourth card starts as.
  */
-export const DEAL_CARD_DEFAULTS: DealCardItem[] = [
+export const DEAL_CARD_SEEDS: DealCardItem[] = [
   { asset: 'deal-type-time-sale', image: null, title: 'Time Sale, hourly',       ctaText: 'Shop now' },
   { asset: 'deal-type-hot-deal',  image: null, title: 'Hot Deals, 60% off',      ctaText: 'Shop now' },
   { asset: 'deal-type-bundle',    image: null, title: 'Bundles, save even more', ctaText: 'Shop now' },
+  { asset: 'deal-type-gift',      image: null, title: 'Gifts, with every deal',  ctaText: 'Shop now' },
 ];
 
+export function dealCardSeed(t: TFunction, i: number): DealCardItem {
+  const c = DEAL_CARD_SEEDS[Math.min(i, DEAL_CARD_SEEDS.length - 1)];
+  return { ...c, title: t(c.title), ctaText: t(c.ctaText) };
+}
+
+/** Default is the FULL four-card set — the carousel starts at "1 / 2" with
+    the Gift card offstage (per request, 2026-09-03). */
 export function dealCardDefaults(t: TFunction): DealCardItem[] {
-  return DEAL_CARD_DEFAULTS.map(c => ({ ...c, title: t(c.title), ctaText: t(c.ctaText) }));
+  return DEAL_CARD_SEEDS.map(c => ({ ...c, title: t(c.title), ctaText: t(c.ctaText) }));
 }
 
 // ── Deal tab nav (Figma 6080:51251 — 2280×98) ─────────────────────────────────

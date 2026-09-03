@@ -54,7 +54,7 @@ import {
 import { heroArtFor, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
 import { MO_HERO_ART } from './DealModuleRendererMo';
 import { renderMotionCutLive } from '../contenttemplate/exportMotion';
-import { DealModuleRenderer } from './DealModuleRenderer';
+import { CarouselSideArrow, DealModuleRenderer } from './DealModuleRenderer';
 import { DealModuleEditPanel } from './DealModuleEditPanel';
 import { acquireSaveTarget } from '../../utils/fileSaver';
 import { useT, type TFunction } from '../../i18n/LanguageContext';
@@ -321,6 +321,20 @@ function SortableCanvasItem({
 
   const boxW = dealPageWidthFor(device) * scale;
 
+  // Deal-cards carousel — the canvas item owns the position so the OBS-style
+  // side arrows can sit OUTSIDE the module frame (the templates clip
+  // everything inside), while the ring arrows inside the render stay in sync.
+  const [carouselRaw, setCarouselPos] = useState(0);
+  const isCards = item.type === 'deal-cards';
+  const cardsData = isCards ? (item.editState.data as DealCardsState) : null;
+  const carouselMax = cardsData ? Math.max(0, cardsData.cards.length - (device === 'pc' ? 3 : 1)) : 0;
+  const carouselPos = Math.min(carouselRaw, carouselMax);
+  // Card-row vertical centre as a fraction of the module height (PC: row
+  // 164..764 of 812; MO: 118..518 of 542) — anchors the side arrows.
+  const rowCenterRatio = device === 'pc' ? 464 / 812 : 318 / 542;
+  const sideArrowTop = innerHeight * scale * rowCenterRatio - 22;
+  const showSideArrows = isCards && !!cardsData?.showCarousel && carouselMax > 0;
+
   return (
     <div
       ref={setNodeRef}
@@ -371,7 +385,11 @@ function SortableCanvasItem({
             ref={innerRef}
             style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: dealPageWidthFor(device), position: 'absolute', top: 0, left: 0 }}
           >
-            <DealModuleRenderer editState={item.editState} device={device} />
+            <DealModuleRenderer
+              editState={item.editState}
+              device={device}
+              carousel={isCards ? { pos: carouselPos, onPos: setCarouselPos } : undefined}
+            />
           </div>
         </div>
 
@@ -380,6 +398,15 @@ function SortableCanvasItem({
             isSelected ? 'border-[#FD312E]' : 'border-transparent group-hover:border-gray-300'
           }`}
         />
+
+        {/* OBS-style side arrows — outside the frame, on the canvas backdrop,
+            only the direction that can still move. */}
+        {showSideArrows && carouselPos > 0 && (
+          <CarouselSideArrow x={-56} y={sideArrowTop} dir="prev" onClick={() => setCarouselPos(carouselPos - 1)} />
+        )}
+        {showSideArrows && carouselPos < carouselMax && (
+          <CarouselSideArrow x={boxW + 12} y={sideArrowTop} dir="next" onClick={() => setCarouselPos(carouselPos + 1)} />
+        )}
       </div>
 
       {isSelected && (

@@ -43,6 +43,9 @@ import {
   DEAL_FOOTER_COLUMN_MAX,
   DEAL_PRODUCT_MIN,
   DEAL_PRODUCT_MAX,
+  DEAL_CARD_MIN,
+  DEAL_CARD_MAX,
+  dealCardSeed,
 } from './dealEditStates';
 
 // ── Shared UI atoms ───────────────────────────────────────────────────────────
@@ -742,14 +745,15 @@ function DealCardsPanel({ data, onUpdate }: { data: DealCardsState; onUpdate: (d
         </div>
       </div>
       <ToggleField label={t('Carousel controls')} shown={data.showCarousel} onShownChange={v => set({ showCarousel: v })}>
-        <input
-          type="text"
-          value={data.slideCount}
-          onChange={e => set({ slideCount: e.target.value })}
-          className={INPUT_CLASS}
-        />
-        <p className="text-[10px] text-gray-400 mt-0.5">{t('Total slides — shown as "1 / n".')}</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">{t('The counter and arrows follow the card count.')}</p>
       </ToggleField>
+      <CountSelector
+        label={t('Number of cards')}
+        min={DEAL_CARD_MIN}
+        max={DEAL_CARD_MAX}
+        value={data.cards.length}
+        onChange={n => set({ cards: resizeList(data.cards, n, i => dealCardSeed(t, i)) })}
+      />
       <SectionDivider>{t('Cards')}</SectionDivider>
       {data.cards.map((card, i) => (
         <div key={i} className="pt-1 pb-3 border-b border-gray-100 last:border-0">
@@ -1233,7 +1237,13 @@ function DealSiteHeaderPanel({ data, onUpdate }: { data: DealSiteHeaderState; on
 
 // ── 9. Site footer ────────────────────────────────────────────────────────────
 
-function DealSiteFooterPanel({ data, onUpdate }: { data: DealSiteFooterState; onUpdate: (d: DealSiteFooterState) => void }) {
+/**
+ * The footer is locked as a reference mockup — the panel shows only a note
+ * (see DealModuleEditPanel's `deal-site-footer` case). This editor is
+ * ⏸ PARKED like DealProductItemsEditor: remount it there if footer editing
+ * ever comes back.
+ */
+export function DealSiteFooterEditor({ data, onUpdate }: { data: DealSiteFooterState; onUpdate: (d: DealSiteFooterState) => void }) {
   const t = useT();
   const set = (p: Partial<DealSiteFooterState>) => onUpdate({ ...data, ...p });
   const updateColumn = (idx: number, col: DealFooterColumn) => {
@@ -1299,6 +1309,12 @@ function DealSiteFooterPanel({ data, onUpdate }: { data: DealSiteFooterState; on
   );
 }
 
+/** The footer panel's only content — the module is view-only. */
+function FooterLockedNote() {
+  const t = useT();
+  return <p className="text-xs text-gray-500">{t('Site footer uses the default preset.')}</p>;
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export function DealModuleEditPanel({
@@ -1312,7 +1328,8 @@ export function DealModuleEditPanel({
     case 'deal-site-header':
       return <DealSiteHeaderPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-site-header', data: d })} />;
     case 'deal-site-footer':
-      return <DealSiteFooterPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-site-footer', data: d })} />;
+      // Locked — the footer is a reference mockup, shown as-is.
+      return <FooterLockedNote />;
     case 'deal-hero':
       return <DealHeroPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-hero', data: d })} />;
     case 'deal-cards':

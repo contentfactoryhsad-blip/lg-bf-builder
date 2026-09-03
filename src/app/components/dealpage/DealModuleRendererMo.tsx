@@ -412,7 +412,44 @@ function MoCardArtLayer({ card }: { card: DealCardsState['cards'][number] }) {
   return null;
 }
 
-function MoDealCardsTemplate({ data, artOnly, artIndex }: { data: DealCardsState; artOnly?: boolean; artIndex?: number }) {
+/**
+ * Ring arrow, mobile size — grey `carousel-prev.png` is the disabled face,
+ * dark `carousel-next.png` the active one; the opposite direction borrows
+ * the other file rotated half a turn (same trick as the PC renderer).
+ */
+function MoCarouselArrow({
+  x, y, dir, disabled, onClick,
+}: { x: number; y: number; dir: 'prev' | 'next'; disabled: boolean; onClick: () => void }) {
+  const flip = (dir === 'prev') !== disabled;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onPointerDown={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      style={{ position: 'absolute', left: x, top: y, width: 36, height: 36, padding: 0, border: 'none', background: 'none', cursor: disabled ? 'default' : 'pointer' }}
+    >
+      <img
+        src={`/deal-page/icons/carousel-${disabled ? 'prev' : 'next'}.png`}
+        alt=""
+        draggable={false}
+        style={{ width: 36, height: 36, display: 'block', maxWidth: 'none', transform: flip ? 'rotate(180deg)' : undefined }}
+      />
+    </button>
+  );
+}
+
+function MoDealCardsTemplate({ data, artOnly, artIndex, carousel }: { data: DealCardsState; artOnly?: boolean; artIndex?: number; carousel?: { pos: number; onPos: (n: number) => void } }) {
+  // Carousel position — one card per step (pitch 320), the neighbour peeking
+  // in like the resting frame. The canvas item passes a controlled position
+  // (its side arrows sit outside the 360 frame); standalone renders fall back
+  // to local state. Clamped for card-count drops.
+  const [internalPos, setInternalPos] = React.useState(0);
+  const rawPos = carousel ? carousel.pos : internalPos;
+  const setPos = carousel ? carousel.onPos : setInternalPos;
+  const maxPos = Math.max(0, data.cards.length - 1);
+  const pos = Math.min(rawPos, maxPos);
+
   // Export mode — ONE card's artwork at the 310×400 crop, square (the corner
   // rounding is the page's, not the asset's).
   if (artOnly) {
@@ -439,13 +476,21 @@ function MoDealCardsTemplate({ data, artOnly, artIndex }: { data: DealCardsState
       )}
       {data.showCarousel && (
         <>
-          <img src="/deal-page/icons/carousel-prev.png" alt="" draggable={false} style={{ position: 'absolute', left: 264, top: 47, width: 36, height: 36, maxWidth: 'none' }} />
-          <img src="/deal-page/icons/carousel-next.png" alt="" draggable={false} style={{ position: 'absolute', left: 308, top: 47, width: 36, height: 36, maxWidth: 'none' }} />
+          <MoCarouselArrow x={264} y={47} dir="prev" disabled={pos === 0} onClick={() => setPos(pos - 1)} />
+          <MoCarouselArrow x={308} y={47} dir="next" disabled={pos >= maxPos} onClick={() => setPos(pos + 1)} />
         </>
       )}
 
       <div style={{ position: 'absolute', left: 0, top: 118, width: DEAL_MO_WIDTH, height: MO_CARD_H, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', gap: MO_CARD_GAP, paddingLeft: 25 }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: MO_CARD_GAP,
+            paddingLeft: 25,
+            transform: `translateX(${-pos * (MO_CARD_W + MO_CARD_GAP)}px)`,
+            transition: 'transform 300ms ease',
+          }}
+        >
           {data.cards.map((card, i) => {
             return (
               <div
@@ -1139,16 +1184,19 @@ export function DealModuleRendererMo({
   editState,
   artOnly,
   artIndex,
+  carousel,
 }: {
   editState: DealEditState;
   /** ZIP export: only the composed image at its art crop — see DealModuleRenderer. */
   artOnly?: boolean;
   artIndex?: number;
+  /** Controlled deal-cards carousel position — see DealModuleRenderer. */
+  carousel?: { pos: number; onPos: (n: number) => void };
 }) {
   switch (editState.type) {
     case 'deal-site-header':  return <MoSiteHeaderTemplate data={editState.data} />;
     case 'deal-hero':         return <MoHeroTemplate data={editState.data} artOnly={artOnly} />;
-    case 'deal-cards':        return <MoDealCardsTemplate data={editState.data} artOnly={artOnly} artIndex={artIndex} />;
+    case 'deal-cards':        return <MoDealCardsTemplate data={editState.data} artOnly={artOnly} artIndex={artIndex} carousel={carousel} />;
     case 'deal-tab-nav':      return <MoDealTabNavTemplate data={editState.data} />;
     case 'deal-promo-banner': return <MoBannerTemplate data={editState.data} size="Large" artOnly={artOnly} />;
     case 'deal-banner':       return <MoBannerTemplate data={editState.data} size="Standard" artOnly={artOnly} />;

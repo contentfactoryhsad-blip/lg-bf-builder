@@ -89,20 +89,20 @@ export interface DealModuleDef {
 }
 
 export const DEAL_MODULE_DEFS: DealModuleDef[] = [
-  { type: 'deal-site-header',  label: 'Site header',      section: 'LG.com global header',        width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 134,  maxCount: 1, zipName: 'site-header'   },
+  { type: 'deal-site-header',  label: 'Site Header',      section: 'LG.com global header',        width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 134,  maxCount: 1, zipName: 'site-header'   },
   { type: 'deal-hero',         label: 'Hero KV',          section: 'Page hero',                   width: DEAL_PAGE_WIDTH, height: 720,    placeholderHeight: 720,  maxCount: 1, component: 'ST0001', zipName: 'hero',         artSize: { w: DEAL_HERO_WIDTH, h: 720 } },
-  { type: 'deal-cards',        label: 'Deal cards',       section: 'Discover exclusive deals',    width: DEAL_PAGE_WIDTH, height: 812,    placeholderHeight: 812,  maxCount: 2, component: 'ST0044', zipName: 'deal-cards',   artSize: { w: 464, h: 600 } },
+  { type: 'deal-cards',        label: 'Benefit Summary',  section: 'Discover exclusive deals',    width: DEAL_PAGE_WIDTH, height: 812,    placeholderHeight: 812,  maxCount: 2, component: 'ST0044', zipName: 'deal-cards',   artSize: { w: 464, h: 600 } },
   // One banner family, two palette entries: the 400-tall promotion banner and
   // the 350-tall deal banner (the height is the module type now, not a size
   // picker in the panel).
-  { type: 'deal-promo-banner', label: 'Promotion banner', section: 'Exclusive offer',              width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 496, maxCount: 4, component: 'ST0001', zipName: 'promo-banner', artSize: { w: DEAL_BANNER_WIDTH, h: 400 } },
-  { type: 'deal-banner',       label: 'Deal banner',      section: 'Hot Deals / Bundles / Gifts',  width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 398, maxCount: 6, component: 'ST0001', zipName: 'deal-banner',  artSize: { w: DEAL_BANNER_WIDTH, h: 350 } },
+  { type: 'deal-promo-banner', label: 'Promotion Banner', section: 'Exclusive offer',              width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 496, maxCount: 4, component: 'ST0001', zipName: 'promo-banner', artSize: { w: DEAL_BANNER_WIDTH, h: 400 } },
+  { type: 'deal-banner',       label: 'Deal Banner',      section: 'Hot Deals / Bundles / Gifts',  width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 398, maxCount: 6, component: 'ST0001', zipName: 'deal-banner',  artSize: { w: DEAL_BANNER_WIDTH, h: 350 } },
   // (Time Sale is no longer its own module — it is the deal banner's
   //  countdown toggle. Old deal-time-sale drafts migrate on restore.)
-  { type: 'deal-tab-nav',      label: 'Deal tabs',        section: 'Deal-type tab bar',           width: DEAL_PAGE_WIDTH, height: 98,     placeholderHeight: 98,   maxCount: 2, component: 'ST0002', zipName: 'tab-nav'       },
-  { type: 'deal-product-list', label: 'Product list',     section: 'Deal product grid',           width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 796,  maxCount: 8, component: 'PD002', zipName: 'product-list'  },
-  { type: 'deal-category-nav', label: 'Category nav',     section: 'Category filter + results',   width: DEAL_PAGE_WIDTH, height: 353,    placeholderHeight: 353,  maxCount: 1, zipName: 'category-nav'  },
-  { type: 'deal-site-footer',  label: 'Site footer',      section: 'LG.com global footer',        width: DEAL_PAGE_WIDTH, height: 848,    placeholderHeight: 848,  maxCount: 1, zipName: 'site-footer'   },
+  { type: 'deal-tab-nav',      label: 'Tab Anchor',       section: 'Deal-type tab bar',           width: DEAL_PAGE_WIDTH, height: 98,     placeholderHeight: 98,   maxCount: 2, component: 'ST0002', zipName: 'tab-nav'       },
+  { type: 'deal-product-list', label: 'Product List',     section: 'Deal product grid',           width: DEAL_PAGE_WIDTH, height: 'free', placeholderHeight: 796,  maxCount: 8, component: 'PD002', zipName: 'product-list'  },
+  { type: 'deal-category-nav', label: 'Category Nav',     section: 'Category filter + results',   width: DEAL_PAGE_WIDTH, height: 353,    placeholderHeight: 353,  maxCount: 1, zipName: 'category-nav'  },
+  { type: 'deal-site-footer',  label: 'Site Footer',      section: 'LG.com global footer',        width: DEAL_PAGE_WIDTH, height: 848,    placeholderHeight: 848,  maxCount: 1, zipName: 'site-footer'   },
 ];
 
 export function getDealModuleDef(type: DealModuleType): DealModuleDef {

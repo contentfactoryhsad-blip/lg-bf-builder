@@ -245,6 +245,23 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   `duplicateModule` 삭제). MO 푸터는 보드 그대로 9행 내비+Libro 배지행+윤리핫라인행으로 재작성,
   푸터 locale 기본값은 `t('English')`.
 
+#### 2026-09-03 — 라이브 캐러셀 / 라벨 정리 / 푸터 잠금
+- **모듈 라벨은 Title Case 통일**: Deal cards → **Benefit Summary**, Deal tabs → **Tab Anchor**,
+  나머지도 Site Header / Promotion Banner / Deal Banner / Product List / Category Nav / Site Footer.
+  ZIP 파일명은 `label.toLowerCase()`라 함께 바뀐다(`…-benefit summary-1-…`).
+- 🔴 **Benefit Summary는 캔버스에서 실제로 도는 캐러셀이다** — 기본 4장(Time Sale/Hot Deal/Bundle + Gift
+  시드), 패널 `Number of cards` 3–4(`DEAL_CARD_MIN/MAX`, `dealCardSeed`). PC는 3장 노출·1피치(488)씩,
+  MO는 1장·320피치씩 슬라이드하고 카운터("1 / 2")는 카드 수에서 계산한다(`slideCount` 필드는 레거시,
+  드래프트 호환용으로만 남음). 링 화살표 아트는 회색 `carousel-prev.png`=disabled, 진한 `carousel-next.png`
+  =active 두 장뿐이라 반대 방향은 180° 회전으로 만든다.
+- 🔴 **캐러셀 위치 상태는 `SortableCanvasItem`(DealPageBuilder)이 소유한다** — OBS식 흰 원형 사이드
+  화살표는 **모듈 프레임 밖**(캔버스 여백)에 떠야 하는데 템플릿은 전부 overflow:hidden이라, 캔버스
+  아이템이 pos를 들고 `DealModuleRenderer`의 `carousel` prop(controlled)으로 내려보낸다. 템플릿 단독
+  렌더는 내부 state 폴백. 사이드 화살표는 이동 가능한 방향만 표시(`CarouselSideArrow`), 익스포트에는
+  절대 안 실린다(artOnly가 카드 단위 크롭이라 캐러셀 위치 무관 — 4장이면 ZIP도 4파일).
+- **Site Footer 편집 잠금** — 패널은 영어 안내문 "Site footer uses the default preset." 한 줄만
+  (`FooterLockedNote`). 기존 편집기는 `DealSiteFooterEditor`로 ⏸ 파킹(제품 편집기와 같은 관례).
+
 ### 2) Brand Shop Page Builder — 가변 사이즈
 - `components/BrandShopBuilder.tsx`(Profile Settings / Store Page Modules 진입 라우터) → 콘텐츠 섹션 편집은 전부 `components/brandshop/StorePageModulesBuilder.tsx`(10개 모듈)로 통합됨.
   - 구 개별 섹션 라우팅(`BigPromotionEditor`/`BrandTrustEditor`/`MembershipEditor`/`MustHaveLGEditor` + 전용 템플릿들)은 미사용 확인 후 삭제됨(2026-07-15). `OtherPromotionsEditor`(Lifestyle/Theme)는 `ModuleEditPanel.tsx`의 banner 모듈에서 재사용 중이라 유지.
@@ -497,8 +514,9 @@ import 여부와 무관하게 전부 훑어 클래스를 수집하므로, 번들
 컴포넌트를 사이즈당 하나씩 `scale=1`로 마운트해 촬영한다(`exportSlots.ts`, `[data-export-box]`가 촬영 대상,
 호스트 안에서만 `border-radius:0`). LG.com 6칸 ≈ 3초.
 
-- 🔴 **bare 규칙**: LG.com의 `ST0001-pc-1920x720`·`ST0001-mo-720x960` 두 히어로는 **아트 + 아이콘 로우만**
-  담아 내보낸다(eyebrow/headline/subcopy/CTA/disclaimer/indicator 제외 — LG.com이 카피를 라이브로 얹는다).
+- 🔴 **bare 규칙**: LG.com의 `ST0001-pc-1920x720`·`ST0001-mo-720x960` 두 히어로는 **아트 + 아이콘 로우 + 디스클레이머**를
+  담아 내보낸다(eyebrow/headline/subcopy/CTA/indicator 제외 — LG.com이 카피를 라이브로 얹지만, 디스클레이머는
+  2026-09-03부터 구워 나간다). mp4도 동일: 오버레이가 전체 프레임 캡처(아이콘 로우+디스클레이머)로 합성된다.
   판정은 `lgcomSlots.ts`의 `bareOnExport(slotId)`. 나머지 4칸과 유료매체는 캔버스에 보이는 그대로.
 
 **영상(mp4) = 다운로드 시점에 브라우저에서 실시간 컷.** `renderMotionCutLive`(`exportMotion.ts`)가
