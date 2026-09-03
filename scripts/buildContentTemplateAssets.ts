@@ -281,10 +281,20 @@ async function main() {
   // that already has one will happily keep showing it. The stamp goes into every
   // asset URL as `?v=` — see contentTemplateAssets.ts — which is enough to make
   // the browser fetch the new bytes without disabling caching for everyone else.
+  // The shorts videos live in a subfolder and are copied to public/ by hand,
+  // but their URLs carry the same `?v=` — so a replaced cut must bump the
+  // stamp too, or returning browsers keep playing the cached old video.
+  const shortsDir = join(SOURCE_DIR, 'shorts');
+  const shortsMtimes = existsSync(shortsDir)
+    ? readdirSync(shortsDir)
+        .filter(f => /\.mp4$/i.test(f))
+        .map(f => statSync(join(shortsDir, f)).mtimeMs)
+    : [];
   const stamp = Math.max(
     ...readdirSync(SOURCE_DIR)
       .filter(f => /\.(png|jpe?g|webp|mp4)$/i.test(f))
       .map(f => statSync(join(SOURCE_DIR, f)).mtimeMs),
+    ...shortsMtimes,
   );
   writeFileSync(
     join(OUT_DIR, 'manifest.json'),
