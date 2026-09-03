@@ -84,3 +84,22 @@ export async function renderMotionCutLive(motionUrl: string, cut: MotionCut): Pr
   if (!buffer) throw new Error('empty output');
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
+/**
+ * The Shorts download with sound off: same file, minus the audio track.
+ *
+ * mediabunny's Conversion passes the video stream through untouched when no
+ * transform is asked of it, so this is a lossless remux — the H.264 packets in
+ * the output are byte-identical to the source. Only the audio is dropped.
+ */
+export async function stripAudioTrack(srcUrl: string): Promise<Blob> {
+  const { Conversion } = await import('mediabunny');
+  const srcBlob = await (await fetch(srcUrl)).blob();
+  const input = new Input({ source: new BlobSource(srcBlob), formats: ALL_FORMATS });
+  const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
+  const conversion = await Conversion.init({ input, output, audio: { discard: true } });
+  await conversion.execute();
+  const buffer = (output.target as BufferTarget).buffer;
+  if (!buffer) throw new Error('empty output');
+  return new Blob([buffer], { type: 'video/mp4' });
+}

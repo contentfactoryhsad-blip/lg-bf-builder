@@ -98,6 +98,12 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
 - 🔴 **Figma 보드의 박스는 읽기만 한다.** 사용자가 직접 그리는 것이라 스크립트로 지우거나 다시 그리지 말 것(두 번 사고 났다).
   옮길 땐 각 프레임의 `Slot n` 사각형을 그 프레임 `KV` 인스턴스 기준 비율로 환산해서 가져온다.
 
+- **SHORTS = 완성 영상 그대로.** `content template builder source/shorts/`의
+  `lg-bf-shorts-{a1,a2,a3}-{1080x1920,1080x1440}.mp4`를 `public/content-template/motion/shorts-{type}-{size}.mp4`로
+  **수동 복사**한다(파생 스크립트는 하위 폴더를 안 본다). 팔레트 썸네일은 9:16 컷 1초 프레임을
+  ffmpeg(png) → sharp(webp)로 뽑아 `thumb/shorts-0N.webp`. 타일 매칭: LGNESS=a1, LGNESS PD=a2, CUBE=a3
+  (`ContentAsset.video` 필드). 캔버스는 선택 사이즈의 mp4를 그대로 재생하고 편집·ZIP 대상이 아니다.
+
 - 선택 상태는 **그룹당 하나**(`Selection = Partial<Record<AssetGroupKey, string>>`)고, 같은 걸 다시 누르면 해제된다.
   미리보기는 **마지막으로 누른 것**(`focused`)을 따라가며, 없으면 key visual로 폴백한다.
 

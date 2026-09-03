@@ -56,6 +56,11 @@ export interface ContentAsset {
    * that could be mistaken for the real thing.
    */
   blank?: boolean;
+  /**
+   * Shorts type key (`a1`…). The asset is a finished vertical video, one file
+   * per output size: `motion/shorts-{video}-{w}x{h}.mp4` — see `shortsVideoUrl`.
+   */
+  video?: string;
 }
 
 /**
@@ -140,11 +145,12 @@ export const ASSET_ROWS: AssetRow[] = [
   },
   {
     key: 'shorts',
-    label: 'Shorts',
+    label: 'SHORTS',
     tileH: 124,
     tiles: [
       { id: 'shorts-01', w: 81 },
       { id: 'shorts-02', w: 81 },
+      { id: 'shorts-03', w: 81 },
     ],
   },
 ];
@@ -175,9 +181,13 @@ export const CONTENT_ASSETS: ContentAsset[] = [
   { id: 'ad-joy-ryder', label: 'Joy & Ryder', group: 'ad-creative', src: 'ad-creative-a-1' },
   { id: 'ad-benefit', label: 'Benefit', group: 'ad-creative', src: 'ad-creative-b-1' },
 
-  // SHORTS — vertical cuts. No art delivered yet.
-  { id: 'shorts-01', label: 'LGNESS', group: 'shorts', blank: true },
-  { id: 'shorts-02', label: 'CUBE', group: 'shorts', blank: true },
+  // SHORTS — vertical video cuts, one file per size (9:16 and 3:4). The videos
+  // live in `content template builder source/shorts/` and are copied verbatim
+  // into `public/content-template/motion/shorts-{type}-{size}.mp4`; the palette
+  // thumbs are poster frames pulled from the 9:16 cut (ffmpeg → sharp).
+  { id: 'shorts-01', label: 'LGNESS', group: 'shorts', video: 'a1' },
+  { id: 'shorts-02', label: 'LGNESS PD', group: 'shorts', video: 'a2' },
+  { id: 'shorts-03', label: 'CUBE', group: 'shorts', video: 'a3' },
 
   // UPLOAD — the operator's own 3000×3000 square, laid out with the Key Visual
   // _Main skeleton on every channel. The file itself lives in `customArtUrl`
@@ -223,6 +233,9 @@ export const artUrl = (stem: string) =>
   stem === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/full/${stem}.webp${V}`;
 export const motionUrl = (a: ContentAsset) =>
   a.motion ? `/content-template/motion/${a.motion}.mp4${V}` : null;
+/** The finished Shorts cut for one output size (`1080x1920` / `1080x1440`). */
+export const shortsVideoUrl = (a: ContentAsset, sizeKey: string) =>
+  a.video ? `/content-template/motion/shorts-${a.video}-${sizeKey}.mp4${V}` : null;
 
 export function assetsInGroup(group: AssetGroupKey): ContentAsset[] {
   return CONTENT_ASSETS.filter(a => a.group === group);

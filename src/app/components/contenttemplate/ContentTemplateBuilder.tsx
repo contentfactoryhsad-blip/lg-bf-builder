@@ -88,7 +88,7 @@ import { IconRowInline } from './icons/IconRowInline';
 import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
-import { renderMotionCutLive } from './exportMotion';
+import { renderMotionCutLive, stripAudioTrack } from './exportMotion';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
 import { CUSTOM_ASSET_ID, hasCustomArt, setCustomArt,
@@ -101,6 +101,7 @@ import { CUSTOM_ASSET_ID, hasCustomArt, setCustomArt,
   type ContentAsset,
   getAsset,
   motionUrl,
+  shortsVideoUrl,
   previewUrl,
   sourceUrl,
   thumbUrl,
@@ -122,6 +123,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [channelKey, setChannelKey] = useState<string | null>(null);
   /** Shorts go out at a fixed size instead of to a channel. */
   const [sizeKey, setSizeKey] = useState<string | null>(null);
+  /** Shorts preview audio. On by default — the tile click that mounts the
+      video is the user gesture Chrome wants for audible autoplay. */
+  const [soundOn, setSoundOn] = useState(true);
+  /** Mirrors the shorts video's own play state (kept honest via onPlay/onPause). */
+  const [shortsPlaying, setShortsPlaying] = useState(true);
+  const shortsVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const [copy, setCopy] = useState<SlotCopy>(EMPTY_COPY);
   /**
@@ -236,7 +243,32 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
    * pixel size; a canvas-scaled screenshot would ship blurry text.
    */
   async function handleDownload() {
-    if (!asset || !channelKey || exportedCount !== null) return;
+    if (!asset || exportedCount !== null) return;
+
+    // Shorts are finished files — the download is the source mp4 itself, at the
+    // size on the canvas. Sound follows the canvas toggle: on = the file
+    // verbatim, off = the same file with its audio track dropped (the video
+    // stream is passed through untouched, so quality is identical either way).
+    if (asset.video) {
+      const sz = shortsSize ?? SHORTS_SIZES[0];
+      const src = shortsVideoUrl(asset, sz.key);
+      if (!src) return;
+      const save = await acquireSaveTarget(`LG-BF-${asset.id}-${sz.key}${soundOn ? '' : '-mute'}.mp4`);
+      if (!save) return;
+      setExportedCount(0);
+      try {
+        const blob = soundOn ? await (await fetch(src)).blob() : await stripAudioTrack(src);
+        await save(blob);
+      } catch (err) {
+        console.error('[ContentTemplate] shorts download failed', err);
+        window.alert(t('Some files could not be rendered and were left out of the ZIP:'));
+      } finally {
+        setExportedCount(null);
+      }
+      return;
+    }
+
+    if (!channelKey) return;
     const list = slotsForChannel(channelKey);
     if (list.length === 0) return;
 
@@ -339,7 +371,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         title={t('Content Banner Builder')}
         onBack={onBack}
         onHome={() => onRailNavigate('home')}
-        center={<StepIndicator active={!asset ? 0 : showBanners || (outputKind === 'size' && sizeKey) ? 2 : 1} />}
+        center={
+          <StepIndicator
+            kind={outputKind}
+            active={!asset ? 0 : outputKind === 'size' ? 1 : showBanners ? 2 : 1}
+          />
+        }
         right={
           <>
             {/* Save for Later is parked, not removed — flip SHOW_SAVE_FOR_LATER
@@ -356,7 +393,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
             <button
               type="button"
               onClick={() => void handleDownload()}
-              disabled={!asset || !showBanners || exporting}
+              disabled={!asset || (!showBanners && !asset.video) || exporting}
               className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border transition-colors border-[#FD312E] text-[#FD312E] hover:bg-[#FD312E] hover:text-white disabled:opacity-40 disabled:pointer-events-none"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -368,7 +405,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   strokeLinejoin="round"
                 />
               </svg>
-              {exporting ? `${exportedCount} / ${slotsForChannel(channelKey ?? '').length}` : t('Download ZIP')}
+              {exporting
+                ? `${exportedCount} / ${asset?.video ? 1 : slotsForChannel(channelKey ?? '').length}`
+                : t(asset?.video ? 'Download MP4' : 'Download ZIP')}
             </button>
           </>
         }
@@ -517,20 +556,85 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 </p>
               </div>
             </div>
-          ) : asset.blank ? (
+          ) : asset.blank || asset.video ? (
             <div className="flex-1 flex items-center justify-center px-12">
               <div className="flex flex-col items-center gap-3">
                 {/* no size picked yet → preview the lead size (1080×1920) */}
-                <div
-                  className="rounded-lg bg-black"
-                  style={{
+                {(() => {
+                  const sz = shortsSize ?? SHORTS_SIZES[0];
+                  const src = shortsVideoUrl(asset, sz.key);
+                  const frame = {
                     height: 'min(1100px, 60vh)',
-                    aspectRatio: `${(shortsSize ?? SHORTS_SIZES[0]).width} / ${(shortsSize ?? SHORTS_SIZES[0]).height}`,
-                  }}
-                />
-                <p className="text-sm text-center" style={{ color: '#8A8078' }}>
-                  {`${(shortsSize ?? SHORTS_SIZES[0]).label} — ${t('artwork not delivered yet')}`}
-                </p>
+                    aspectRatio: `${sz.width} / ${sz.height}`,
+                  } as const;
+                  return (
+                    <>
+                      {src ? (
+                        <div className="relative" style={frame}>
+                          <video
+                            key={src}
+                            ref={shortsVideoRef}
+                            src={src}
+                            autoPlay
+                            loop
+                            muted={!soundOn}
+                            playsInline
+                            onPlay={() => setShortsPlaying(true)}
+                            onPause={() => setShortsPlaying(false)}
+                            className="absolute inset-0 w-full h-full rounded-lg bg-black object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const v = shortsVideoRef.current;
+                              if (!v) return;
+                              if (v.paused) void v.play(); else v.pause();
+                            }}
+                            aria-label={shortsPlaying ? 'Pause' : 'Play'}
+                            className="absolute bottom-3 left-3 flex items-center justify-center w-9 h-9 rounded-full bg-black/55 text-white hover:bg-black/75 transition-colors"
+                          >
+                            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+                              {shortsPlaying ? (
+                                <>
+                                  <rect x="7" y="6" width="3.4" height="12" rx="1" />
+                                  <rect x="13.6" y="6" width="3.4" height="12" rx="1" />
+                                </>
+                              ) : (
+                                <path d="M8.5 5.8v12.4a.7.7 0 0 0 1.07.6l9.6-6.2a.7.7 0 0 0 0-1.2l-9.6-6.2a.7.7 0 0 0-1.07.6z" />
+                              )}
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSoundOn(v => !v)}
+                            aria-label={soundOn ? 'Mute' : 'Unmute'}
+                            className="absolute bottom-3 right-3 flex items-center justify-center w-9 h-9 rounded-full bg-black/55 text-white hover:bg-black/75 transition-colors"
+                          >
+                            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 5.5 6.5 9H3.5v6h3L11 18.5z" fill="currentColor" stroke="none" />
+                              {soundOn ? (
+                                <>
+                                  <path d="M14.5 9.2a4 4 0 0 1 0 5.6" />
+                                  <path d="M17 6.8a7.4 7.4 0 0 1 0 10.4" />
+                                </>
+                              ) : (
+                                <>
+                                  <line x1="15" y1="9.5" x2="20" y2="14.5" />
+                                  <line x1="20" y1="9.5" x2="15" y2="14.5" />
+                                </>
+                              )}
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg bg-black" style={frame} />
+                      )}
+                      <p className="text-sm text-center" style={{ color: '#8A8078' }}>
+                        {src ? sz.label : `${sz.label} — ${t('artwork not delivered yet')}`}
+                      </p>
+                    </>
+                  );
+                })()}
                 <OutputPicker
                   outputKind={outputKind}
                   channelKey={channelKey}
@@ -593,10 +697,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           </div>
           {!asset ? (
             <div className="flex-1" />
-          ) : asset.blank ? (
+          ) : asset.blank || asset.video ? (
             <div className="h-full flex items-center justify-center px-12">
               <p className="text-sm text-gray-400 text-center">
-                {t('Nothing to edit until the artwork lands.')}
+                {t(asset.video
+                  ? 'Shorts go out as delivered — nothing to edit.'
+                  : 'Nothing to edit until the artwork lands.')}
               </p>
             </div>
           ) : showBanners ? (
@@ -817,9 +923,12 @@ function AssetCell({
  * Widths flex so it survives narrow windows: the connectors give way first,
  * and below ~lg the labels drop to keep the numbers.
  */
-function StepIndicator({ active }: { active: number }) {
+function StepIndicator({ active, kind = 'channel' }: { active: number; kind?: 'channel' | 'size' }) {
   const t = useT();
-  const STEPS = ['Select Visual Type', 'Select Channel', 'Edit'];
+  // Shorts are finished videos: step 2 picks a size and there is no Edit step.
+  const STEPS = kind === 'size'
+    ? ['Select Visual Type', 'Select Size']
+    : ['Select Visual Type', 'Select Channel', 'Edit'];
   return (
     <div className="flex items-center min-w-0">
       {STEPS.map((label, i) => {
