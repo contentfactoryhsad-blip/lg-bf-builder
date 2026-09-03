@@ -41,12 +41,12 @@ UPLOAD 그룹(2026-09-01) = 운영자가 3000×3000 정방형을 올리는 자�
 배치는 전 채널에서 **Key Visual _Main 뼈대 그대로**(`artFor`/`gradFor`의 kv-main 폴백 + `PAID_ASSETS` 등록).
 비정방형은 업로드 시 alert로 거부(±1%). 세션 한정 — 드래프트 저장 없음.
 Dynamic의 유료매체는 표준 41종이 아니라 **자기 보드의 영상 사이즈 세트**를 쓴다(`DYNAMIC_PAID_SLOTS`,
-보드 `6255:145194`): Criteo 16:9/1:1/9:16 · DV360 16:9/9:16 · Pmax 16:9/9:16/1:1 · Meta 1:1/9:16/**4:5(1080×1350)**.
+보드 `6255:145194`): Criteo 16:9/1:1/9:16 · DV360 16:9/9:16 · Pmax 16:9/9:16/1:1 · Meta **3:4(1080×1440)**/9:16/**4:5(1080×1350)** (Meta 1:1은 2026-09-04에 3:4로 교체).
 프레임은 bare가 아니다 — 사이즈 컴포넌트 안에 **로고/헤드라인/서브카피/CTA/디스클레이머가 들어있다**
 (비율당 레이아웃 한 벌, 채널 공통). 캔버스는 `PaidSlotPreview`가 **모션을 video로 재생**하며 카피를 얹고
 (`motionSrc` prop), **전부 mp4로 익스포트**된다(짝수 픽셀 ✓) — 카피 레이어는 `hideArt` 모드의
 PaidSlotPreview를 투명 배경으로 래스터해 컷 위에 합성(`renderPaidOverlaySlot` 호스트).
-배치 4벌: 16:9=-22,-825,2730 · 1:1=-360,-157,1810 · 9:16=-1006,-400,3130 · 4:5=-614,-254,2318.
+배치 5벌: 16:9=-22,-825,2730 · 1:1=-360,-157,1810 · 3:4=-694,-295,2478 · 9:16=-1006,-400,3130 · 4:5=-614,-254,2318.
 Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlotsFor(assetId)`가 `hero` 플래그로 거르고,
 `LG.com — Dynamic` 보드(`6210:73073`, 구 Teasing Content)도 그 4칸을 숨겨놨다. 캔버스·ZIP 둘 다 이 필터를 탄다.)
 - `components/contenttemplate/` — `ContentTemplateBuilder.tsx`(옆 빌더와 같은 4분할 셸)가
@@ -106,6 +106,16 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
 
 - 선택 상태는 **그룹당 하나**(`Selection = Partial<Record<AssetGroupKey, string>>`)고, 같은 걸 다시 누르면 해제된다.
   미리보기는 **마지막으로 누른 것**(`focused`)을 따라가며, 없으면 key visual로 폴백한다.
+
+- **AD Benefit 보드/에디터** (2026-09-04, 뼈대 단계). Figma에 `External Banner Black Friday_AD Benefit` 보드가 따로 생겼고
+  (Deal Type & AD에서 Benefit 분리), 보드 자체 Component 섹션의 `Black Friday Image / AD_Benefit`(6338:174533, 2000²)에
+  Benefit 아트 + **Box1~6**(145×138, 3×2, `Asset` 그룹)이 있다 — 보드 전 사이즈의 아트 인스턴스가 이 컴포넌트를 물고 있어
+  박스가 사이즈마다 자동 스케일된다. 빌더는 `BenefitSlotsEditor`(ad-benefit 전용, Edit 패널 하단): 박스당 PD Slot과 같은
+  제품 파이프라인(URL→갤러리→누끼→브러시→크롭, `ProductRow` 재사용) + 어셋 콤보박스(썸네일+이름, IconCombobox 스타일).
+  어셋 7종은 `content template builder source/object/` → `public/content-template/object/` 수동 복사, `BENEFIT_ASSETS` 등록.
+  캔버스/다운로드 반영 완료(2026-09-04): `AD_BENEFIT_PLACEMENT`(41칸, 보드 실측; 왼쪽으로 밀린 그라데이션 랙트는 프레임
+  좌표로 환산) + `AD_BENEFIT_BOXES`(2000² 기준 6칸)로 박스가 아트 변환을 타고 사이즈별 자동 배치된다. 아트는
+  `ad-creative-benefit-no-object`(빈 큐브), 팔레트 썸네일만 `ad-creative-benefit`(`ContentAsset.thumb` 오버라이드).
 
 - 🔴 **카피 스택은 Figma 오토레이아웃을 실측으로 흉내 낸다** (2026-09-02). Figma는 headline → (subcopy) → CTA를
   세로 오토레이아웃으로 묶어 두므로, 카피가 디자인 박스보다 짧아지면 아래 레이어가 그만큼 당겨 올라와야 한다.

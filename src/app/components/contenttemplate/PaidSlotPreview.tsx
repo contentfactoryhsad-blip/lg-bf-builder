@@ -12,7 +12,8 @@ import { artUrl, type ContentAsset } from './contentTemplateAssets';
 import { type SlotCopy } from './SlotCopyEditor';
 import { CTA_COLOR, SHORT_DISCLAIMER, SLOT_BG, disclaimerMaxChars, longDisclaimer } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
-import { PD_PLATE_FILL, paidPlacementFor } from './paidBoards';
+import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor } from './paidBoards';
+import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import { type ProductSlots } from './ProductSlotsEditor';
 
 /** Figma reports tracking as a % of font size; CSS wants an em value. */
@@ -54,7 +55,8 @@ function Line({ spec, text, slotH, dy = 0, pRef }: {
         lineHeight: spec.lineHeightPct === null ? 'normal' : `${spec.lineHeightPct}%`,
         letterSpacing: tracking(spec.trackingPct),
         textAlign: spec.align,
-        color: '#fff',
+        // the disclaimer reads at 50% strength across the builder (2026-09-03)
+        color: spec.role === 'disclaimer' ? 'rgba(255,255,255,0.5)' : '#fff',
         whiteSpace: 'pre-line',
       }}
     >
@@ -73,6 +75,7 @@ export function PaidSlotPreview({
   hideArt = false,
   motionSrc = null,
   showDisclaimer = true,
+  benefitSlots,
 }: {
   slot: PaidSlot;
   /** Which artwork this tile stands for. */
@@ -92,6 +95,8 @@ export function PaidSlotPreview({
   motionSrc?: string | null;
   /** Panel toggle — off drops the disclaimer from every size. */
   showDisclaimer?: boolean;
+  /** The Benefit cube's six boxes — product cut-outs / picked assets. */
+  benefitSlots?: BenefitSlots;
 }) {
   /**
    * Key visuals with a board of their own bring their own artwork framing, their
@@ -116,16 +121,24 @@ export function PaidSlotPreview({
   const flowRef = React.useRef<Record<string, HTMLParagraphElement | null>>({});
   const [flowH, setFlowH] = React.useState<Record<string, number>>({});
   React.useLayoutEffect(() => {
-    const next: Record<string, number> = {};
-    for (const [role, el] of Object.entries(flowRef.current)) {
-      if (el) next[role] = el.offsetHeight;
-    }
-    setFlowH(prev =>
-      Object.keys(next).length === Object.keys(prev).length &&
-      Object.entries(next).every(([k, v]) => prev[k] === v)
-        ? prev
-        : next,
-    );
+    const measure = () => {
+      const next: Record<string, number> = {};
+      for (const [role, el] of Object.entries(flowRef.current)) {
+        if (el) next[role] = el.offsetHeight;
+      }
+      setFlowH(prev =>
+        Object.keys(next).length === Object.keys(prev).length &&
+        Object.entries(next).every(([k, v]) => prev[k] === v)
+          ? prev
+          : next,
+      );
+    };
+    measure();
+    // fonts land after mount and reflow the text without a React render — the
+    // observer catches that (and any other silent resize) and re-measures
+    const ro = new ResizeObserver(measure);
+    for (const el of Object.values(flowRef.current)) if (el) ro.observe(el);
+    return () => ro.disconnect();
   });
   const flowSpecs = slot.text.filter(s => s.role === 'headline' || s.role === 'subcopy');
   const pullUp = (y: number) =>
@@ -203,6 +216,35 @@ export function PaidSlotPreview({
               draggable={false}
             />
             )}
+            {/* Benefit boxes ride the art's transform (component 2000-space) */}
+            {benefitSlots && benefitSlots.map((bs, i) => {
+              const isAsset = !bs.image && !!bs.assetId;
+              const src = bs.image ?? BENEFIT_ASSETS.find(a2 => a2.id === bs.assetId)?.src ?? null;
+              if (!src) return null;
+              const S = art.size / AD_BENEFIT_BOXES.base;
+              const [bx, by] = AD_BENEFIT_BOXES.xy[i];
+              // picked assets sit at 70% of the box so they breathe like the
+              // reference cube faces; product cut-outs keep the full box
+              const k = isAsset ? 0.7 : 1;
+              const w = AD_BENEFIT_BOXES.w * S, h = AD_BENEFIT_BOXES.h * S;
+              return (
+                <img
+                  key={i}
+                  src={src}
+                  alt=""
+                  style={{
+                    position: 'absolute',
+                    left: art.x + bx * S + (w - w * k) / 2,
+                    top: art.y + by * S + (h - h * k) / 2,
+                    width: w * k,
+                    height: h * k,
+                    objectFit: 'contain',
+                    maxWidth: 'none',
+                  }}
+                  draggable={false}
+                />
+              );
+            })}
           </div>
 
           {slot.logo && (

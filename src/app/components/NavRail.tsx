@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Image, Search, Megaphone, History, LayoutTemplate, Tag } from 'lucide-react';
+import { BookOpen, Home, Image, Search, Megaphone, History, LayoutTemplate, Tag } from 'lucide-react';
 import { useT } from '../i18n/LanguageContext';
 import { isDraftStoreAvailable } from '../utils/draftStore';
 import type { DraftRecord } from '../utils/draftStore';
@@ -9,9 +9,12 @@ import { SavedWorkModal } from './SavedWorkModal';
 // stay in the union so those screens keep compiling — they are not on the rail yet.
 export type NavRailKey = 'home' | 'content-template' | 'shop-in-shop' | 'deal-page' | 'thumbnail' | 'id-banner' | 'off-site';
 
-// The guide site is still being written, so the rail does not link to it yet.
-// Restore the row below Saved Work once it is complete:
-//   const GUIDE_URL = 'https://retail-obs-guide.lge-d2c.com/';
+/**
+ * TUTORIAL destination — still being written (2026-09-04). The rail
+ * row and the Home-screen pill both render disabled while this is empty; fill
+ * it in when the guide goes up.
+ */
+export const TUTORIAL_URL = '';
 
 interface Props {
   /** Currently active builder — highlighted in the rail. */
@@ -61,6 +64,21 @@ export function NavRail({ active, onNavigate, onOpenDraft }: Props) {
             </button>
           );
         })}
+
+        {/* TUTORIAL — sits with the builders so it reads as a destination, not
+            a setting. Opens in a new tab once TUTORIAL_URL is filled in. */}
+        <a
+          href={TUTORIAL_URL || undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={TUTORIAL_URL ? undefined : t('Link coming soon')}
+          className={rowClass(false)}
+        >
+          <BookOpen size={18} className="shrink-0" strokeWidth={1.75} />
+          <span className="text-sm font-medium opacity-0 group-hover/rail:opacity-100 transition-opacity duration-150">
+            {t('Tutorial')}
+          </span>
+        </a>
 
         {/* Footer: Saved Work — pinned to the bottom */}
         <div className="mt-auto pt-2 border-t border-gray-100">

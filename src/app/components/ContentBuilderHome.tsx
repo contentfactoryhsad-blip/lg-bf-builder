@@ -1,6 +1,7 @@
 import React from 'react';
 import { useT } from '../i18n/LanguageContext';
-import { NavRail, type NavRailKey } from './NavRail';
+import { BookOpen } from 'lucide-react';
+import { NavRail, TUTORIAL_URL, type NavRailKey } from './NavRail';
 import { AppHeader } from './AppHeader';
 import type { DraftRecord } from '../utils/draftStore';
 
@@ -133,6 +134,20 @@ export function ContentBuilderHome({ onSelectContentTemplate, onSelectPromotionP
           {/* The old Shop in Shop flow ("ex") is no longer surfaced here - the code
               stays in the repo purely as reference (App.tsx 'select' step). */}
         </div>
+
+        {/* TUTORIAL — pill under the cards, styled to match the sales banner
+            builder's README & TUTORIAL link. Goes live when TUTORIAL_URL
+            (NavRail.tsx) is filled in. */}
+        <a
+          href={TUTORIAL_URL || undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={TUTORIAL_URL ? undefined : t('Link coming soon')}
+          className="flex items-center gap-1.5 mt-8 h-9 px-4 rounded-full border border-gray-300 bg-transparent text-[13px] font-medium text-gray-700 transition-colors hover:bg-black/[0.04] hover:border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FD312E]/40 shrink-0"
+        >
+          <BookOpen size={14} strokeWidth={2} />
+          {t('TUTORIAL')}
+        </a>
 
         </div>
       </main>

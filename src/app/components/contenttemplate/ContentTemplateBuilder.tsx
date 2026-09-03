@@ -84,13 +84,13 @@ import { LgcomSlotPreview } from './LgcomSlotPreview';
 import { PaidSlotPreview } from './PaidSlotPreview';
 import { paidSlotsFor, type PaidSlot } from './paidSlots';
 import { artFor, bareOnExport, lgcomSlotsFor, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
-import { IconRowInline } from './icons/IconRowInline';
 import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
 import { renderMotionCutLive, stripAudioTrack } from './exportMotion';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
+import { BenefitSlotsEditor, emptyBenefitSlots, type BenefitSlots } from './BenefitSlotsEditor';
 import { CUSTOM_ASSET_ID, hasCustomArt, setCustomArt,
   ASSET_ROWS,
   SHORTS_SIZES,
@@ -154,6 +154,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const iconLabels = (iconKind === 'line' ? lineIconLabels : solidIconLabels).slice(0, iconCount);
   /** Products keyed by asset — switching key visual keeps each one's fills. */
   const [products, setProducts] = useState<Record<string, ProductSlots>>({});
+  /** The AD Benefit boxes — see BenefitSlotsEditor. Skeleton for now. */
+  const [benefitSlots, setBenefitSlots] = useState<BenefitSlots>(emptyBenefitSlots());
   /** Plate fill on the paid boards; starts on the Figma value. */
   const [plateColor, setPlateColor] = useState(PD_PLATE_FILL);
   /**
@@ -319,13 +321,15 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               const ovBlob = host ? await captureBox(host, slot.w, slot.h) : null;
               setRenderPaidOverlaySlot(null);
               if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: slot.w, h: slot.h }; }
-            } else if (iconOn && lg) {
+            } else if (lg && (iconOn || showDisclaimer)) {
+              // full-frame overlay: icon row + disclaimer, transparent ground —
+              // the disclaimer ships burned into the hero video (2026-09-03)
               setRenderIconRowSlot(lg);
               await new Promise(r => setTimeout(r, 220));
               const host = exportHost.current;
-              const iconBlob = host ? await captureBox(host, lg!.iconRow!.w, lg!.iconRow!.h) : null;
+              const ovBlob = host ? await captureBox(host, lg.w, lg.h) : null;
               setRenderIconRowSlot(null);
-              if (iconBlob) { overlayUrl = URL.createObjectURL(iconBlob); overlayBox = { ...lg.iconRow! }; }
+              if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: lg.w, h: lg.h }; }
             }
             try {
               const blob = await renderMotionCutLive(src, {
@@ -390,6 +394,19 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 {t('Save for Later')}
               </button>
             )}
+            {/* BF working-file package on Frame.io — disabled until the link lands */}
+            <a
+              href={WORKING_FILES_URL || undefined}
+              target="_blank"
+              rel="noreferrer"
+              title={WORKING_FILES_URL ? undefined : t('Link coming soon')}
+              aria-disabled={!WORKING_FILES_URL}
+              className={`flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border transition-colors border-gray-300 text-gray-600 hover:border-gray-400 ${
+                WORKING_FILES_URL ? '' : 'opacity-40 pointer-events-none'
+              }`}
+            >
+              {t('BF Working Files')}
+            </a>
             <button
               type="button"
               onClick={() => void handleDownload()}
@@ -661,6 +678,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   asset={asset}
                   copy={copy}
                   products={assetProducts}
+                  benefitSlots={asset.id === 'ad-benefit' ? benefitSlots : undefined}
                   plateColor={plateColor}
                   showIconRow={showIconRow && iconRowAvailable}
                   iconStyle={iconStyle}
@@ -698,13 +716,47 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           {!asset ? (
             <div className="flex-1" />
           ) : asset.blank || asset.video ? (
-            <div className="h-full flex items-center justify-center px-12">
-              <p className="text-sm text-gray-400 text-center">
-                {t(asset.video
-                  ? 'Shorts go out as delivered — nothing to edit.'
-                  : 'Nothing to edit until the artwork lands.')}
-              </p>
-            </div>
+            asset.video === 'a2' ? (
+              /* LGNESS PD carries product slots inside the video — the swap
+                 happens outside the builder, so the panel explains how. */
+              <div className="px-5 py-6 flex flex-col gap-4">
+                <p className="text-sm font-medium text-gray-800">
+                  {t('Want different products in the product boxes?')}
+                </p>
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">{t('Option 1')}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    {t('Request the product swap from the Creative Hub.')}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">{t('Option 2')}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                    {t('Download the After Effects working file and replace them yourself.')}
+                  </p>
+                  <a
+                    href={SHORTS_AE_FILE_URL || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={SHORTS_AE_FILE_URL ? undefined : t('Link coming soon')}
+                    aria-disabled={!SHORTS_AE_FILE_URL}
+                    className={`inline-flex items-center gap-2 text-xs font-medium px-4 py-2 rounded-full border transition-colors border-[#FD312E] text-[#FD312E] hover:bg-[#FD312E] hover:text-white ${
+                      SHORTS_AE_FILE_URL ? '' : 'opacity-40 pointer-events-none'
+                    }`}
+                  >
+                    {t('Download AE file (Frame.io)')}
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center px-12">
+                <p className="text-sm text-gray-400 text-center">
+                  {t(asset.video
+                    ? 'Shorts go out as delivered — nothing to edit.'
+                    : 'Nothing to edit until the artwork lands.')}
+                </p>
+              </div>
+            )
           ) : showBanners ? (
             <>
               <SlotCopyEditor
@@ -747,6 +799,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   color={plateColor}
                   onColorChange={plateColorEditable ? setPlateColor : undefined}
                 />
+              )}
+              {asset.id === 'ad-benefit' && (
+                <BenefitSlotsEditor slots={benefitSlots} onChange={setBenefitSlots} />
               )}
             </>
           ) : (
@@ -792,22 +847,22 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           style={{ position: 'fixed', left: -99999, top: 0, pointerEvents: 'none' }}
           aria-hidden
         >
-          <div
-            data-export-box
-            style={{
-              position: 'relative',
-              width: renderIconRowSlot.iconRow!.w,
-              height: renderIconRowSlot.iconRow!.h,
-              background: 'transparent',
-            }}
-          >
-            <IconRowInline
-              box={{ ...renderIconRowSlot.iconRow!, x: 0, y: 0 }}
-              style={iconStyle}
-              iconIds={iconIds}
-              labels={iconLabels}
-            />
-          </div>
+          <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important}'}</style>
+          {/* full-frame hero overlay for the mp4: icon row + disclaimer on a
+              transparent ground, exactly as the canvas draws them */}
+          <LgcomSlotPreview
+            slot={renderIconRowSlot}
+            asset={asset ?? undefined}
+            scale={1}
+            copy={copy}
+            showIconRow={showIconRow && iconRowAvailable}
+            iconStyle={iconStyle}
+            iconIds={iconIds}
+            iconLabels={iconLabels}
+            showDisclaimer={showDisclaimer}
+            bare
+            hideArt
+          />
         </div>
       )}
       {!renderPaidOverlaySlot && !renderIconRowSlot && renderSlot && asset && (
@@ -825,6 +880,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               scale={1}
               copy={copy}
               products={assetProducts}
+              benefitSlots={asset.id === 'ad-benefit' ? benefitSlots : undefined}
               plateColor={plateColor}
               showIconRow={showIconRow && iconRowAvailable}
               iconStyle={iconStyle}
@@ -841,6 +897,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               scale={1}
               copy={copy}
               products={assetProducts}
+              benefitSlots={asset.id === 'ad-benefit' ? benefitSlots : undefined}
               plateColor={plateColor}
               showDisclaimer={showDisclaimer}
               showIndicator={showIndicator}
@@ -1005,6 +1062,11 @@ function OutputPicker({
               </button>
             ))}
       </div>
+      {outputKind === 'channel' && (
+        <p className="text-[11px] text-center leading-relaxed max-w-lg" style={{ color: '#8A8078' }}>
+          {t('For LG.com, files are downloaded to match the image upload guide — hero banner sizes are exported without copy, CTA, and indicators (icons and disclaimer included).')}
+        </p>
+      )}
     </div>
   );
 }
@@ -1080,6 +1142,15 @@ function PreviewBox({ asset }: { asset: ContentAsset | undefined }) {
 /** Parked header button — hidden for now, likely to return with the draft flow. */
 const SHOW_SAVE_FOR_LATER = false;
 
+/**
+ * Frame.io links — both TBD (2026-09-04). Fill them in when the share links
+ * exist; the buttons render disabled while a link is empty.
+ */
+/** The whole Black Friday working-file package, linked from the header. */
+const WORKING_FILES_URL = '';
+/** The LGNESS PD After Effects file, linked from its Edit panel note. */
+const SHORTS_AE_FILE_URL = '';
+
 const PAID_ASSETS = new Set([
   // Teasing is the Main artwork with a motion cut, and the uploaded square is
   // placed with the Main skeleton outright — both ship the same paid set
@@ -1096,6 +1167,7 @@ function ChannelSlots({
   asset,
   copy,
   products,
+  benefitSlots,
   plateColor,
   showIconRow,
   iconStyle,
@@ -1109,6 +1181,7 @@ function ChannelSlots({
   asset: ContentAsset | undefined;
   copy: SlotCopy;
   products?: ProductSlots;
+  benefitSlots?: BenefitSlots;
   plateColor: string;
   showIconRow: boolean;
   iconStyle: IconRowStyle;
@@ -1153,6 +1226,7 @@ function ChannelSlots({
               scale={paidScale}
               copy={copy}
               products={products}
+              benefitSlots={benefitSlots}
               plateColor={plateColor}
               motionSrc={paidMotion}
               showDisclaimer={showDisclaimer}
@@ -1178,6 +1252,7 @@ function ChannelSlots({
               scale={slotScale}
               copy={copy}
               products={products}
+              benefitSlots={benefitSlots}
               plateColor={plateColor}
               showIconRow={showIconRow}
               iconStyle={iconStyle}

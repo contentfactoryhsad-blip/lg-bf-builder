@@ -19,6 +19,8 @@ import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
 import { IconRowInline } from './icons/IconRowInline';
+import { AD_BENEFIT_BOXES } from './paidBoards';
+import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import {
   SHORT_DISCLAIMER,
   disclaimerMaxChars,
@@ -55,7 +57,8 @@ function SlotLine({ spec, text, slotH, dy = 0, pRef }: {
     lineHeight: `${spec.lineHeightPct}%`,
     letterSpacing: tracking(spec.trackingPct),
     textAlign: spec.align,
-    color: '#fff',
+    // the disclaimer reads at 50% strength across the builder (2026-09-03)
+    color: spec.role === 'disclaimer' ? 'rgba(255,255,255,0.5)' : '#fff',
     whiteSpace: 'pre-line' as const,
   };
 
@@ -107,6 +110,8 @@ export function LgcomSlotPreview({
   showDisclaimer = true,
   showIndicator = true,
   bare = false,
+  hideArt = false,
+  benefitSlots,
 }: {
   slot: LgcomSlot;
   asset: ContentAsset | undefined;
@@ -138,12 +143,20 @@ export function LgcomSlotPreview({
   /** Panel toggle — off drops the carousel indicator from the two hero sizes. */
   showIndicator?: boolean;
   /**
-   * Artwork and benefit icons only — no eyebrow, headline, subcopy, CTA,
-   * disclaimer or carousel indicator. The two ST0001 hero placements ship this
-   * way: the copy is set live on LG.com, so baking it into the delivered image
-   * would double it up. Every other size ships exactly as it previews.
+   * Artwork, benefit icons and the disclaimer only — no eyebrow, headline,
+   * subcopy, CTA or carousel indicator. The two ST0001 hero placements ship
+   * this way: the copy is set live on LG.com, so baking it into the delivered
+   * image would double it up; the disclaimer is the exception and ships burned
+   * in (2026-09-03). Every other size ships exactly as it previews.
    */
   bare?: boolean;
+  /**
+   * Overlay layers only — transparent ground, no artwork/scrim/plates. The
+   * hero mp4 export rasterises this (icon row + disclaimer) over the video.
+   */
+  hideArt?: boolean;
+  /** The Benefit cube's six boxes — product cut-outs / picked assets. */
+  benefitSlots?: BenefitSlots;
 }) {
   const t = useT();
   // placement is per asset per size — the 15 key visuals are framed differently
@@ -165,16 +178,24 @@ export function LgcomSlotPreview({
   const flowRef = React.useRef<Record<string, HTMLParagraphElement | null>>({});
   const [flowH, setFlowH] = React.useState<Record<string, number>>({});
   React.useLayoutEffect(() => {
-    const next: Record<string, number> = {};
-    for (const [role, el] of Object.entries(flowRef.current)) {
-      if (el) next[role] = el.offsetHeight;
-    }
-    setFlowH(prev =>
-      Object.keys(next).length === Object.keys(prev).length &&
-      Object.entries(next).every(([k, v]) => prev[k] === v)
-        ? prev
-        : next,
-    );
+    const measure = () => {
+      const next: Record<string, number> = {};
+      for (const [role, el] of Object.entries(flowRef.current)) {
+        if (el) next[role] = el.offsetHeight;
+      }
+      setFlowH(prev =>
+        Object.keys(next).length === Object.keys(prev).length &&
+        Object.entries(next).every(([k, v]) => prev[k] === v)
+          ? prev
+          : next,
+      );
+    };
+    measure();
+    // fonts land after mount and reflow the text without a React render — the
+    // observer catches that (and any other silent resize) and re-measures
+    const ro = new ResizeObserver(measure);
+    for (const el of Object.values(flowRef.current)) if (el) ro.observe(el);
+    return () => ro.disconnect();
   });
   const flowSpecs = slot.text.filter(
     s => (s.role === 'headline' || s.role === 'subcopy') && s.h != null && s.vAlign !== 'bottom',
@@ -196,7 +217,7 @@ export function LgcomSlotPreview({
       <div
         data-export-box
         className="relative overflow-hidden rounded-lg"
-        style={{ width: slot.w * scale, height: slot.h * scale, background: SLOT_BG }}
+        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : SLOT_BG }}
       >
         <div
           style={{
@@ -209,7 +230,7 @@ export function LgcomSlotPreview({
             transformOrigin: 'top left',
           }}
         >
-          {asset && art && (
+          {!hideArt && asset && art && (
             motion ? (
               <video
                 key={motion}
@@ -249,7 +270,36 @@ export function LgcomSlotPreview({
             )
           )}
 
-          {art && plates.map((box, i) => {
+          {/* Benefit boxes ride the art's transform (component 2000-space);
+              assets sit at 70% of the box, product cut-outs fill it */}
+          {!hideArt && art && benefitSlots && benefitSlots.map((bs, i) => {
+            const isAsset = !bs.image && !!bs.assetId;
+            const src = bs.image ?? BENEFIT_ASSETS.find(a2 => a2.id === bs.assetId)?.src ?? null;
+            if (!src) return null;
+            const S = art.size / AD_BENEFIT_BOXES.base;
+            const [bx, by] = AD_BENEFIT_BOXES.xy[i];
+            const k = isAsset ? 0.7 : 1;
+            const w = AD_BENEFIT_BOXES.w * S, h = AD_BENEFIT_BOXES.h * S;
+            return (
+              <img
+                key={`benefit-${i}`}
+                src={src}
+                alt=""
+                style={{
+                  position: 'absolute',
+                  left: art.x + bx * S + (w - w * k) / 2,
+                  top: art.y + by * S + (h - h * k) / 2,
+                  width: w * k,
+                  height: h * k,
+                  objectFit: 'contain',
+                  maxWidth: 'none',
+                }}
+                draggable={false}
+              />
+            );
+          })}
+
+          {!hideArt && art && plates.map((box, i) => {
             const S = art.size;
             const product = products?.[i]?.image ?? null;
             return (
@@ -278,7 +328,7 @@ export function LgcomSlotPreview({
             );
           })}
 
-          {grad && (
+          {!hideArt && grad && (
             <div
               style={{
                 position: 'absolute',
@@ -295,7 +345,10 @@ export function LgcomSlotPreview({
             <IconRowInline box={slot.iconRow} style={iconStyle} iconIds={iconIds} labels={iconLabels} />
           )}
 
-          {!bare && slot.text.map(spec => {
+          {slot.text.map(spec => {
+            // bare drops the live-set copy but keeps the disclaimer — it ships
+            // burned into the hero images/video (2026-09-03)
+            if (bare && spec.role !== 'disclaimer') return null;
             if (spec.role === 'disclaimer' && !showDisclaimer) return null;
             // small sizes lock the disclaimer to the short version
             if (spec.role === 'disclaimer' && !lgcomDisclaimerEditable(slot)) {

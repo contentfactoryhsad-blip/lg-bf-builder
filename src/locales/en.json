@@ -888,5 +888,11 @@
   "Zoom in": "Zoom in",
   "Zoom out": "Zoom out",
   "{n} cutout-ready first": "{n} cutout-ready first",
-  "{succeeded} succeeded, {failed} failed": "{succeeded} succeeded, {failed} failed"
+  "{succeeded} succeeded, {failed} failed": "{succeeded} succeeded, {failed} failed",
+  "For LG.com, files are downloaded to match the image upload guide — hero banner sizes are exported without copy, CTA, and indicators (icons and disclaimer included).": "For LG.com, files are downloaded to match the image upload guide — hero banner sizes are exported without copy, CTA, and indicators (icons and disclaimer included).",
+  "Benefit Slots": "Benefit Slots",
+  "Fill the six boxes with product images or assets. Applies to every size.": "Fill the six boxes with product images or assets. Applies to every size.",
+  "BOX": "BOX",
+  "or asset": "or asset",
+  "Assets coming soon": "Assets coming soon"
 }

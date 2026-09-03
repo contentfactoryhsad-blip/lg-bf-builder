@@ -41,6 +41,11 @@ export interface ContentAsset {
    * entries share art while staying separately selectable.
    */
   src?: string;
+  /**
+   * Palette-thumbnail stem, when it differs from the artwork — Benefit shows
+   * the with-objects still in the palette but lays out the no-object frame.
+   */
+  thumb?: string;
   /** Derived stem of a motion file in `public/content-template/motion/`. */
   motion?: string;
   /**
@@ -101,13 +106,13 @@ export const ASSET_ROWS: AssetRow[] = [
   },
   {
     key: 'kv-pd-centric',
-    label: 'KEY VISUAL_PD Centric',
+    label: 'KEY VISUAL_Hero Product',
     captionFromIndex: 1,
     tiles: [{ id: 'kv-product-centric-1', w: 140 }, { id: 'kv-product-centric-2', w: 140 }],
   },
   {
     key: 'kv-pd-slot',
-    label: 'KEY VISUAL_PD Slot',
+    label: 'KEY VISUAL_Product Slot',
     captionFromIndex: 1,
     tiles: [
       { id: 'kv-product-slot', w: 140 },
@@ -137,7 +142,7 @@ export const ASSET_ROWS: AssetRow[] = [
   },
   {
     key: 'ad-creative',
-    label: 'AD CREATIVE',
+    label: 'You may also like..',
     tiles: [
       { id: 'ad-joy-ryder', w: 66 },
       { id: 'ad-benefit', w: 66 },
@@ -159,12 +164,12 @@ export const CONTENT_ASSETS: ContentAsset[] = [
   // KEY VISUAL — laid out by ASSET_GROUPS.rows, not as one grid
   { id: 'kv-main', label: 'Main', group: 'key-visual' },
   { id: 'kv-main-character', label: 'Joy & Ryder', group: 'key-visual' },
-  { id: 'kv-product-centric-1', label: 'PD Centric', group: 'key-visual' },
+  { id: 'kv-product-centric-1', label: 'Hero Product', group: 'key-visual' },
   { id: 'kv-product-centric-2', label: 'Non AC', group: 'key-visual' },
-  { id: 'kv-product-slot', label: 'PD Slot Ver.1', group: 'key-visual' },
+  { id: 'kv-product-slot', label: 'Product Slot Ver.1', group: 'key-visual' },
   { id: 'kv-product-slot-character', label: 'Joy & Ryder', group: 'key-visual' },
-  { id: 'kv-product-slot2', label: 'PD Slot Ver.2', group: 'key-visual', hidden: true },
-  { id: 'kv-product-slot2-character', label: 'PD Slot Ver.2 (Character)', group: 'key-visual', hidden: true },
+  { id: 'kv-product-slot2', label: 'Product Slot Ver.2', group: 'key-visual', hidden: true },
+  { id: 'kv-product-slot2-character', label: 'Product Slot Ver.2 (Character)', group: 'key-visual', hidden: true },
 
   // DEAL TYPE — 4-up
   { id: 'deal-type-bundle', label: 'Bundle', group: 'deal-type' },
@@ -179,7 +184,7 @@ export const CONTENT_ASSETS: ContentAsset[] = [
   // AD CREATIVE — the `-2` source variants are held back until a concept calls
   // for them.
   { id: 'ad-joy-ryder', label: 'Joy & Ryder', group: 'ad-creative', src: 'ad-creative-a-1' },
-  { id: 'ad-benefit', label: 'Benefit', group: 'ad-creative', src: 'ad-creative-b-1' },
+  { id: 'ad-benefit', label: 'Benefit', group: 'ad-creative', src: 'ad-creative-benefit-no-object', thumb: 'ad-creative-benefit' },
 
   // SHORTS — vertical video cuts, one file per size (9:16 and 3:4). The videos
   // live in `content template builder source/shorts/` and are copied verbatim
@@ -211,7 +216,7 @@ export const artOf = (a: ContentAsset) => a.src ?? a.id;
 const V = `?v=${ASSET_STAMP}`;
 
 export const thumbUrl = (a: ContentAsset) =>
-  a.id === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/thumb/${artOf(a)}.webp${V}`;
+  a.id === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/thumb/${a.thumb ?? artOf(a)}.webp${V}`;
 export const previewUrl = (a: ContentAsset) =>
   a.id === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/preview/${artOf(a)}.webp${V}`;
 /** The delivered frame, uncropped — what the edit panel shows. */

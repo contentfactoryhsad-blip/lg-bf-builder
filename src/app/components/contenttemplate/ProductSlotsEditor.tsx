@@ -108,14 +108,17 @@ function PlateColorField({ color, onChange }: { color: string; onChange: (next: 
   );
 }
 
-function ProductRow({
+export function ProductRow({
   index,
   slot,
   onChange,
+  label,
 }: {
   index: number;
   slot: ProductSlot;
   onChange: (part: Partial<ProductSlot>) => void;
+  /** Row heading override — the Benefit editor labels rows BOX n, not PLATE n. */
+  label?: string;
 }) {
   const t = useT();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -192,7 +195,7 @@ function ProductRow({
   return (
     <div className="py-3 border-b border-gray-100 last:border-b-0">
       <p className="text-[11px] font-medium text-gray-400 tracking-wide mb-2">
-        {t('PLATE')} {index}
+        {label ?? `${t('PLATE')} ${index}`}
       </p>
       <div className="flex items-start gap-2.5">
         <div className="w-14 h-14 shrink-0 rounded-lg border border-gray-200 bg-gray-50 relative overflow-hidden group flex items-center justify-center text-gray-300">

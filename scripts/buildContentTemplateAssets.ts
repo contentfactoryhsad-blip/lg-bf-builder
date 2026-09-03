@@ -85,6 +85,9 @@ const FIGMA_CROP: Record<string, [number, number, number, number]> = {
   // and, being a 136×64 tile, its letterbox crop too.
   'ad-creative-a-1':            [0.3447, 0.3506, 0.3106, 0.3012],
   'ad-creative-b-1':            [0.3059, 0.3147, 0.3882, 0.3765],
+  // Benefit cube (2026-09-04): the detector cuts to the cube's true bounds
+  // (3.78×), which fills the tile edge to edge — reuse b-1's designed framing.
+  'ad-creative-benefit':        [0.3059, 0.3147, 0.3882, 0.3765],
 };
 
 /**

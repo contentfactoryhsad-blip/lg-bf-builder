@@ -1,20 +1,16 @@
 {
   "generatedFrom": "content template builder source",
-  "stamp": 1788405890229,
+  "stamp": 1788428654134,
   "assets": {
     "ad-creative-a-1": {
       "width": 3000,
       "height": 3000
     },
-    "ad-creative-a-2": {
+    "ad-creative-benefit": {
       "width": 3000,
       "height": 3000
     },
-    "ad-creative-b-1": {
-      "width": 3000,
-      "height": 3000
-    },
-    "ad-creative-b-2": {
+    "ad-creative-benefit-no-object": {
       "width": 3000,
       "height": 3000
     },
