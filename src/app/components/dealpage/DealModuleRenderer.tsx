@@ -265,7 +265,7 @@ function DealSiteHeaderTemplate({ data }: { data: DealSiteHeaderState }) {
 
 // ── 1. Hero KV (Figma 6080:51044 — 2280×720) ──────────────────────────────────
 
-function DealHeroTemplate({ data, artOnly }: { data: DealHeroState; artOnly?: boolean }) {
+function DealHeroTemplate({ data, artOnly, exportMode }: { data: DealHeroState; artOnly?: boolean; exportMode?: boolean }) {
   // Motion is not a registry asset — it plays kv-main's animated master over
   // Main's static art (which doubles as the frame a PNG export can capture).
   const motion = data.kvAsset === HERO_MOTION_ID;
@@ -326,7 +326,11 @@ function DealHeroTemplate({ data, artOnly }: { data: DealHeroState; artOnly?: bo
           />
         )}
 
-        {motion && (
+        {/* The live video is canvas-only — html-to-image chokes on <video>
+            (rejects with an Event when the frame isn't ready, which killed
+            deployed downloads), and Main's static art beneath IS the export
+            frame. The mp4 ships separately via renderMotionCutLive. */}
+        {motion && !exportMode && (
           <video
             src={HERO_MOTION_SRC}
             autoPlay
@@ -1661,6 +1665,7 @@ export function DealModuleRenderer({
   artOnly,
   artIndex,
   carousel,
+  exportMode,
 }: {
   editState: DealEditState;
   device?: DealDevice;
@@ -1671,11 +1676,14 @@ export function DealModuleRenderer({
   artIndex?: number;
   /** Controlled deal-cards carousel position (canvas side arrows live outside the frame). */
   carousel?: CarouselControl;
+  /** True for ANY export render (crops and the full-page mockup): drops the
+      canvas-only live <video>, which html-to-image cannot capture reliably. */
+  exportMode?: boolean;
 }) {
-  if (device === 'mo') return <DealModuleRendererMo editState={editState} artOnly={artOnly} artIndex={artIndex} carousel={carousel} />;
+  if (device === 'mo') return <DealModuleRendererMo editState={editState} artOnly={artOnly} artIndex={artIndex} carousel={carousel} exportMode={exportMode} />;
   switch (editState.type) {
     case 'deal-site-header':  return <DealSiteHeaderTemplate data={editState.data} />;
-    case 'deal-hero':         return <DealHeroTemplate data={editState.data} artOnly={artOnly} />;
+    case 'deal-hero':         return <DealHeroTemplate data={editState.data} artOnly={artOnly} exportMode={exportMode} />;
     case 'deal-cards':        return <DealCardsTemplate data={editState.data} artOnly={artOnly} artIndex={artIndex} carousel={carousel} />;
     case 'deal-tab-nav':      return <DealTabNavTemplate data={editState.data} />;
     case 'deal-promo-banner': return <DealPromoBannerTemplate data={editState.data} size="Large" artOnly={artOnly} />;

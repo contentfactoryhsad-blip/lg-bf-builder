@@ -230,7 +230,7 @@ function MoSiteHeaderTemplate({ data: _data }: { data: DealSiteHeaderState }) {
 /** The artwork square inside the mobile hero plate (698² at −169.5, −0.8). */
 export const MO_HERO_ART = { x: -169.5, y: -0.8, size: 698 };
 
-function MoHeroTemplate({ data, artOnly }: { data: DealHeroState; artOnly?: boolean }) {
+function MoHeroTemplate({ data, artOnly, exportMode }: { data: DealHeroState; artOnly?: boolean; exportMode?: boolean }) {
   const motion = data.kvAsset === HERO_MOTION_ID;
   const custom = data.kvAsset === 'custom-upload' ? data.customImage : null;
   const kv = data.kvAsset === 'custom-upload' ? undefined : getAsset(motion ? 'kv-main' : data.kvAsset);
@@ -279,7 +279,10 @@ function MoHeroTemplate({ data, artOnly }: { data: DealHeroState; artOnly?: bool
           }}
         />
       )}
-      {motion && (
+      {/* Live video is canvas-only — export renders capture the static art
+          (html-to-image cannot reliably capture <video>); the mp4 ships
+          separately. Same rule as the PC hero. */}
+      {motion && !exportMode && (
         <video
           src={HERO_MOTION_SRC}
           autoPlay
@@ -1185,6 +1188,7 @@ export function DealModuleRendererMo({
   artOnly,
   artIndex,
   carousel,
+  exportMode,
 }: {
   editState: DealEditState;
   /** ZIP export: only the composed image at its art crop — see DealModuleRenderer. */
@@ -1192,10 +1196,12 @@ export function DealModuleRendererMo({
   artIndex?: number;
   /** Controlled deal-cards carousel position — see DealModuleRenderer. */
   carousel?: { pos: number; onPos: (n: number) => void };
+  /** Any export render — drops the canvas-only live <video>. */
+  exportMode?: boolean;
 }) {
   switch (editState.type) {
     case 'deal-site-header':  return <MoSiteHeaderTemplate data={editState.data} />;
-    case 'deal-hero':         return <MoHeroTemplate data={editState.data} artOnly={artOnly} />;
+    case 'deal-hero':         return <MoHeroTemplate data={editState.data} artOnly={artOnly} exportMode={exportMode} />;
     case 'deal-cards':        return <MoDealCardsTemplate data={editState.data} artOnly={artOnly} artIndex={artIndex} carousel={carousel} />;
     case 'deal-tab-nav':      return <MoDealTabNavTemplate data={editState.data} />;
     case 'deal-promo-banner': return <MoBannerTemplate data={editState.data} size="Large" artOnly={artOnly} />;

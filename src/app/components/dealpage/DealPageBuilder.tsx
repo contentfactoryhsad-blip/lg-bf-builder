@@ -706,7 +706,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           for (let j = 0; j < cardCount; j++) {
             n += 1;
             await new Promise<void>(resolve => {
-              root.render(<DealModuleRenderer editState={item.editState} device={dev} artOnly artIndex={j} />);
+              root.render(<DealModuleRenderer editState={item.editState} device={dev} artOnly artIndex={j} exportMode />);
               setTimeout(resolve, 250);
             });
 
@@ -766,7 +766,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           root.render(
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: dealPageWidthFor(dev) }}>
               {canvasItems.map(item => (
-                <DealModuleRenderer key={item.id} editState={item.editState} device={dev} />
+                <DealModuleRenderer key={item.id} editState={item.editState} device={dev} exportMode />
               ))}
             </div>,
           );
