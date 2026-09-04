@@ -502,6 +502,8 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
   // Export progress — `{done, total}` while a ZIP is being produced (the
   // button reads "N / M" like the Content Template Builder's), null when idle.
   const [exportProgress, setExportProgress] = useState<{ done: number; total: number } | null>(null);
+  // AEM authoring notice — pops on every entry until Confirm or X.
+  const [showAemNotice, setShowAemNotice] = useState(true);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [pendingReset, setPendingReset] = useState(false);
 
@@ -880,6 +882,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           </aside>
 
           {/* Center — Canvas */}
+          <div className="flex-1 relative min-w-0 flex flex-col">
           <main
             ref={canvasContainerRef}
             className="flex-1 overflow-y-auto p-6"
@@ -924,6 +927,26 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
               </CanvasDropZone>
             </SortableContext>
           </main>
+
+          {/* AEM notice — greets every entry, centred over the canvas.
+              Confirm is the only way out. */}
+          {showAemNotice && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.25)' }}>
+              <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-[440px]" onClick={e => e.stopPropagation()}>
+                <p className="text-sm text-gray-700 text-center" style={{ lineHeight: '22px' }}>
+                  {t('Images created and downloaded from this builder are not automatically registered in AEM. Please complete the promotion page authoring in AEM.')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAemNotice(false)}
+                  className="mt-6 w-full h-11 rounded-lg bg-[#FD312E] text-white text-sm font-semibold hover:bg-[#e02b28] transition-colors"
+                >
+                  {t('Confirm')}
+                </button>
+              </div>
+            </div>
+          )}
+          </div>
 
           {/* Right — Edit Panel */}
           <aside className="w-80 shrink-0 bg-white border-l border-gray-200 overflow-y-auto flex flex-col">
