@@ -1034,14 +1034,17 @@ function DealPromoBannerTemplate({ data, size, artOnly }: { data: DealPromoBanne
                 }
               />
               {size === 'Standard' && (
+                // The upload is a square that only covers the banner's right
+                // side, so a FIXED scrim leaves its left edge as a visible
+                // seam against the black plate. This one is computed from the
+                // image's position instead: solid black up to the image's
+                // left edge (wherever nudge/scale put it), then a fade across
+                // the image — the seam can never show.
                 <div
                   style={{
                     position: 'absolute',
-                    left: DEAL_BANNER_SCRIM.x,
-                    top: DEAL_BANNER_SCRIM.y,
-                    width: DEAL_BANNER_SCRIM.w,
-                    height: DEAL_BANNER_SCRIM.h,
-                    background: DEAL_BANNER_SCRIM.gradient,
+                    inset: 0,
+                    background: `linear-gradient(90deg, #000 ${Math.max(0, 650 + nx - (1010 * (kvs - 1)) / 2)}px, rgba(0,0,0,0) ${650 + nx - (1010 * (kvs - 1)) / 2 + 1010 * kvs * 0.55}px)`,
                   }}
                 />
               )}

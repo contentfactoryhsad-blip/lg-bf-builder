@@ -667,18 +667,22 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
     const exportItems = canvasItems.filter(item =>
       (['deal-hero', 'deal-cards', 'deal-promo-banner', 'deal-banner'] as DealModuleType[]).includes(item.type),
     );
-    const save = await acquireSaveTarget(device === 'mo' ? 'LG-deal-page-modules-mobile.zip' : 'LG-deal-page-modules.zip', [
+    const save = await acquireSaveTarget('LG-deal-page-modules.zip', [
       { description: 'ZIP Archive', accept: { 'application/zip': ['.zip'] } },
     ]);
     if (!save) return; // cancelled
-    // Files the ZIP will hold — one per module, one per configured deal card,
-    // the mp4 the motion hero adds, plus ONE tall full-page mockup shot of
-    // the whole canvas. The button counts these down.
-    const totalFiles = exportItems.reduce((sum, item) => {
-      if (item.type === 'deal-cards') return sum + (item.editState.data as DealCardsState).cards.length;
-      if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) return sum + 2;
-      return sum + 1;
-    }, 0) + 1;
+    // ONE download carries BOTH devices — a PC/ and an MO/ folder in the ZIP,
+    // each holding that canvas's crops under the same filename schema. Per
+    // device: one file per module, one per configured deal card, the mp4 the
+    // motion hero adds, plus the tall full-page mockup shot.
+    const totalFiles =
+      (exportItems.reduce((sum, item) => {
+        if (item.type === 'deal-cards') return sum + (item.editState.data as DealCardsState).cards.length;
+        if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) return sum + 2;
+        return sum + 1;
+      }, 0) +
+        1) *
+      2;
     let doneFiles = 0;
     setExportProgress({ done: 0, total: totalFiles });
     const container = hiddenRenderRef.current;
@@ -690,77 +694,79 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
 
       const zip = new JSZip();
 
-      let n = 0;
-      for (const item of exportItems) {
-        const def = getDealModuleDef(item.type);
-        const cardCount = item.type === 'deal-cards' ? (item.editState.data as DealCardsState).cards.length : 1;
+      for (const dev of ['pc', 'mo'] as DealDevice[]) {
+        const folder = zip.folder(dev === 'mo' ? 'MO' : 'PC')!;
+        const deviceTag = dev;
+        let n = 0;
 
-        for (let j = 0; j < cardCount; j++) {
-          n += 1;
-          await new Promise<void>(resolve => {
-            root.render(<DealModuleRenderer editState={item.editState} device={device} artOnly artIndex={j} />);
-            setTimeout(resolve, 250);
-          });
+        for (const item of exportItems) {
+          const def = getDealModuleDef(item.type);
+          const cardCount = item.type === 'deal-cards' ? (item.editState.data as DealCardsState).cards.length : 1;
 
-          const el = container.firstElementChild as HTMLElement | null;
-          if (!el) continue;
+          for (let j = 0; j < cardCount; j++) {
+            n += 1;
+            await new Promise<void>(resolve => {
+              root.render(<DealModuleRenderer editState={item.editState} device={dev} artOnly artIndex={j} />);
+              setTimeout(resolve, 250);
+            });
 
-          const size = `${Math.round(el.offsetWidth)}x${Math.round(el.offsetHeight)}`;
-          // Schema (per request 2026-09-03): NN-component code-module name-WxH-device,
-          // e.g. "01-ST0001-hero kv-1920x720-pc.png"; cards number the module
-          // name ("02-ST0044-benefit summary-1-…").
-          const deviceTag = device === 'mo' ? 'mo' : 'pc';
-          const index = String(n).padStart(2, '0');
-          const cardTag = item.type === 'deal-cards' ? `-${j + 1}` : '';
-          const fileName = `${index}-${def.component ?? 'page'}-${def.label.toLowerCase()}${cardTag}-${size}-${deviceTag}.png`;
+            const el = container.firstElementChild as HTMLElement | null;
+            if (!el) continue;
 
-          await toPng(el);
-          await toPng(el);
-          const dataUrl = await toPng(el, { cacheBust: true });
-          zip.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
-          doneFiles += 1;
-          setExportProgress({ done: doneFiles, total: totalFiles });
+            const size = `${Math.round(el.offsetWidth)}x${Math.round(el.offsetHeight)}`;
+            // Schema (per request 2026-09-03): NN-component code-module name-WxH-device,
+            // e.g. "01-ST0001-hero kv-1920x720-pc.png"; cards number the module
+            // name ("02-ST0044-benefit summary-1-…").
+            const index = String(n).padStart(2, '0');
+            const cardTag = item.type === 'deal-cards' ? `-${j + 1}` : '';
+            const fileName = `${index}-${def.component ?? 'page'}-${def.label.toLowerCase()}${cardTag}-${size}-${deviceTag}.png`;
 
-          // Motion hero — the PNG above is the static frame; the video itself
-          // goes out too, cut live to the same crop and placement (nudge and
-          // scale included), the way the Content Template Builder ships its
-          // hero motion. A failed cut is reported, never silently dropped.
-          if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) {
-            const hd = item.editState.data as DealHeroState;
-            const base = device === 'mo' ? MO_HERO_ART : heroArtFor(hd.kvAsset);
-            const kvs = hd.kvScale || 1;
-            const artSize = base.size * kvs;
-            const dims = device === 'mo' ? { w: DEAL_MO_WIDTH, h: 480 } : { w: DEAL_HERO_WIDTH, h: 720 };
-            try {
-              const mp4 = await renderMotionCutLive(HERO_MOTION_SRC, {
-                ...dims,
-                art: {
-                  x: base.x + hd.kvNudgeX - (artSize - base.size) / 2,
-                  y: base.y + hd.kvNudgeY - (artSize - base.size) / 2,
-                  size: artSize,
-                },
-              });
-              zip.file(`${index}-${def.component ?? 'page'}-${def.label.toLowerCase()}-motion-${dims.w}x${dims.h}-${deviceTag}.mp4`, mp4);
-              doneFiles += 1;
-              setExportProgress({ done: doneFiles, total: totalFiles });
-            } catch (err) {
-              console.error('[DealPage] motion cut failed', err);
-              window.alert(t('The motion video could not be rendered and was left out of the ZIP.'));
+            await toPng(el);
+            await toPng(el);
+            const dataUrl = await toPng(el, { cacheBust: true });
+            folder.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
+            doneFiles += 1;
+            setExportProgress({ done: doneFiles, total: totalFiles });
+
+            // Motion hero — the PNG above is the static frame; the video itself
+            // goes out too, cut live to the same crop and placement (nudge and
+            // scale included), the way the Content Template Builder ships its
+            // hero motion. A failed cut is reported, never silently dropped.
+            if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) {
+              const hd = item.editState.data as DealHeroState;
+              const base = dev === 'mo' ? MO_HERO_ART : heroArtFor(hd.kvAsset);
+              const kvs = hd.kvScale || 1;
+              const artSize = base.size * kvs;
+              const dims = dev === 'mo' ? { w: DEAL_MO_WIDTH, h: 480 } : { w: DEAL_HERO_WIDTH, h: 720 };
+              try {
+                const mp4 = await renderMotionCutLive(HERO_MOTION_SRC, {
+                  ...dims,
+                  art: {
+                    x: base.x + hd.kvNudgeX - (artSize - base.size) / 2,
+                    y: base.y + hd.kvNudgeY - (artSize - base.size) / 2,
+                    size: artSize,
+                  },
+                });
+                folder.file(`${index}-${def.component ?? 'page'}-${def.label.toLowerCase()}-motion-${dims.w}x${dims.h}-${deviceTag}.mp4`, mp4);
+                doneFiles += 1;
+                setExportProgress({ done: doneFiles, total: totalFiles });
+              } catch (err) {
+                console.error('[DealPage] motion cut failed', err);
+                window.alert(t('The motion video could not be rendered and was left out of the ZIP.'));
+              }
             }
           }
         }
-      }
 
-      // Full-page mockup — the whole canvas as one tall shot, copy and all,
-      // exactly as the page reads on screen (carousels at their resting
-      // position). Numbered after the art crops.
-      {
+        // Full-page mockup — the whole canvas as one tall shot, copy and all,
+        // exactly as the page reads on screen (carousels at their resting
+        // position). Numbered after the art crops.
         n += 1;
         await new Promise<void>(resolve => {
           root.render(
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: dealPageWidthFor(device) }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: dealPageWidthFor(dev) }}>
               {canvasItems.map(item => (
-                <DealModuleRenderer key={item.id} editState={item.editState} device={device} />
+                <DealModuleRenderer key={item.id} editState={item.editState} device={dev} />
               ))}
             </div>,
           );
@@ -769,12 +775,11 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
         const el = container.firstElementChild as HTMLElement | null;
         if (el) {
           const size = `${Math.round(el.offsetWidth)}x${Math.round(el.offsetHeight)}`;
-          const deviceTag = device === 'mo' ? 'mo' : 'pc';
           const fileName = `${String(n).padStart(2, '0')}-full page mockup-${size}-${deviceTag}.png`;
           await toPng(el);
           await toPng(el);
           const dataUrl = await toPng(el, { cacheBust: true });
-          zip.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
+          folder.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
           doneFiles += 1;
           setExportProgress({ done: doneFiles, total: totalFiles });
         }
