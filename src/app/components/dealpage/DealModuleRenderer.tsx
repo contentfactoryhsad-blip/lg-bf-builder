@@ -1003,33 +1003,49 @@ function DealPromoBannerTemplate({ data, size, artOnly }: { data: DealPromoBanne
             </>
           ) : customArt ? (
             // Uploaded square — promo uses the shared square skeleton, the
-            // deal banner a right-of-centre square; nudge/scale apply.
-            <img
-              src={customArt}
-              alt=""
-              draggable={false}
-              style={
-                size === 'Large'
-                  ? {
-                      position: 'absolute',
-                      left: PROMO_ART.x + nx - (PROMO_ART.size * (kvs - 1)) / 2,
-                      top: PROMO_ART.y + ny - (PROMO_ART.size * (kvs - 1)) / 2,
-                      width: PROMO_ART.size * kvs,
-                      height: PROMO_ART.size * kvs,
-                      display: 'block',
-                      maxWidth: 'none',
-                    }
-                  : {
-                      position: 'absolute',
-                      left: 650 + nx - (1010 * (kvs - 1)) / 2,
-                      top: -330 + ny - (1010 * (kvs - 1)) / 2,
-                      width: 1010 * kvs,
-                      height: 1010 * kvs,
-                      display: 'block',
-                      maxWidth: 'none',
-                    }
-              }
-            />
+            // deal banner a right-of-centre square; nudge/scale apply. The
+            // deal banner keeps its left scrim over uploads too, so the copy
+            // reads on black exactly like the built-in arts.
+            <>
+              <img
+                src={customArt}
+                alt=""
+                draggable={false}
+                style={
+                  size === 'Large'
+                    ? {
+                        position: 'absolute',
+                        left: PROMO_ART.x + nx - (PROMO_ART.size * (kvs - 1)) / 2,
+                        top: PROMO_ART.y + ny - (PROMO_ART.size * (kvs - 1)) / 2,
+                        width: PROMO_ART.size * kvs,
+                        height: PROMO_ART.size * kvs,
+                        display: 'block',
+                        maxWidth: 'none',
+                      }
+                    : {
+                        position: 'absolute',
+                        left: 650 + nx - (1010 * (kvs - 1)) / 2,
+                        top: -330 + ny - (1010 * (kvs - 1)) / 2,
+                        width: 1010 * kvs,
+                        height: 1010 * kvs,
+                        display: 'block',
+                        maxWidth: 'none',
+                      }
+                }
+              />
+              {size === 'Standard' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: DEAL_BANNER_SCRIM.x,
+                    top: DEAL_BANNER_SCRIM.y,
+                    width: DEAL_BANNER_SCRIM.w,
+                    height: DEAL_BANNER_SCRIM.h,
+                    background: DEAL_BANNER_SCRIM.gradient,
+                  }}
+                />
+              )}
+            </>
           ) : (
             <BannerArt src={data.image} width={DEAL_BANNER_WIDTH} height={bannerH} />
           )}
