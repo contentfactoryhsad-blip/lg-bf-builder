@@ -635,10 +635,17 @@ app.use(express.static(distDir, {
   setHeaders: (res, filePath) => {
     if (filePath.includes('/fonts/') || filePath.includes('/assets/')) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (filePath.endsWith('index.html')) {
+      // '/' is served by the static middleware, not the fallback below — the
+      // shell must revalidate on every load or old bundles outlive a deploy
+      res.setHeader('Cache-Control', 'no-cache');
     }
   },
 }));
 app.get('*', (_req, res) => {
+  // Never let the shell get heuristically cached — a stale index.html keeps
+  // loading last deploy's hashed bundles even after Railway rebuilds.
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(distDir, 'index.html'));
 });
 
