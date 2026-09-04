@@ -19,7 +19,7 @@ import { scrapeProductImages, getProxiedImageUrl, type ScrapedImage } from '../.
 import { removeBackgroundAI } from '../../utils/salesBgRemoval';
 import { useT } from '../../i18n/LanguageContext';
 import { PD_PLATE_FILL } from './paidBoards';
-import { ColorPickerField } from '../offsite/ColorPickerField';
+import { SlotColorField } from './SlotColorField';
 
 /** What one plate holds. `image` is the finished cut-out. */
 export interface ProductSlot {
@@ -93,7 +93,7 @@ function PlateColorField({ color, onChange }: { color: string; onChange: (next: 
     <div className="mt-3 mb-1">
       <div className="flex items-baseline justify-between mb-1.5">
         <p className="text-xs font-medium text-gray-700">{t('Slot Color')}</p>
-        {color.toLowerCase() !== PD_PLATE_FILL.toLowerCase() && (
+        {color.slice(0, 7).toLowerCase() !== PD_PLATE_FILL.toLowerCase() && (
           <button
             type="button"
             onClick={() => onChange(PD_PLATE_FILL)}
@@ -103,7 +103,7 @@ function PlateColorField({ color, onChange }: { color: string; onChange: (next: 
           </button>
         )}
       </div>
-      <ColorPickerField value={color} onChange={onChange} />
+      <SlotColorField value={color} onChange={onChange} />
     </div>
   );
 }
