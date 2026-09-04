@@ -117,6 +117,14 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   좌표로 환산) + `AD_BENEFIT_BOXES`(2000² 기준 6칸)로 박스가 아트 변환을 타고 사이즈별 자동 배치된다. 아트는
   `ad-creative-benefit-no-object`(빈 큐브), 팔레트 썸네일만 `ad-creative-benefit`(`ContentAsset.thumb` 오버라이드).
 
+- **LG.com PD Slot 아트는 클린(플레이트 없는) 마스터를 쓴다** (2026-09-04). LG.com — Product Slot(+Character) 보드의
+  마스터 4개(`KV — PD Slot` Ver.1/Ver.2 × 일반/캐릭터)에서 이미지 필을 추출해
+  `full/kv-product-slot{,2}{,-character}-clean.webp`로 저장했고, lgcom ART의 전 사이즈가 `src`로 이를 가리킨다.
+  플레이트는 빌더가 SLOT_BOXES 위치에 직접 그리므로 **Slot Color 투명도가 LG.com에서도 실제로 비친다**
+  (예전 baked-plate 아트에선 불가). 보드 아트가 바뀌면 download_assets로 마스터에서 다시 추출.
+  🔴 마스터 이미지는 라이브러리 변형이 아니라 **보드 컴포넌트의 Image 인스턴스 오버라이드**에 실려 있다 —
+  라이브러리 변형(4375:*)을 받으면 옛 아트가 나온다.
+
 - 🔴 **카피 스택은 Figma 오토레이아웃을 실측으로 흉내 낸다** (2026-09-02). Figma는 headline → (subcopy) → CTA를
   세로 오토레이아웃으로 묶어 두므로, 카피가 디자인 박스보다 짧아지면 아래 레이어가 그만큼 당겨 올라와야 한다.
   `PaidSlotPreview`·`LgcomSlotPreview` 둘 다: headline/subcopy `<p>`의 `offsetHeight`를 `useLayoutEffect`로 실측하고,
