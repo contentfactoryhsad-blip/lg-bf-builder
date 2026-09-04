@@ -106,7 +106,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     hero: true,
     text: [
       { role: 'eyebrow',    x: 240, y: 72,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 240, y: 94,  w: 542, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
+      { role: 'headline',   x: 240, y: 94,  w: 680, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
       { role: 'subcopy',    x: 240, y: 228, w: 542, h: 18,  size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
       { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, maxLines: 2, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
@@ -135,7 +135,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     h: 400,
     text: [
       { role: 'eyebrow',    x: 80, y: 48,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 80, y: 70,  w: 542, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
+      { role: 'headline',   x: 80, y: 70,  w: 680, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
       { role: 'subcopy',    x: 80, y: 196, w: 542, h: 18,  size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
       { role: 'disclaimer', x: 80, y: 322, w: 820, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
