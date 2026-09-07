@@ -372,7 +372,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
       }
       if (entries.length) {
         await save(await buildZip(entries));
-        void logUsage({ builder: 'content-banner', item: asset?.id ?? '', detail: channelKey ?? '', files: entries.length });
+        void logUsage({ builder: 'content-banner', item: exportStem(asset?.id ?? ''), detail: channelKey ?? '', files: entries.length });
       }
       if (failed.length) {
         window.alert(`${t('Some files could not be rendered and were left out of the ZIP:')}\n${failed.join('\n')}`);
