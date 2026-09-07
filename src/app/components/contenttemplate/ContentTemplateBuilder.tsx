@@ -241,6 +241,20 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   }
 
   /**
+   * File-name stem for an asset — 'ad-teasing' is the DYNAMIC group's only
+   * member and keeps its legacy id for art lookups and old drafts, but the
+   * files it produces should carry the group's name (2026-09-07).
+   */
+  const exportStem = (id: string) =>
+    ({
+      'ad-teasing': 'dynamic',
+      // The Hero Product pair — renamed on screen (ex "PD Centric"), so the
+      // files follow; every other id already reads like its label.
+      'kv-product-centric-1': 'hero-product',
+      'kv-product-centric-2': 'hero-product-non-ac',
+    })[id] ?? id;
+
+  /**
    * One ZIP for the chosen key visual on the chosen channel. Sizes render one at
    * a time through the hidden host so each gets a full layout pass at its true
    * pixel size; a canvas-scaled screenshot would ship blurry text.
@@ -256,7 +270,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
       const sz = shortsSize ?? SHORTS_SIZES[0];
       const src = shortsVideoUrl(asset, sz.key);
       if (!src) return;
-      const save = await acquireSaveTarget(`LG-BF-${asset.id}-${sz.key}${soundOn ? '' : '-mute'}.mp4`);
+      const save = await acquireSaveTarget(`LG-BF-${exportStem(asset.id)}-${sz.key}${soundOn ? '' : '-mute'}.mp4`);
       if (!save) return;
       setExportedCount(0);
       try {
@@ -278,7 +292,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     // ask for the save location first, while the click still counts as a user
     // gesture — asking after the export made the picker fail and the browser
     // ask a second time through its own download prompt
-    const save = await acquireSaveTarget(`LG-BF-${asset.id}-${channelKey}-${dateTag()}.zip`);
+    const save = await acquireSaveTarget(`LG-BF-${exportStem(asset.id)}-${channelKey}-${dateTag()}.zip`);
     if (!save) return; // cancelled
 
     setExportedCount(0);
@@ -296,8 +310,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         const dynamicPaid = !('id' in slot) && asset.id === 'ad-teasing';
         // paid slot keys already carry their channel; LG.com sizes name it
         const fileStem = 'id' in slot
-          ? `${asset.id}-lgcom-${slot.w}x${slot.h}`
-          : `${asset.id}-${(slot as PaidSlot).key}`;
+          ? `${exportStem(asset.id)}-lgcom-${slot.w}x${slot.h}`
+          : `${exportStem(asset.id)}-${(slot as PaidSlot).key}`;
         const asMotion = !!asset.motion && (dynamicPaid || ('id' in slot && bareOnExport(slot.id)));
         if (asMotion) {
           const lg = dynamicPaid ? null : (slot as LgcomSlot);
