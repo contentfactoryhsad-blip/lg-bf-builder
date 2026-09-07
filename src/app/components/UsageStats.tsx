@@ -75,6 +75,20 @@ function tally(rows: Row[], field: string, split?: string): [string, number][] {
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
 
+/**
+ * 레거시 id → 지금 화면이 쓰는 이름. 기록은 남긴 그대로 두고 **표시할 때**
+ * 바꾼다 — 이름을 바꾸기 전에 쌓인 CSV 행도 새 이름으로 합산되게.
+ */
+const KV_RENAME: Record<string, string> = {
+  'ad-teasing': 'dynamic',
+  'kv-main-motion': 'dynamic',
+  'kv-product-centric-1': 'hero-product',
+  'kv-product-centric-2': 'hero-product-non-ac',
+  'kv-product-slot': 'product-slot',
+  'kv-product-slot-character': 'product-slot-joy-ryder',
+};
+const kvName = (id: string) => KV_RENAME[id] ?? id;
+
 function Bars({ title, data, total }: { title: string; data: [string, number][]; total: number }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -224,7 +238,7 @@ export function UsageStats() {
       for (const r of shown) {
         for (const v of (r.item ?? '').split('|')) {
           if (!v.startsWith(`${prefix}:`)) continue;
-          const k = v.slice(prefix.length + 1) || '(없음)';
+          const k = kvName(v.slice(prefix.length + 1)) || '(없음)';
           m.set(k, (m.get(k) ?? 0) + 1);
         }
       }
@@ -235,7 +249,7 @@ export function UsageStats() {
       days: new Set(shown.map(day)).size,
       files: shown.reduce((a, x) => a + (Number(x.files) || 0), 0),
       country: tally(shown, 'country'),
-      item: tally(shown, 'item', '|'),
+      item: tally(shown, 'item', '|').map(([k, n]) => [kvName(k), n] as [string, number]),
       detail: tally(shown, 'detail'),
       heroKv: kvOf('hero'),
       promoKv: kvOf('promo'),
