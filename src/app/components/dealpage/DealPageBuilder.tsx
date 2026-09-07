@@ -793,20 +793,29 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       const blob = await zip.generateAsync({ type: 'blob' });
       await save(blob);
       // `item` = which key visual each exported module used, pipe-joined
-      // (`hero:kv-main|promo:kv-product-slot|deal:deal-type-gift|card:…`) —
+      // (`hero:kv-main|promo:product-slot|deal:deal-type-gift|card:…`) —
       // the stats page splits on '|' and tallies per entry. The whole page
       // always ships, so "what was picked" is the per-module art, not a
-      // single asset id.
+      // single asset id. Legacy ids are mapped to the on-screen names the
+      // pickers use now (Hero Product / Product Slot / DYNAMIC).
+      const kvStem = (id: string | null | undefined): string =>
+        ({
+          'kv-product-centric-1': 'hero-product',
+          'kv-product-centric-2': 'hero-product-non-ac',
+          'kv-product-slot': 'product-slot',
+          'kv-product-slot-character': 'product-slot-joy-ryder',
+          'kv-main-motion': 'dynamic',
+        })[id ?? ''] ?? id ?? 'upload';
       void logUsage({
         builder: 'promotion-page',
         item: exportItems
           .map(it => {
             const d = it.editState.data as Record<string, unknown>;
-            if (it.type === 'deal-hero') return `hero:${(d.kvAsset as string) ?? 'none'}`;
-            if (it.type === 'deal-promo-banner') return `promo:${(d.kvAsset as string) ?? 'upload'}`;
-            if (it.type === 'deal-banner') return `deal:${(d.kvAsset as string) ?? 'upload'}`;
+            if (it.type === 'deal-hero') return `hero:${kvStem(d.kvAsset as string | null)}`;
+            if (it.type === 'deal-promo-banner') return `promo:${kvStem(d.kvAsset as string | null)}`;
+            if (it.type === 'deal-banner') return `deal:${kvStem(d.kvAsset as string | null)}`;
             if (it.type === 'deal-cards')
-              return (d.cards as DealCardsState['cards']).map(c => `card:${c.asset ?? 'upload'}`).join('|');
+              return (d.cards as DealCardsState['cards']).map(c => `card:${kvStem(c.asset)}`).join('|');
             return '';
           })
           .filter(Boolean)
