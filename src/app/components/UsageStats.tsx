@@ -219,16 +219,37 @@ export function UsageStats() {
 
   const shown = useMemo(() => tabRows.filter((r) => inPeriod(r, period)), [tabRows, period]);
 
-  const stat = useMemo(() => ({
-    total: shown.length,
-    days: new Set(shown.map(day)).size,
-    files: shown.reduce((a, x) => a + (Number(x.files) || 0), 0),
-    country: tally(shown, 'country'),
-    builder: tally(shown, 'builder').map(([k, n]) => [BUILDER_NAME[k] ?? k, n] as [string, number]),
-    // 페이지 빌더의 item 은 모듈별 키비주얼을 '|' 로 이어 담는다 — 쪼개 센다.
-    item: tally(shown, 'item', '|'),
-    detail: tally(shown, 'detail'),
-  }), [shown]);
+  const stat = useMemo(() => {
+    /*
+      페이지 빌더의 item 은 이미지(키비주얼)를 쓰는 네 모듈의 선택값을
+      `hero:…|promo:…|deal:…|card:…` 로 이어 담는다. PP 탭에서는 접두어로
+      갈라 모듈별 카드로 따로 센다 — 한 목록에 섞으면 의미가 없다.
+    */
+    const kvOf = (prefix: string): [string, number][] => {
+      const m = new Map<string, number>();
+      for (const r of shown) {
+        for (const v of (r.item ?? '').split('|')) {
+          if (!v.startsWith(`${prefix}:`)) continue;
+          const k = v.slice(prefix.length + 1) || '(없음)';
+          m.set(k, (m.get(k) ?? 0) + 1);
+        }
+      }
+      return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    };
+    return {
+      total: shown.length,
+      days: new Set(shown.map(day)).size,
+      files: shown.reduce((a, x) => a + (Number(x.files) || 0), 0),
+      country: tally(shown, 'country'),
+      builder: tally(shown, 'builder').map(([k, n]) => [BUILDER_NAME[k] ?? k, n] as [string, number]),
+      item: tally(shown, 'item', '|'),
+      detail: tally(shown, 'detail'),
+      heroKv: kvOf('hero'),
+      promoKv: kvOf('promo'),
+      dealKv: kvOf('deal'),
+      cardKv: kvOf('card'),
+    };
+  }, [shown]);
 
   if (!rows) {
     return (
@@ -333,14 +354,24 @@ export function UsageStats() {
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Bars title="국가별" data={stat.country} total={stat.total} />
-            {tab === '' && <Bars title="빌더별" data={stat.builder} total={stat.total} />}
-            <Bars
-              title={tab === 'promotion-page' ? '키비주얼 (모듈별)' : '에셋 (키비주얼)'}
-              data={stat.item}
-              total={stat.total}
-            />
-            <Bars title={tab === 'promotion-page' ? '구성 (모션/스태틱)' : '채널 / 구성'} data={stat.detail} total={stat.total} />
+            {tab === 'promotion-page' ? (
+              // 이미지(키비주얼)를 쓰는 네 모듈만, 각자 카드로 — 이게 전부다.
+              // (국가/모션·스태틱은 계속 수집되고 CSV 와 전체 탭에서 보인다.)
+              <>
+                <Bars title="Hero KV" data={stat.heroKv} total={stat.total} />
+                <Bars title="Benefit Summary" data={stat.cardKv} total={stat.total} />
+                <Bars title="Promotion Banner" data={stat.promoKv} total={stat.total} />
+                <Bars title="Deal Banner" data={stat.dealKv} total={stat.total} />
+                <Bars title="구성 (스태틱 / 스태틱+모션)" data={stat.detail} total={stat.total} />
+              </>
+            ) : (
+              <>
+                <Bars title="국가별" data={stat.country} total={stat.total} />
+                {tab === '' && <Bars title="빌더별" data={stat.builder} total={stat.total} />}
+                <Bars title="에셋 (키비주얼)" data={stat.item} total={stat.total} />
+                <Bars title="채널 / 구성" data={stat.detail} total={stat.total} />
+              </>
+            )}
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -350,7 +381,7 @@ export function UsageStats() {
             <div className="overflow-x-auto">
               <table className="w-full text-[12px]">
                 <thead className="text-gray-400">
-                  <tr>{['시각', '국가', '빌더', '에셋', '채널/구성', '파일 수'].map((h) => (
+                  <tr>{['시각', '국가', '빌더', ...(tab === 'promotion-page' ? [] : ['에셋']), '채널/구성', '파일 수'].map((h) => (
                     <th key={h} className="text-left font-normal pb-2 pr-4 whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
@@ -360,7 +391,13 @@ export function UsageStats() {
                       <td className="py-1.5 pr-4 whitespace-nowrap tabular-nums">{stampText(r)}</td>
                       <td className="py-1.5 pr-4">{r.country}</td>
                       <td className="py-1.5 pr-4 whitespace-nowrap">{BUILDER_NAME[r.builder] ?? r.builder}</td>
-                      <td className="py-1.5 pr-4 max-w-[220px] truncate" title={r.item}>{r.item}</td>
+                      {/* 페이지 빌더 행의 item 은 모듈별 목록이라 표에서는 뺀다 —
+                          모듈별 카드가 그 몫을 한다. */}
+                      {tab !== 'promotion-page' && (
+                        <td className="py-1.5 pr-4 max-w-[220px] truncate" title={r.item}>
+                          {r.builder === 'promotion-page' ? '—' : r.item}
+                        </td>
+                      )}
                       <td className="py-1.5 pr-4">{r.detail}</td>
                       <td className="py-1.5 pr-4 tabular-nums">{r.files}</td>
                     </tr>

@@ -811,9 +811,11 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           })
           .filter(Boolean)
           .join('|'),
+        // A motion hero still ships every static crop — the ZIP is
+        // static+motion, never motion alone.
         detail: exportItems.some(
           it => it.type === 'deal-hero' && (it.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID,
-        ) ? 'motion' : 'static',
+        ) ? 'static+motion' : 'static',
         files: doneFiles,
       });
     } catch (err) {
