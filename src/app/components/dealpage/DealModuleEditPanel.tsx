@@ -472,10 +472,11 @@ function KeyVisualField({
           </div>
         ))}
 
-        {/* KEY VISUAL_Motion — kv-main's animated master, framed exactly like
-            Main. One tile of its own under the three artwork rows. */}
+        {/* KEY VISUAL_Dynamic (named after the CBB's DYNAMIC group) —
+            kv-main's animated master, framed exactly like Main. One tile of
+            its own under the three artwork rows. */}
         <div className="flex flex-col gap-1.5">
-          <p className="text-[11px] text-gray-400">{t('KEY VISUAL_Motion')}</p>
+          <p className="text-[11px] text-gray-400">{t('DYNAMIC')}</p>
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
             <button type="button" onClick={() => onChange(HERO_MOTION_ID)} className="flex flex-col gap-1 text-left group/kv">
               <span
@@ -966,9 +967,11 @@ function DealPromoBannerPanel({
         </div>
       ) : (
         // The deal banner picks between the four Deal Banner_* types — the
-        // same four campaign artworks the deal cards use, as tiles.
+        // same four campaign artworks the deal cards use, as tiles. The
+        // heading says DEAL TYPE (not KEY VISUAL) since these are the four
+        // deal-type artworks, per request 2026-09-07.
         <div className="mb-3">
-          <FieldLabel>{t('Key visual')}</FieldLabel>
+          <FieldLabel>{t('Deal type')}</FieldLabel>
           <div className="grid grid-cols-4 gap-2">
             {DEAL_KV_TILES.map(tl => {
               const a = getAsset(tl.id);

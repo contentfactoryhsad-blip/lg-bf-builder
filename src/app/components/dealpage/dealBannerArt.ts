@@ -36,7 +36,7 @@ export interface PromoKvTile {
  */
 export const PROMO_KV_ROWS: { label: string; captionFromIndex: number; tiles: PromoKvTile[] }[] = [
   {
-    label: 'KEY VISUAL_PD Centric',
+    label: 'KEY VISUAL_Hero Product',
     captionFromIndex: 1,
     tiles: [
       { id: 'kv-product-centric-1', hasSlots: false },
@@ -44,7 +44,7 @@ export const PROMO_KV_ROWS: { label: string; captionFromIndex: number; tiles: Pr
     ],
   },
   {
-    label: 'KEY VISUAL_PD Slot',
+    label: 'KEY VISUAL_Product Slot',
     captionFromIndex: 1,
     tiles: [
       { id: 'kv-product-slot',           art: 'kv-product-slot001',           hasSlots: true },
