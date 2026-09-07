@@ -55,6 +55,15 @@ export interface DealHeroState extends CountdownFields {
   /** Multiplier on the board's size, applied about the artwork's centre. */
   kvScale: number;
   /**
+   * The mobile canvas keeps its OWN nudge/scale (2026-09-07) — one shared set
+   * meant a PC adjustment silently dragged the 360 layout around. The panel
+   * edits whichever canvas is showing; old drafts seed these from the PC
+   * values on restore (dealPagePayload.ts).
+   */
+  kvNudgeXMo: number;
+  kvNudgeYMo: number;
+  kvScaleMo: number;
+  /**
    * One product per plate, for the PD Slot key visuals — those artworks ship
    * with empty plates baked in and this fills them. Same shape and same flow as
    * the Content Template Builder's product slots.
@@ -197,6 +206,10 @@ export interface DealPromoBannerState extends CountdownFields {
   kvNudgeY: number;
   /** Multiplier on the board's art size, applied about the artwork's centre. */
   kvScale: number;
+  /** Mobile canvas's own nudge/scale — see DealHeroState (2026-09-07). */
+  kvNudgeXMo: number;
+  kvNudgeYMo: number;
+  kvScaleMo: number;
   /**
    * Product cutouts for the PD Slot variants' four plates — same shape and
    * crawl + background-removal flow as the hero's PD Slot products. The row
@@ -535,6 +548,9 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           kvNudgeX: 0,
           kvNudgeY: 0,
           kvScale: 1,
+          kvNudgeXMo: 0,
+          kvNudgeYMo: 0,
+          kvScaleMo: 1,
           products: [],
           plateColor: PD_PLATE_FILL,
           customImage: null,
@@ -584,6 +600,9 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           kvNudgeX: 0,
           kvNudgeY: 0,
           kvScale: 1,
+          kvNudgeXMo: 0,
+          kvNudgeYMo: 0,
+          kvScaleMo: 1,
           showSlots: true,
           products: PROMO_DEFAULT_PRODUCTS.map(p => ({ url: '', image: p })),
           plateColor: PD_PLATE_FILL,
@@ -609,6 +628,9 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           kvNudgeX: 0,
           kvNudgeY: 0,
           kvScale: 1,
+          kvNudgeXMo: 0,
+          kvNudgeYMo: 0,
+          kvScaleMo: 1,
           showSlots: true,
           products: [],
           plateColor: PD_PLATE_FILL,

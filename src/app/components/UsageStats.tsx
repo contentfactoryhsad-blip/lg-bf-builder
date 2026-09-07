@@ -62,12 +62,16 @@ function periodLabel(p: Period): string {
   return `${y}년 ${Number(m)}월`;
 }
 
-/** 값별 건수를 세어 많은 순으로. */
-function tally(rows: Row[], field: string): [string, number][] {
+/** 값별 건수를 세어 많은 순으로. split 을 주면 한 칸을 쪼개 항목별로 센다. */
+function tally(rows: Row[], field: string, split?: string): [string, number][] {
   const m = new Map<string, number>();
   for (const r of rows) {
-    const k = (r[field] ?? '').trim() || '(없음)';
-    m.set(k, (m.get(k) ?? 0) + 1);
+    const raw = (r[field] ?? '').trim();
+    const vals = split ? raw.split(split).filter(Boolean) : [raw];
+    for (const v of vals.length ? vals : ['']) {
+      const k = v || '(없음)';
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
   }
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
@@ -221,7 +225,8 @@ export function UsageStats() {
     files: shown.reduce((a, x) => a + (Number(x.files) || 0), 0),
     country: tally(shown, 'country'),
     builder: tally(shown, 'builder').map(([k, n]) => [BUILDER_NAME[k] ?? k, n] as [string, number]),
-    item: tally(shown, 'item'),
+    // 페이지 빌더의 item 은 모듈별 키비주얼을 '|' 로 이어 담는다 — 쪼개 센다.
+    item: tally(shown, 'item', '|'),
     detail: tally(shown, 'detail'),
   }), [shown]);
 
@@ -330,7 +335,11 @@ export function UsageStats() {
           <div className="grid grid-cols-2 gap-4">
             <Bars title="국가별" data={stat.country} total={stat.total} />
             {tab === '' && <Bars title="빌더별" data={stat.builder} total={stat.total} />}
-            {tab !== 'promotion-page' && <Bars title="에셋 (키비주얼)" data={stat.item} total={stat.total} />}
+            <Bars
+              title={tab === 'promotion-page' ? '키비주얼 (모듈별)' : '에셋 (키비주얼)'}
+              data={stat.item}
+              total={stat.total}
+            />
             <Bars title={tab === 'promotion-page' ? '구성 (모션/스태틱)' : '채널 / 구성'} data={stat.detail} total={stat.total} />
           </div>
 

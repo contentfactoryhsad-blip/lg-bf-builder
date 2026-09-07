@@ -18,6 +18,7 @@ import { productSlotCount } from '../contenttemplate/lgcomSlots';
 import { ProductSlotsEditor, emptyProductSlots } from '../contenttemplate/ProductSlotsEditor';
 import { HERO_MOTION_ID, HERO_NUDGE_LIMIT, HERO_SCALE_MAX, HERO_SCALE_MIN, HERO_SCALE_STEP } from './dealHeroArt';
 import { PROMO_KV_ROWS, PROMO_SLOT, DEAL_KV_TILES } from './dealBannerArt';
+import type { DealDevice } from './dealModuleRegistry';
 import {
   type DealEditState,
   type DealSiteHeaderState,
@@ -523,11 +524,14 @@ function NudgeField({
   x,
   y,
   scale,
+  device,
   onChange,
 }: {
   x: number;
   y: number;
   scale: number;
+  /** Which canvas these values belong to — shown as a badge on the label. */
+  device: DealDevice;
   onChange: (next: { x: number; y: number; scale: number }) => void;
 }) {
   const t = useT();
@@ -551,6 +555,7 @@ function NudgeField({
     <div className="mb-4">
       <div className="flex items-center mb-1">
         <FieldLabel>{t('Image Position')}</FieldLabel>
+        <span className="ml-1.5 -mt-1 text-[10px] font-semibold text-[#FD312E]">{device === 'mo' ? 'MO' : 'PC'}</span>
         <button
           type="button"
           onClick={() => onChange({ x: 0, y: 0, scale: 1 })}
@@ -595,9 +600,10 @@ function NudgeField({
   );
 }
 
-function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: DealHeroState) => void }) {
+function DealHeroPanel({ data, onUpdate, device }: { data: DealHeroState; onUpdate: (d: DealHeroState) => void; device: DealDevice }) {
   const t = useT();
   const set = (p: Partial<DealHeroState>) => onUpdate({ ...data, ...p });
+  const mo = device === 'mo';
   // Only the PD Slot key visuals carry plates; everything else reports 0.
   const plateCount = data.kvAsset ? productSlotCount(data.kvAsset) : 0;
   return (
@@ -608,11 +614,16 @@ function DealHeroPanel({ data, onUpdate }: { data: DealHeroState; onUpdate: (d: 
         customImage={data.customImage ?? null}
         onUploadCustom={dataUrl => set({ customImage: dataUrl, kvAsset: 'custom-upload' })}
       />
+      {/* Position/scale edit the SHOWING canvas only — PC and mobile keep
+          separate values (kv*Mo) since 2026-09-07. */}
       <NudgeField
-        x={data.kvNudgeX}
-        y={data.kvNudgeY}
-        scale={data.kvScale ?? 1}
-        onChange={n => set({ kvNudgeX: n.x, kvNudgeY: n.y, kvScale: n.scale })}
+        device={device}
+        x={mo ? data.kvNudgeXMo ?? 0 : data.kvNudgeX}
+        y={mo ? data.kvNudgeYMo ?? 0 : data.kvNudgeY}
+        scale={mo ? data.kvScaleMo ?? 1 : data.kvScale ?? 1}
+        onChange={n => set(mo
+          ? { kvNudgeXMo: n.x, kvNudgeYMo: n.y, kvScaleMo: n.scale }
+          : { kvNudgeX: n.x, kvNudgeY: n.y, kvScale: n.scale })}
       />
       <SectionDivider>{t('Copy')}</SectionDivider>
       <ToggleField label={t('Eyebrow')} shown={data.showEyebrow} onShownChange={v => set({ showEyebrow: v })}>
@@ -825,11 +836,13 @@ function BannerNudgeField({
   x,
   y,
   scale,
+  device,
   onChange,
 }: {
   x: number;
   y: number;
   scale: number;
+  device: DealDevice;
   onChange: (n: { x: number; y: number; scale: number }) => void;
 }) {
   const t = useT();
@@ -851,6 +864,7 @@ function BannerNudgeField({
     <div className="mb-3">
       <div className="flex items-center mb-1">
         <FieldLabel>{t('Image Position')}</FieldLabel>
+        <span className="ml-1.5 -mt-1 text-[10px] font-semibold text-[#FD312E]">{device === 'mo' ? 'MO' : 'PC'}</span>
         <button
           type="button"
           onClick={() => onChange({ x: 0, y: 0, scale: 1 })}
@@ -902,13 +916,16 @@ function DealPromoBannerPanel({
   data,
   size,
   onUpdate,
+  device,
 }: {
   data: DealPromoBannerState;
   size: DealBannerSize;
   onUpdate: (d: DealPromoBannerState) => void;
+  device: DealDevice;
 }) {
   const t = useT();
   const set = (p: Partial<DealPromoBannerState>) => onUpdate({ ...data, ...p });
+  const mo = device === 'mo';
   return (
     <div>
       {size === 'Large' ? (
@@ -1012,10 +1029,13 @@ function DealPromoBannerPanel({
         </div>
       )}
       <BannerNudgeField
-        x={data.kvNudgeX ?? 0}
-        y={data.kvNudgeY ?? 0}
-        scale={data.kvScale ?? 1}
-        onChange={n => set({ kvNudgeX: n.x, kvNudgeY: n.y, kvScale: n.scale })}
+        device={device}
+        x={mo ? data.kvNudgeXMo ?? 0 : data.kvNudgeX ?? 0}
+        y={mo ? data.kvNudgeYMo ?? 0 : data.kvNudgeY ?? 0}
+        scale={mo ? data.kvScaleMo ?? 1 : data.kvScale ?? 1}
+        onChange={n => set(mo
+          ? { kvNudgeXMo: n.x, kvNudgeYMo: n.y, kvScaleMo: n.scale }
+          : { kvNudgeX: n.x, kvNudgeY: n.y, kvScale: n.scale })}
       />
       <TextAreaField label={t('Headline')} value={data.headline} onChange={v => set({ headline: v })} rows={2} />
       <ToggleField label={t('Sub copy')} shown={data.showSubCopy} onShownChange={v => set({ showSubCopy: v })}>
@@ -1323,9 +1343,12 @@ function FooterLockedNote() {
 export function DealModuleEditPanel({
   editState,
   onUpdate,
+  device = 'pc',
 }: {
   editState: DealEditState;
   onUpdate: (s: DealEditState) => void;
+  /** Which canvas is showing — Image Position/Scale edit that device's values. */
+  device?: DealDevice;
 }) {
   switch (editState.type) {
     case 'deal-site-header':
@@ -1334,15 +1357,15 @@ export function DealModuleEditPanel({
       // Locked — the footer is a reference mockup, shown as-is.
       return <FooterLockedNote />;
     case 'deal-hero':
-      return <DealHeroPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-hero', data: d })} />;
+      return <DealHeroPanel data={editState.data} device={device} onUpdate={d => onUpdate({ type: 'deal-hero', data: d })} />;
     case 'deal-cards':
       return <DealCardsPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-cards', data: d })} />;
     case 'deal-tab-nav':
       return <DealTabNavPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-tab-nav', data: d })} />;
     case 'deal-promo-banner':
-      return <DealPromoBannerPanel data={editState.data} size="Large" onUpdate={d => onUpdate({ type: 'deal-promo-banner', data: d })} />;
+      return <DealPromoBannerPanel data={editState.data} size="Large" device={device} onUpdate={d => onUpdate({ type: 'deal-promo-banner', data: d })} />;
     case 'deal-banner':
-      return <DealPromoBannerPanel data={editState.data} size="Standard" onUpdate={d => onUpdate({ type: 'deal-banner', data: d })} />;
+      return <DealPromoBannerPanel data={editState.data} size="Standard" device={device} onUpdate={d => onUpdate({ type: 'deal-banner', data: d })} />;
     case 'deal-product-list':
       return <DealProductListPanel data={editState.data} onUpdate={d => onUpdate({ type: 'deal-product-list', data: d })} />;
     case 'deal-category-nav':

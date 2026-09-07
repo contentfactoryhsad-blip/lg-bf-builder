@@ -235,13 +235,13 @@ function MoHeroTemplate({ data, artOnly, exportMode }: { data: DealHeroState; ar
   const custom = data.kvAsset === 'custom-upload' ? data.customImage : null;
   const kv = data.kvAsset === 'custom-upload' ? undefined : getAsset(motion ? 'kv-main' : data.kvAsset);
   const plates = kv ? slotBoxesFor(kv.id, HERO_SLOT_ID) : [];
-  // Nudge and scale apply here too — scale about the artwork's centre, same
-  // recipe as the PC hero.
-  const scale = data.kvScale || 1;
+  // Nudge and scale apply here too — the MOBILE set (kv*Mo), its own values
+  // since 2026-09-07 so PC adjustments stop dragging the 360 layout around.
+  const scale = data.kvScaleMo || 1;
   const size = MO_HERO_ART.size * scale;
   const art = {
-    x: MO_HERO_ART.x + data.kvNudgeX - (size - MO_HERO_ART.size) / 2,
-    y: MO_HERO_ART.y + data.kvNudgeY - (size - MO_HERO_ART.size) / 2,
+    x: MO_HERO_ART.x + (data.kvNudgeXMo ?? 0) - (size - MO_HERO_ART.size) / 2,
+    y: MO_HERO_ART.y + (data.kvNudgeYMo ?? 0) - (size - MO_HERO_ART.size) / 2,
     size,
   };
 
@@ -641,10 +641,10 @@ function MoBannerTemplate({ data, size, artOnly }: { data: DealPromoBannerState;
 
   const dealTile = !isPromo && data.kvAsset !== 'custom-upload' ? dealBannerArtFor(data.kvAsset) : null;
   const dealPlace = !isPromo && data.kvAsset ? MO_DEAL_ART[data.kvAsset] ?? null : null;
-  // Art nudge + scale — the plates stay put; only the artwork moves.
-  const nx = data.kvNudgeX ?? 0;
-  const ny = data.kvNudgeY ?? 0;
-  const kvs = data.kvScale || 1;
+  // Art nudge + scale — the MOBILE set (kv*Mo); the plates stay put.
+  const nx = data.kvNudgeXMo ?? 0;
+  const ny = data.kvNudgeYMo ?? 0;
+  const kvs = data.kvScaleMo || 1;
 
   return (
     <Band height={bannerH} background={BLACK}>

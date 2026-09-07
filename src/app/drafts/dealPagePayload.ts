@@ -69,6 +69,19 @@ export function restoreDealCanvasItems(payload: DealPagePayloadV1, t?: TFunction
       savedData = { ...savedData, layout: 'Art right' };
     }
 
+    // Position/scale split per canvas (2026-09-07) — a draft saved when one
+    // set drove both devices seeds the mobile values from the PC ones, so the
+    // page comes back looking exactly as it did.
+    if ((type === 'deal-hero' || type === 'deal-promo-banner' || type === 'deal-banner')
+        && savedData && 'kvNudgeX' in savedData && !('kvNudgeXMo' in savedData)) {
+      savedData = {
+        ...savedData,
+        kvNudgeXMo: savedData.kvNudgeX ?? 0,
+        kvNudgeYMo: savedData.kvNudgeY ?? 0,
+        kvScaleMo: savedData.kvScale ?? 1,
+      };
+    }
+
     const defaults = createDealDefaultState(type, t);
     restored.push({
       id: typeof item.id === 'string' && item.id ? item.id : crypto.randomUUID(),

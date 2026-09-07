@@ -736,15 +736,18 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
             if (item.type === 'deal-hero' && (item.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID) {
               const hd = item.editState.data as DealHeroState;
               const base = dev === 'mo' ? MO_HERO_ART : heroArtFor(hd.kvAsset);
-              const kvs = hd.kvScale || 1;
+              // Each canvas keeps its own nudge/scale — the cut follows suit.
+              const kvs = (dev === 'mo' ? hd.kvScaleMo : hd.kvScale) || 1;
+              const nudgeX = dev === 'mo' ? hd.kvNudgeXMo ?? 0 : hd.kvNudgeX;
+              const nudgeY = dev === 'mo' ? hd.kvNudgeYMo ?? 0 : hd.kvNudgeY;
               const artSize = base.size * kvs;
               const dims = dev === 'mo' ? { w: DEAL_MO_WIDTH, h: 480 } : { w: DEAL_HERO_WIDTH, h: 720 };
               try {
                 const mp4 = await renderMotionCutLive(HERO_MOTION_SRC, {
                   ...dims,
                   art: {
-                    x: base.x + hd.kvNudgeX - (artSize - base.size) / 2,
-                    y: base.y + hd.kvNudgeY - (artSize - base.size) / 2,
+                    x: base.x + nudgeX - (artSize - base.size) / 2,
+                    y: base.y + nudgeY - (artSize - base.size) / 2,
                     size: artSize,
                   },
                 });
@@ -789,9 +792,25 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       root.unmount();
       const blob = await zip.generateAsync({ type: 'blob' });
       await save(blob);
+      // `item` = which key visual each exported module used, pipe-joined
+      // (`hero:kv-main|promo:kv-product-slot|deal:deal-type-gift|card:…`) —
+      // the stats page splits on '|' and tallies per entry. The whole page
+      // always ships, so "what was picked" is the per-module art, not a
+      // single asset id.
       void logUsage({
         builder: 'promotion-page',
-        item: 'deal-page',
+        item: exportItems
+          .map(it => {
+            const d = it.editState.data as Record<string, unknown>;
+            if (it.type === 'deal-hero') return `hero:${(d.kvAsset as string) ?? 'none'}`;
+            if (it.type === 'deal-promo-banner') return `promo:${(d.kvAsset as string) ?? 'upload'}`;
+            if (it.type === 'deal-banner') return `deal:${(d.kvAsset as string) ?? 'upload'}`;
+            if (it.type === 'deal-cards')
+              return (d.cards as DealCardsState['cards']).map(c => `card:${c.asset ?? 'upload'}`).join('|');
+            return '';
+          })
+          .filter(Boolean)
+          .join('|'),
         detail: exportItems.some(
           it => it.type === 'deal-hero' && (it.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID,
         ) ? 'motion' : 'static',
@@ -979,6 +998,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
                     {size && <p className="text-xs text-gray-400 mb-5">{size}</p>}
                     <DealModuleEditPanel
                       editState={selectedItem.editState}
+                      device={device}
                       onUpdate={newState => updateEditState(selectedItem.id, newState)}
                     />
                   </div>
