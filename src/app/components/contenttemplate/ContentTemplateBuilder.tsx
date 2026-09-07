@@ -1147,13 +1147,13 @@ function PreviewBox({ asset }: { asset: ContentAsset | undefined }) {
 const SHOW_SAVE_FOR_LATER = false;
 
 /**
- * Frame.io links — both TBD (2026-09-04). Fill them in when the share links
- * exist; the buttons render disabled while a link is empty.
+ * Frame.io links — fill in as the share links arrive; a button renders
+ * disabled while its link is empty.
  */
 /** The whole Black Friday working-file package, linked from the header. */
-const WORKING_FILES_URL = '';
+const WORKING_FILES_URL = 'https://f.io/pqxfEudc';
 /** The LGNESS PD After Effects file, linked from its Edit panel note. */
-const SHORTS_AE_FILE_URL = '';
+const SHORTS_AE_FILE_URL = 'https://f.io/CTJ5l4du';
 
 const PAID_ASSETS = new Set([
   // Teasing is the Main artwork with a motion cut, and the uploaded square is
