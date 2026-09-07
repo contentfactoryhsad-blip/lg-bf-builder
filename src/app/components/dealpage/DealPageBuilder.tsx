@@ -52,6 +52,7 @@ import {
   type DealProductSetKey,
 } from './dealEditStates';
 import { heroArtFor, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
+import { logUsage } from '../../utils/usageClient';
 import { MO_HERO_ART } from './DealModuleRendererMo';
 import { renderMotionCutLive } from '../contenttemplate/exportMotion';
 import { CarouselSideArrow, DealModuleRenderer } from './DealModuleRenderer';
@@ -788,6 +789,14 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       root.unmount();
       const blob = await zip.generateAsync({ type: 'blob' });
       await save(blob);
+      void logUsage({
+        builder: 'promotion-page',
+        item: 'deal-page',
+        detail: exportItems.some(
+          it => it.type === 'deal-hero' && (it.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID,
+        ) ? 'motion' : 'static',
+        files: doneFiles,
+      });
     } catch (err) {
       // Without this the error vanished into the click handler and the picked
       // file stayed at 0 bytes with no clue why.

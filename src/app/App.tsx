@@ -1,5 +1,6 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { ContentBuilderHome } from './components/ContentBuilderHome';
+import { UsageStats } from './components/UsageStats';
 import type { NavRailKey } from './components/NavRail';
 import {
   ThumbnailType,
@@ -262,6 +263,17 @@ function LoadingScreen() {
 }
 
 export default function App() {
+  /*
+    관리자용 사용 통계 — 주소에 #stats 를 붙였을 때만 열린다
+    (예: https://도메인/#stats). 화면 어디에도 링크가 없다.
+  */
+  if (typeof window !== 'undefined' && window.location.hash === '#stats') {
+    return (
+      <LanguageProvider>
+        <UsageStats />
+      </LanguageProvider>
+    );
+  }
   return (
     <LanguageProvider>
       <Suspense fallback={<LoadingScreen />}>

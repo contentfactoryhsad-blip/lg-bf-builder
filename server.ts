@@ -3,6 +3,7 @@ import compression from 'compression';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as cheerio from 'cheerio';
+import { appendUsage, checkUsageKey, clientIp, readUsageIn, readUsageRows, resetUsage } from './usageLog';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -626,6 +627,50 @@ app.post('/api/crawl-page', async (req, res) => {
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Failed to crawl page' });
   }
+});
+
+// ─── 사용 기록 (usageLog.ts — sales-banner-builder 와 같은 구조) ─────────────
+
+/*
+  다운로드 한 번을 한 줄로 남긴다. 기록이 실패해도 사용자에게는 영향이
+  없어야 하므로 항상 200 으로 답한다 — 다운로드가 끝난 뒤에 부른다.
+*/
+app.post('/api/log-usage', async (req, res) => {
+  try {
+    await appendUsage(req.body || {}, clientIp(req.headers, req.socket.remoteAddress));
+  } catch (err) {
+    console.warn('usage log failed:', err);
+  }
+  return res.status(200).json({ ok: true });
+});
+
+/*
+  통계 조회/내려받기 — key 가 USAGE_KEY 환경변수와 맞아야 한다.
+  값이 없으면 아예 닫아 둔다 (아무나 보면 안 된다).
+*/
+app.get('/api/usage.json', async (req, res) => {
+  const k = checkUsageKey(req.query.key);
+  if (k === 'no-key') return res.status(503).json({ error: 'USAGE_KEY not set on server' });
+  if (k !== 'ok') return res.status(403).json({ error: 'Forbidden' });
+  return res.json({ rows: await readUsageRows() });
+});
+
+app.post('/api/usage/reset', async (req, res) => {
+  const k = checkUsageKey(req.query.key);
+  if (k === 'no-key') return res.status(503).json({ error: 'USAGE_KEY not set on server' });
+  if (k !== 'ok') return res.status(403).json({ error: 'Forbidden' });
+  const backup = await resetUsage();
+  return res.json({ ok: true, backup });
+});
+
+app.get('/api/usage.csv', async (req, res) => {
+  const k = checkUsageKey(req.query.key);
+  if (k === 'no-key') return res.status(503).json({ error: 'USAGE_KEY not set on server' });
+  if (k !== 'ok') return res.status(403).json({ error: 'Forbidden' });
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="usage.csv"');
+  // 엑셀이 UTF-8 로 열도록 BOM (없으면 한글이 깨진다)
+  return res.send('\uFEFF' + (await readUsageIn((req.query.tz as string) || 'Asia/Seoul')));
 });
 
 // ─── Static + SPA fallback ───────────────────────────────────────────────────

@@ -88,6 +88,7 @@ import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
 import { renderMotionCutLive, stripAudioTrack } from './exportMotion';
+import { logUsage } from '../../utils/usageClient';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
 import { BenefitSlotsEditor, emptyBenefitSlots, type BenefitSlots } from './BenefitSlotsEditor';
@@ -355,7 +356,10 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         }
         setExportedCount(i + 1);
       }
-      if (entries.length) await save(await buildZip(entries));
+      if (entries.length) {
+        await save(await buildZip(entries));
+        void logUsage({ builder: 'content-banner', item: asset?.id ?? '', detail: channelKey ?? '', files: entries.length });
+      }
       if (failed.length) {
         window.alert(`${t('Some files could not be rendered and were left out of the ZIP:')}\n${failed.join('\n')}`);
       }

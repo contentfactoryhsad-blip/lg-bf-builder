@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite';
 import * as cheerio from 'cheerio';
+import { appendUsage, clientIp, readUsageIn, readUsageRows, resetUsage } from './usageLog';
 
 // Bypass self-signed certificate issues (company proxy/VPN)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -487,6 +488,34 @@ export function apiPlugin(): Plugin {
   return {
     name: 'dev-api',
     configureServer(server) {
+      // ─── 사용 기록 — 운영(server.ts)과 같은 핸들러(usageLog.ts)를 쓴다 ───
+      server.middlewares.use('/api/log-usage', async (req, res) => {
+        let body = '';
+        for await (const chunk of req) body += chunk;
+        try { await appendUsage(JSON.parse(body || '{}'), clientIp(req.headers as never, req.socket.remoteAddress)); }
+        catch (err) { console.warn('usage log failed:', err); }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end('{"ok":true}');
+      });
+
+      server.middlewares.use('/api/usage.json', async (_req, res) => {
+        // 개발에서는 열쇠 없이 — 로컬 logs/usage.csv 만 보인다
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ rows: await readUsageRows() }));
+      });
+
+      server.middlewares.use('/api/usage/reset', async (_req, res) => {
+        const backup = await resetUsage();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, backup }));
+      });
+
+      server.middlewares.use('/api/usage.csv', async (req, res) => {
+        const tz = new URL(req.url || '', 'http://localhost').searchParams.get('tz') || 'Asia/Seoul';
+        res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8' });
+        res.end('\uFEFF' + (await readUsageIn(tz)));
+      });
+
       server.middlewares.use('/api/proxy-image', async (req, res) => {
         const url = new URL(req.url || '', 'http://localhost').searchParams.get('url');
         if (!url) {

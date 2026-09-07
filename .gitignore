@@ -10,3 +10,6 @@ dist/
 # (contentfactoryhsad-blip/lg-retail-obs-assets) and are served via jsDelivr.
 # Only manifest.json is committed — its URLs point to the CDN.
 public/asset-library/*/
+
+# usage stats records (dev)
+logs/
