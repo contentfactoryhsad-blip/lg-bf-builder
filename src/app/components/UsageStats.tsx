@@ -22,9 +22,8 @@ type Period =
   | { kind: 'year'; y: string }
   | { kind: 'month'; ym: string };
 
-/** 탭 축 — CSV 의 builder 칸 값. */
+/** 탭 축 — CSV 의 builder 칸 값. 빌더 둘뿐이라 '전체' 탭은 없다. */
 const TABS = [
-  { key: '', label: '전체' },
   { key: 'content-banner', label: 'Content Banner Builder' },
   { key: 'promotion-page', label: 'Promotion Page Builder' },
 ] as const;
@@ -75,11 +74,6 @@ function tally(rows: Row[], field: string, split?: string): [string, number][] {
   }
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
-
-const BUILDER_NAME: Record<string, string> = {
-  'content-banner': 'Content Banner',
-  'promotion-page': 'Promotion Page',
-};
 
 function Bars({ title, data, total }: { title: string; data: [string, number][]; total: number }) {
   return (
@@ -155,7 +149,7 @@ export function UsageStats() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<Period>({ kind: 'all' });
-  const [tab, setTab] = useState<string>('');
+  const [tab, setTab] = useState<string>('content-banner');
 
   const load = async (k: string) => {
     setLoading(true);
@@ -194,7 +188,7 @@ export function UsageStats() {
 
   /** 탭 필터가 먼저, 기간 필터는 그 안에서. */
   const tabRows = useMemo(
-    () => (rows ?? []).filter((r) => !tab || r.builder === tab),
+    () => (rows ?? []).filter((r) => r.builder === tab),
     [rows, tab],
   );
 
@@ -241,7 +235,6 @@ export function UsageStats() {
       days: new Set(shown.map(day)).size,
       files: shown.reduce((a, x) => a + (Number(x.files) || 0), 0),
       country: tally(shown, 'country'),
-      builder: tally(shown, 'builder').map(([k, n]) => [BUILDER_NAME[k] ?? k, n] as [string, number]),
       item: tally(shown, 'item', '|'),
       detail: tally(shown, 'detail'),
       heroKv: kvOf('hero'),
@@ -367,7 +360,6 @@ export function UsageStats() {
             ) : (
               <>
                 <Bars title="국가별" data={stat.country} total={stat.total} />
-                {tab === '' && <Bars title="빌더별" data={stat.builder} total={stat.total} />}
                 <Bars title="에셋 (키비주얼)" data={stat.item} total={stat.total} />
                 <Bars title="채널 / 구성" data={stat.detail} total={stat.total} />
               </>
@@ -381,7 +373,7 @@ export function UsageStats() {
             <div className="overflow-x-auto">
               <table className="w-full text-[12px]">
                 <thead className="text-gray-400">
-                  <tr>{['시각', '국가', '빌더', ...(tab === 'promotion-page' ? [] : ['에셋']), '채널/구성', '파일 수'].map((h) => (
+                  <tr>{['시각', '국가', ...(tab === 'promotion-page' ? [] : ['에셋']), '채널/구성', '파일 수'].map((h) => (
                     <th key={h} className="text-left font-normal pb-2 pr-4 whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
@@ -390,13 +382,10 @@ export function UsageStats() {
                     <tr key={i} className="border-t border-gray-100">
                       <td className="py-1.5 pr-4 whitespace-nowrap tabular-nums">{stampText(r)}</td>
                       <td className="py-1.5 pr-4">{r.country}</td>
-                      <td className="py-1.5 pr-4 whitespace-nowrap">{BUILDER_NAME[r.builder] ?? r.builder}</td>
                       {/* 페이지 빌더 행의 item 은 모듈별 목록이라 표에서는 뺀다 —
                           모듈별 카드가 그 몫을 한다. */}
                       {tab !== 'promotion-page' && (
-                        <td className="py-1.5 pr-4 max-w-[220px] truncate" title={r.item}>
-                          {r.builder === 'promotion-page' ? '—' : r.item}
-                        </td>
+                        <td className="py-1.5 pr-4 max-w-[220px] truncate" title={r.item}>{r.item}</td>
                       )}
                       <td className="py-1.5 pr-4">{r.detail}</td>
                       <td className="py-1.5 pr-4 tabular-nums">{r.files}</td>
