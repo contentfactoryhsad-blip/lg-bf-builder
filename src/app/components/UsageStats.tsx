@@ -365,11 +365,12 @@ export function UsageStats() {
               // 이미지(키비주얼)를 쓰는 네 모듈만, 각자 카드로 — 이게 전부다.
               // (국가/모션·스태틱은 계속 수집되고 CSV 와 전체 탭에서 보인다.)
               <>
+                <Bars title="국가별" data={stat.country} total={stat.total} />
+                <Bars title="구성 (스태틱 / 스태틱+모션)" data={stat.detail} total={stat.total} />
                 <Bars title="Hero KV" data={stat.heroKv} total={stat.total} />
                 <Bars title="Benefit Summary" data={stat.cardKv} total={stat.total} />
                 <Bars title="Promotion Banner" data={stat.promoKv} total={stat.total} />
                 <Bars title="Deal Banner" data={stat.dealKv} total={stat.total} />
-                <Bars title="구성 (스태틱 / 스태틱+모션)" data={stat.detail} total={stat.total} />
               </>
             ) : (
               <>
