@@ -9,12 +9,8 @@ import { SavedWorkModal } from './SavedWorkModal';
 // stay in the union so those screens keep compiling — they are not on the rail yet.
 export type NavRailKey = 'home' | 'content-template' | 'shop-in-shop' | 'deal-page' | 'thumbnail' | 'id-banner' | 'off-site';
 
-/**
- * TUTORIAL destination — still being written (2026-09-04). The rail
- * row and the Home-screen pill both render disabled while this is empty; fill
- * it in when the guide goes up.
- */
-export const TUTORIAL_URL = '';
+/** TUTORIAL destination (Frame.io) — the rail row and the Home-screen pill both open it. */
+export const TUTORIAL_URL = 'https://f.io/7z93QpkN';
 
 interface Props {
   /** Currently active builder — highlighted in the rail. */
