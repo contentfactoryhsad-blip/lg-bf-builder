@@ -734,12 +734,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           {!asset ? (
             <div className="flex-1" />
           ) : asset.blank || asset.video ? (
-            asset.video === 'a2' ? (
-              /* LGNESS PD carries product slots inside the video — the swap
-                 happens outside the builder, so the panel explains how. */
+            asset.video === 'a2' || asset.video === 'a3' ? (
+              /* LGNESS PD and CUBE carry product slots inside the video — the
+                 swap happens outside the builder, so the panel explains how. */
               <div className="px-5 py-6 flex flex-col gap-4">
                 <p className="text-sm font-medium text-gray-800">
-                  {t('Want different products in the product boxes?')}
+                  {t(asset.video === 'a3' ? 'Want to change the subtitles?' : 'Want different products in the product boxes?')}
                 </p>
                 <div className="rounded-lg border border-gray-200 p-4">
                   <p className="text-xs font-semibold text-gray-700 mb-1">{t('Option 1')}</p>
@@ -753,13 +753,13 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                     {t('Download the After Effects working file and replace them yourself.')}
                   </p>
                   <a
-                    href={SHORTS_AE_FILE_URL || undefined}
+                    href={SHORTS_AE_FILE_URLS[asset.video] || undefined}
                     target="_blank"
                     rel="noreferrer"
-                    title={SHORTS_AE_FILE_URL ? undefined : t('Link coming soon')}
-                    aria-disabled={!SHORTS_AE_FILE_URL}
+                    title={SHORTS_AE_FILE_URLS[asset.video] ? undefined : t('Link coming soon')}
+                    aria-disabled={!SHORTS_AE_FILE_URLS[asset.video]}
                     className={`inline-flex items-center gap-2 text-xs font-medium px-4 py-2 rounded-full border transition-colors border-[#FD312E] text-[#FD312E] hover:bg-[#FD312E] hover:text-white ${
-                      SHORTS_AE_FILE_URL ? '' : 'opacity-40 pointer-events-none'
+                      SHORTS_AE_FILE_URLS[asset.video] ? '' : 'opacity-40 pointer-events-none'
                     }`}
                   >
                     {t('Download AE file (Frame.io)')}
@@ -1166,8 +1166,15 @@ const SHOW_SAVE_FOR_LATER = false;
  */
 /** The whole Black Friday working-file package, linked from the header. */
 const WORKING_FILES_URL = 'https://f.io/pqxfEudc';
-/** The LGNESS PD After Effects file, linked from its Edit panel note. */
-const SHORTS_AE_FILE_URL = 'https://f.io/CTJ5l4du';
+/**
+ * The shorts' After Effects working files, per video, linked from the Edit
+ * panel note (a2 = LGNESS PD, a3 = CUBE). An empty link renders the button
+ * disabled with "Link coming soon".
+ */
+const SHORTS_AE_FILE_URLS: Record<string, string> = {
+  a2: 'https://f.io/CTJ5l4du',
+  a3: 'https://f.io/CTJ5l4du',
+};
 
 const PAID_ASSETS = new Set([
   // Teasing is the Main artwork with a motion cut, and the uploaded square is
