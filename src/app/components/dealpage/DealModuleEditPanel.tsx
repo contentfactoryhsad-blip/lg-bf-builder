@@ -267,6 +267,30 @@ function CountSelector({
  * survives drafts; non-square files are refused (±1%) since every module
  * lays the square out with its own fixed skeleton.
  */
+/**
+ * The CBB upload group's "Creation Guide" hover, panel-width edition — the
+ * Safe Area note for the 3000² upload (keys shared with the CBB strings).
+ */
+function CreationGuide() {
+  const t = useT();
+  return (
+    <div className="group/uhelp relative flex items-center gap-1.5 shrink-0">
+      <span className="flex items-center justify-center w-6 h-6 shrink-0 rounded-full border-2 border-gray-400 text-gray-400 cursor-help select-none">
+        <span className="font-bold text-[13px] leading-none">!</span>
+      </span>
+      <span className="text-[11px] text-gray-500 cursor-help select-none whitespace-nowrap">{t('Creation Guide')}</span>
+      <div className="hidden group-hover/uhelp:block absolute bottom-full right-0 mb-2 z-50 w-[236px] bg-white border border-gray-200 rounded-xl shadow-xl p-3">
+        <p className="text-[11px] font-semibold text-gray-800 mb-0.5">
+          {t('Safe Area (center 1080 × 1080px of 3000 × 3000px)')}
+        </p>
+        <p className="text-[11px] leading-snug text-gray-600">
+          {t('Keep the main visual inside the Safe Area so the image is not cropped when varied across sizes.')}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function UploadArtSection({
   value,
   selected,
@@ -333,15 +357,19 @@ function UploadArtSection({
           >
             {t('Replace')}
           </button>
+          <div className="ml-auto"><CreationGuide /></div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="w-full h-9 rounded-md border border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
-        >
-          {t('Upload')}
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex-1 h-9 rounded-md border border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+          >
+            {t('Upload')}
+          </button>
+          <CreationGuide />
+        </div>
       )}
     </div>
   );
