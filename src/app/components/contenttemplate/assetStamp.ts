@@ -5,4 +5,4 @@
  *
  * Do not edit by hand; re-run the script instead.
  */
-export const ASSET_STAMP = 1788428654134;
+export const ASSET_STAMP = 1788862625849;
