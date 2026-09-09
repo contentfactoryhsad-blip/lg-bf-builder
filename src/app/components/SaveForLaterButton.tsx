@@ -25,9 +25,11 @@ interface Props {
   /** Initial version name shown in the save modal. */
   defaultName: string;
   disabled?: boolean;
+  /** Tighter pill for crowded headers (Content Banner Builder). */
+  compact?: boolean;
 }
 
-export function SaveForLaterButton({ draft, defaultName, disabled }: Props) {
+export function SaveForLaterButton({ draft, defaultName, disabled, compact }: Props) {
   const t = useT();
   const [name, setName] = useState(defaultName);
   const [showModal, setShowModal] = useState(false);
@@ -54,13 +56,15 @@ export function SaveForLaterButton({ draft, defaultName, disabled }: Props) {
         <button
           onClick={() => setShowModal(true)}
           disabled={disabled || draft.status === 'saving'}
-          className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border border-gray-300 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          className={`flex items-center font-medium rounded-full border border-gray-300 text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-colors disabled:opacity-40 disabled:pointer-events-none ${
+            compact ? 'gap-1.5 text-[13px] px-3.5 py-2' : 'gap-2 text-sm px-5 py-2'
+          }`}
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M12.5 13.5h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h7l3 3v7a1 1 0 0 1-1 1Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
             <path d="M5 2.5V6h5V2.5M5 13.5V9.5h6v4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
           </svg>
-          {t('Save for Later')}
+          {t('Save')}
         </button>
         {/* Hover hint */}
         <div className="absolute right-0 top-full mt-2 z-50 hidden group-hover/save:block pointer-events-none">
