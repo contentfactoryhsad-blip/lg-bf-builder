@@ -67,7 +67,7 @@ import { useDraftSave } from '../../hooks/useDraftSave';
 import { useApplyBrandFont } from '../../fonts/useApplyBrandFont';
 import { ensureBrandFontLoaded } from '../../fonts/brandFonts';
 import { useUnsavedGuard } from '../../hooks/useUnsavedGuard';
-import { SaveDraftModal } from '../SaveForLaterButton';
+import { SaveDraftModal, SaveForLaterButton } from '../SaveForLaterButton';
 import { UnsavedChangesModal } from '../UnsavedChangesModal';
 import { ConfirmModal } from '../ConfirmModal';
 import { restoreDealCanvasItems, type DealPagePayloadV1 } from '../../drafts/dealPagePayload';
@@ -862,6 +862,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
         }
         right={
           <>
+            <SaveForLaterButton draft={draft} defaultName={defaultDraftName} disabled={canvasItems.length === 0} />
             <button
               onClick={handleDownload}
               disabled={canvasItems.length === 0 || exportProgress !== null}
