@@ -7,6 +7,7 @@
 
 import { STORE_MODULES_SCHEMA_VERSION } from './storeModulesPayload';
 import { DEAL_PAGE_SCHEMA_VERSION } from './dealPagePayload';
+import { CONTENT_BANNER_SCHEMA_VERSION } from './contentBannerPayload';
 import { THUMBNAIL_SINGLE_SCHEMA_VERSION, THUMBNAIL_BULK_SCHEMA_VERSION } from './thumbnailPayload';
 import { ID_BANNER_DEFAULT_SCHEMA_VERSION, ID_BANNER_PROMOTION_SCHEMA_VERSION } from './idBannerPayload';
 import { OFF_SITE_SCHEMA_VERSION } from './offsitePayload';
@@ -14,6 +15,7 @@ import { OFF_SITE_SCHEMA_VERSION } from './offsitePayload';
 export type BuilderKey =
   | 'sis-store-modules'
   | 'deal-page'
+  | 'content-banner'
   | 'thumbnail-single'
   | 'thumbnail-bulk'
   | 'id-banner-default'
@@ -49,10 +51,17 @@ export const DRAFT_KINDS: Record<BuilderKey, DraftKindDef> = {
   },
   'deal-page': {
     key: 'deal-page',
-    title: 'Deal Page',
+    title: 'Promotion Page Builder',
     previewImg: '/deal-page/preview.png',
     schemaVersion: DEAL_PAGE_SCHEMA_VERSION,
     migrate: (payload, from) => (from === DEAL_PAGE_SCHEMA_VERSION ? payload : null),
+  },
+  'content-banner': {
+    key: 'content-banner',
+    title: 'Content Banner Builder',
+    previewImg: '/content-template/home-card.png',
+    schemaVersion: CONTENT_BANNER_SCHEMA_VERSION,
+    migrate: (payload, from) => (from === CONTENT_BANNER_SCHEMA_VERSION ? payload : null),
   },
   'thumbnail-single': {
     key: 'thumbnail-single',

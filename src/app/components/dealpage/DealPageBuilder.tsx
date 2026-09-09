@@ -78,7 +78,7 @@ export interface DealCanvasItem {
   editState: DealEditState;
 }
 
-const DRAFT_TITLE = 'Deal Page';
+const DRAFT_TITLE = 'Promotion Page Builder';
 
 // ── Quick start ───────────────────────────────────────────────────────────────
 
