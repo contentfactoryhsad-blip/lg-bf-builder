@@ -76,6 +76,7 @@ export function PaidSlotPreview({
   motionSrc = null,
   showDisclaimer = true,
   benefitSlots,
+  hideLogo = false,
 }: {
   slot: PaidSlot;
   /** Which artwork this tile stands for. */
@@ -97,6 +98,8 @@ export function PaidSlotPreview({
   showDisclaimer?: boolean;
   /** The Benefit cube's six boxes — product cut-outs / picked assets. */
   benefitSlots?: BenefitSlots;
+  /** META ships a second file without the LG logo — the export's second pass. */
+  hideLogo?: boolean;
 }) {
   /**
    * Key visuals with a board of their own bring their own artwork framing, their
@@ -247,7 +250,7 @@ export function PaidSlotPreview({
             })}
           </div>
 
-          {slot.logo && (
+          {slot.logo && !hideLogo && (
             <div
               style={{
                 position: 'absolute',

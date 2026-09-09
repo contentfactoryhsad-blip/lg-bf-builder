@@ -196,6 +196,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [renderIconRowSlot, setRenderIconRowSlot] = useState<LgcomSlot | null>(null);
   /** A Dynamic paid size whose copy layers render art-less for the mp4 overlay. */
   const [renderPaidOverlaySlot, setRenderPaidOverlaySlot] = useState<PaidSlot | null>(null);
+  /** Second META export pass — the same frame without the LG logo. */
+  const [renderNoLogo, setRenderNoLogo] = useState(false);
   const [exportedCount, setExportedCount] = useState<number | null>(null);
   const exportHost = useRef<HTMLDivElement>(null);
 
@@ -312,6 +314,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         const fileStem = 'id' in slot
           ? `${exportStem(asset.id)}-lgcom-${slot.w}x${slot.h}`
           : `${exportStem(asset.id)}-${(slot as PaidSlot).key}`;
+        // META ships every file twice: as-is and without the LG logo
+        const isMetaPaid = !('id' in slot) && (slot as PaidSlot).key.startsWith('meta-');
         const asMotion = !!asset.motion && (dynamicPaid || ('id' in slot && bareOnExport(slot.id)));
         if (asMotion) {
           const lg = dynamicPaid ? null : (slot as LgcomSlot);
@@ -322,40 +326,43 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
             const art = dynamicPaid ? (slot as PaidSlot).art : artFor(asset.id, lg!.id);
             const src = motionUrl(asset);
             if (!art || !src) throw new Error('no art placement or motion source');
-            // the icon row is drawn live now, so the overlay for the video is
-            // rasterised from the same component the canvas uses
             // whatever rides over the video gets rasterised from the same
             // components the canvas uses: the icon row on LG.com heroes, the
             // full copy/logo/CTA layer set on Dynamic paid sizes
-            let overlayUrl: string | null = null;
-            let overlayBox: { x: number; y: number; w: number; h: number } | null = null;
-            if (dynamicPaid) {
-              setRenderPaidOverlaySlot(slot as PaidSlot);
-              await new Promise(r => setTimeout(r, 220));
-              const host = exportHost.current;
-              const ovBlob = host ? await captureBox(host, slot.w, slot.h) : null;
-              setRenderPaidOverlaySlot(null);
-              if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: slot.w, h: slot.h }; }
-            } else if (lg && (iconOn || showDisclaimer)) {
-              // full-frame overlay: icon row + disclaimer, transparent ground —
-              // the disclaimer ships burned into the hero video (2026-09-03)
-              setRenderIconRowSlot(lg);
-              await new Promise(r => setTimeout(r, 220));
-              const host = exportHost.current;
-              const ovBlob = host ? await captureBox(host, lg.w, lg.h) : null;
-              setRenderIconRowSlot(null);
-              if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: lg.w, h: lg.h }; }
-            }
-            try {
-              const blob = await renderMotionCutLive(src, {
-                w: slot.w,
-                h: slot.h,
-                art: { x: art.x, y: art.y, size: art.size },
-                iconRow: overlayUrl && overlayBox ? { url: overlayUrl, ...overlayBox } : undefined,
-              });
-              entries.push({ name: `${fileStem}.mp4`, blob });
-            } finally {
-              if (overlayUrl) URL.revokeObjectURL(overlayUrl);
+            const passes = dynamicPaid && isMetaPaid ? [false, true] : [false];
+            for (const noLogo of passes) {
+              let overlayUrl: string | null = null;
+              let overlayBox: { x: number; y: number; w: number; h: number } | null = null;
+              if (dynamicPaid) {
+                setRenderNoLogo(noLogo);
+                setRenderPaidOverlaySlot(slot as PaidSlot);
+                await new Promise(r => setTimeout(r, 220));
+                const host = exportHost.current;
+                const ovBlob = host ? await captureBox(host, slot.w, slot.h) : null;
+                setRenderPaidOverlaySlot(null);
+                setRenderNoLogo(false);
+                if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: slot.w, h: slot.h }; }
+              } else if (lg && (iconOn || showDisclaimer)) {
+                // full-frame overlay: icon row + disclaimer, transparent ground —
+                // the disclaimer ships burned into the hero video (2026-09-03)
+                setRenderIconRowSlot(lg);
+                await new Promise(r => setTimeout(r, 220));
+                const host = exportHost.current;
+                const ovBlob = host ? await captureBox(host, lg.w, lg.h) : null;
+                setRenderIconRowSlot(null);
+                if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: lg.w, h: lg.h }; }
+              }
+              try {
+                const blob = await renderMotionCutLive(src, {
+                  w: slot.w,
+                  h: slot.h,
+                  art: { x: art.x, y: art.y, size: art.size },
+                  iconRow: overlayUrl && overlayBox ? { url: overlayUrl, ...overlayBox } : undefined,
+                });
+                entries.push({ name: `${fileStem}${noLogo ? '-no-logo' : ''}.mp4`, blob });
+              } finally {
+                if (overlayUrl) URL.revokeObjectURL(overlayUrl);
+              }
             }
           } catch (err) {
             console.error('[ContentTemplate] motion cut failed', err);
@@ -366,6 +373,13 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           if (host) {
             const blob = await captureBox(host, slot.w, slot.h);
             if (blob) entries.push({ name: `${fileStem}.png`, blob });
+            if (isMetaPaid) {
+              setRenderNoLogo(true);
+              await new Promise(r => setTimeout(r, 220));
+              const blob2 = await captureBox(host, slot.w, slot.h);
+              setRenderNoLogo(false);
+              if (blob2) entries.push({ name: `${fileStem}-no-logo.png`, blob: blob2 });
+            }
           }
         }
         setExportedCount(i + 1);
@@ -855,7 +869,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           aria-hidden
         >
           <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
-          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} />
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} hideLogo={renderNoLogo} />
         </div>
       )}
       {!renderPaidOverlaySlot && renderIconRowSlot && (
@@ -919,6 +933,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               plateColor={plateColor}
               showDisclaimer={showDisclaimer}
               showIndicator={showIndicator}
+              hideLogo={renderNoLogo}
             />
           )}
         </div>
@@ -1081,9 +1096,14 @@ function OutputPicker({
             ))}
       </div>
       {outputKind === 'channel' && (
-        <p className="text-[11px] text-center leading-relaxed max-w-lg" style={{ color: '#8A8078' }}>
-          {t('For LG.com, files are downloaded to match the image upload guide — hero banner sizes are exported without copy, CTA, and indicators (icons and disclaimer included).')}
-        </p>
+        <>
+          <p className="text-[11px] text-center leading-relaxed max-w-lg" style={{ color: '#8A8078' }}>
+            {t('For LG.com, files are downloaded to match the image upload guide — hero banner sizes are exported without copy, CTA, and indicators (icons and disclaimer included).')}
+          </p>
+          <p className="text-[11px] text-center leading-relaxed max-w-lg" style={{ color: '#8A8078' }}>
+            {t('* When downloading from the META Media channel, a version without the LG logo is also downloaded.')}
+          </p>
+        </>
       )}
     </div>
   );
