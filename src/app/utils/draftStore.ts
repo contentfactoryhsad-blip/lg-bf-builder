@@ -43,7 +43,9 @@ export interface DraftRecord extends DraftMeta {
   payload: unknown;
 }
 
-export const MAX_DRAFTS = 20;
+/** Cap is PER BUILDER (2026-09-09) — one busy builder must not evict
+    another's saves. Quota pressure is the only cross-builder eviction. */
+export const MAX_DRAFTS = 25;
 
 const DB_NAME = 'lg-retail-obs-drafts';
 const DB_VERSION = 1;
@@ -147,25 +149,30 @@ async function writeDraft(rec: DraftRecord): Promise<void> {
 }
 
 /** Oldest drafts by updatedAt, excluding `keepId` (never evict the draft
- *  currently being written). */
-async function evictOldest(keepId: string, count = 1): Promise<number> {
+ *  currently being written). `builder` narrows the victims to one builder —
+ *  the cap eviction; without it (quota emergencies) anything can go. */
+async function evictOldest(keepId: string, count = 1, builder?: string): Promise<number> {
   const metas = await listDrafts();
-  const victims = metas.filter((m) => m.id !== keepId).slice(-count);
+  const victims = metas
+    .filter((m) => m.id !== keepId && (!builder || m.builder === builder))
+    .slice(-count);
   for (const v of victims) await deleteDraft(v.id);
   return victims.length;
 }
 
 /**
- * Upsert a draft. Enforces MAX_DRAFTS (evicts oldest when inserting a new id)
+ * Upsert a draft. Enforces MAX_DRAFTS per builder (evicts that builder's oldest)
  * and retries QuotaExceededError up to 3 times by evicting the oldest draft.
  */
 export async function putDraft(rec: DraftRecord): Promise<void> {
-  // Cap total drafts: when this id is new and the store is full, drop oldest.
+  // Cap drafts PER BUILDER: when this id is new and that builder's shelf is
+  // full, drop its oldest — other builders' saves are never touched here.
   try {
     const metas = await listDrafts();
     const isNew = !metas.some((m) => m.id === rec.id);
-    if (isNew && metas.length >= MAX_DRAFTS) {
-      await evictOldest(rec.id, metas.length - MAX_DRAFTS + 1);
+    const sameBuilder = metas.filter((m) => m.builder === rec.builder);
+    if (isNew && sameBuilder.length >= MAX_DRAFTS) {
+      await evictOldest(rec.id, sameBuilder.length - MAX_DRAFTS + 1, rec.builder);
     }
   } catch {
     // listing failed — proceed with the write attempt anyway

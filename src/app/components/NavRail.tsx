@@ -90,7 +90,11 @@ export function NavRail({ active, onNavigate, onOpenDraft }: Props) {
       </div>
 
       {showSavedWork && (
-        <SavedWorkModal onOpenDraft={onOpenDraft} onClose={() => setShowSavedWork(false)} />
+        <SavedWorkModal
+          onOpenDraft={onOpenDraft}
+          onClose={() => setShowSavedWork(false)}
+          context={active === 'content-template' ? 'content-banner' : active === 'deal-page' ? 'deal-page' : 'home'}
+        />
       )}
     </div>
   );

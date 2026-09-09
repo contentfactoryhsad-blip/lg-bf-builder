@@ -12,7 +12,6 @@ import {
   listDrafts,
   getDraft,
   deleteDraft,
-  deleteAllDrafts,
   MAX_DRAFTS,
   type DraftMeta,
   type DraftRecord,
@@ -20,9 +19,17 @@ import {
 import { getDraftKind } from '../drafts/draftKinds';
 import { ConfirmModal } from './ConfirmModal';
 
+/**
+ * Where the modal was opened from. On Home the two builders show as tabs;
+ * inside a builder only that builder's saves are listed (no tabs). The
+ * count in the header's top-right is the LISTED builder's `NN/50`.
+ */
+export type SavedWorkContext = 'home' | 'content-banner' | 'deal-page';
+
 interface Props {
   onOpenDraft: (rec: DraftRecord) => void;
   onClose: () => void;
+  context?: SavedWorkContext;
 }
 
 function formatRelativeTime(ts: number, t: (k: string) => string): string {
@@ -37,9 +44,11 @@ function formatRelativeTime(ts: number, t: (k: string) => string): string {
   return new Date(ts).toLocaleDateString();
 }
 
-export function SavedWorkModal({ onOpenDraft, onClose }: Props) {
+export function SavedWorkModal({ onOpenDraft, onClose, context = 'home' }: Props) {
   const t = useT();
   const [drafts, setDrafts] = useState<DraftMeta[]>([]);
+  const [tab, setTab] = useState<'content-banner' | 'deal-page'>('content-banner');
+  const filter = context === 'home' ? tab : context;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DraftMeta | null>(null);
   const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
@@ -82,11 +91,14 @@ export function SavedWorkModal({ onOpenDraft, onClose }: Props) {
 
   const handleDeleteAll = () => setPendingDeleteAll(true);
 
+  /** Scoped to the listed builder — the other tab's saves stay. */
   const confirmDeleteAll = async () => {
     setPendingDeleteAll(false);
-    await deleteAllDrafts();
+    for (const m of drafts.filter((x) => x.builder === filter)) await deleteDraft(m.id);
     refresh();
   };
+
+  const shown = drafts.filter((m) => m.builder === filter);
 
   return (
     <div
@@ -97,31 +109,57 @@ export function SavedWorkModal({ onOpenDraft, onClose }: Props) {
         className="bg-white rounded-2xl shadow-2xl w-[520px] max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        {/* Header — the count top-right is the listed builder's NN/50 */}
+        <div className="flex items-start justify-between px-6 py-4 border-b border-gray-200">
           <div>
             <h2 className="font-lgei font-bold text-[17px] text-gray-900" style={{ lineHeight: '24px' }}>
-              {t('Saved Work')} ({String(drafts.length).padStart(2, '0')}/{MAX_DRAFTS})
+              {t('Saved Work')}
             </h2>
             <p className="text-xs text-gray-400 mt-0.5" style={{ lineHeight: '16px' }}>
-              {t('Saved in this browser')} · {t('Over {n} saved, oldest deleted first.').replace('{n}', String(MAX_DRAFTS))}
+              {t('Saved in this browser')} · {t('Up to {n} per builder — oldest deleted first.').replace('{n}', String(MAX_DRAFTS))}
             </p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-sm font-medium text-gray-500 tabular-nums" style={{ lineHeight: '24px' }}>
+              {String(shown.length).padStart(2, '0')}/{MAX_DRAFTS}
+            </span>
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+              <X size={20} />
+            </button>
+          </div>
         </div>
+
+        {/* Builder tabs — Home only; inside a builder the filter is fixed */}
+        {context === 'home' && (
+          <div className="flex items-center gap-1 px-6 border-b border-gray-100 shrink-0">
+            {([
+              ['content-banner', 'Content Banner Builder'],
+              ['deal-page', 'Promotion Page Builder'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={`px-3 h-10 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
+                  tab === key ? 'border-[#FD312E] text-[#FD312E]' : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                {t(label)}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4">
-          {drafts.length === 0 ? (
+          {shown.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <p className="text-sm">{t('No saved work yet.')}</p>
               <p className="text-xs mt-1">{t('Use Save for Later inside a builder to see it here.')}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {drafts.map((meta) => {
+              {shown.map((meta) => {
                 const kind = getDraftKind(meta.builder);
                 return (
                   <button
@@ -173,7 +211,7 @@ export function SavedWorkModal({ onOpenDraft, onClose }: Props) {
           )}
         </div>
 
-        {drafts.length > 0 && (
+        {shown.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-100 shrink-0 flex justify-start">
             <button
               onClick={handleDeleteAll}

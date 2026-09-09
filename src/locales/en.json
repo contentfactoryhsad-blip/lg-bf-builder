@@ -2,6 +2,7 @@
   "\"Off\" label": "\"Off\" label",
   "\"{name}\" is already used by another saved version. Overwriting will replace its contents.": "\"{name}\" is already used by another saved version. Overwriting will replace its contents.",
   "$50 Off": "$50 Off",
+  "* When downloading from the META Media channel, a version without the LG logo is also downloaded.": "* When downloading from the META Media channel, a version without the LG logo is also downloaded.",
   "*T&Cs apply": "*T&Cs apply",
   "*T&Cs apply.": "*T&Cs apply.",
   "*T&Cs apply. Stocks subject to availability. Pictures for illustrations only.": "*T&Cs apply. Stocks subject to availability. Pictures for illustrations only.",
@@ -164,6 +165,7 @@
   "Compare Original (Hold)": "Compare Original (Hold)",
   "Complete": "Complete",
   "Confirm": "Confirm",
+  "Content Banner": "Content Banner",
   "Content Template Builder": "Content Template Builder",
   "Copy": "Copy",
   "COPY 1": "COPY 1",
@@ -841,6 +843,7 @@
   "UP TO": "UP TO",
   "Up to\n$240* Off": "Up to\n$240* Off",
   "Up to 2 lines": "Up to 2 lines",
+  "Up to {n} per builder — oldest deleted first.": "Up to {n} per builder — oldest deleted first.",
   "Upload": "Upload",
   "Upload an image to fill the shape.": "Upload an image to fill the shape.",
   "Upload image": "Upload image",
@@ -903,7 +906,5 @@
   "Zoom in": "Zoom in",
   "Zoom out": "Zoom out",
   "{n} cutout-ready first": "{n} cutout-ready first",
-  "{succeeded} succeeded, {failed} failed": "{succeeded} succeeded, {failed} failed",
-  "* When downloading from the META Media channel, a version without the LG logo is also downloaded.": "* When downloading from the META Media channel, a version without the LG logo is also downloaded.",
-  "Content Banner": "Content Banner"
+  "{succeeded} succeeded, {failed} failed": "{succeeded} succeeded, {failed} failed"
 }
