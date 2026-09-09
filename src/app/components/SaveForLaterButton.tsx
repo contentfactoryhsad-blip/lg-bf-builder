@@ -31,7 +31,9 @@ interface Props {
 
 export function SaveForLaterButton({ draft, defaultName, disabled, compact }: Props) {
   const t = useT();
-  const [name, setName] = useState(defaultName);
+  // null until the user saves under an explicit name — the modal then opens
+  // with the live default (asset/channel can change between saves)
+  const [name, setName] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
   if (!draft.available) return null;
@@ -44,12 +46,12 @@ export function SaveForLaterButton({ draft, defaultName, disabled, compact }: Pr
 
   return (
     <>
-      {/* Save status */}
-      {(draft.status !== 'idle' || draft.dirty) && (
+      {/* Save status — dirty state is not surfaced, only save activity */}
+      {draft.status !== 'idle' && (
         <span className={`text-xs ${draft.status === 'error' ? 'text-[#FD312E]' : 'text-gray-400'}`} style={{ lineHeight: '16px' }}>
           {draft.status === 'saving' && t('Saving…')}
           {draft.status === 'error' && t('Save failed')}
-          {draft.status !== 'saving' && draft.status !== 'error' && (draft.dirty ? t('Unsaved changes') : draft.status === 'saved' ? t('Saved') : '')}
+          {draft.status === 'saved' && !draft.dirty && t('Saved')}
         </span>
       )}
       <div className="relative group/save">
@@ -76,7 +78,7 @@ export function SaveForLaterButton({ draft, defaultName, disabled, compact }: Pr
 
       {showModal && (
         <SaveDraftModal
-          defaultName={name}
+          defaultName={name ?? defaultName}
           checkNameTaken={draft.checkNameTaken}
           onSave={handleConfirm}
           onCancel={() => setShowModal(false)}

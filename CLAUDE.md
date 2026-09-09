@@ -125,6 +125,11 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   🔴 마스터 이미지는 라이브러리 변형이 아니라 **보드 컴포넌트의 Image 인스턴스 오버라이드**에 실려 있다 —
   라이브러리 변형(4375:*)을 받으면 옛 아트가 나온다.
 
+- **Save 기능** (2026-09-09): 헤더 BF Working Files 와 Download 사이의 Save 버튼(`SaveForLaterButton compact`).
+  드래프트 종류 `content-banner`(`contentBannerPayload.ts` v1) — 선택 에셋/채널/사이즈, 카피, 아이콘 설정, 토글,
+  Slot Color(+투명도), 제품·베네핏 이미지(dataURL), 업로드 이미지(dataURL — 이를 위해 업로드가 blob URL 대신
+  dataURL 로 저장된다). 복원은 App.tsx가 `initialDraft` prop 으로 seed. "Unsaved changes" 상태 문구는 표시하지 않는다.
+
 - 🔴 **카피 스택은 Figma 오토레이아웃을 실측으로 흉내 낸다** (2026-09-02). Figma는 headline → (subcopy) → CTA를
   세로 오토레이아웃으로 묶어 두므로, 카피가 디자인 박스보다 짧아지면 아래 레이어가 그만큼 당겨 올라와야 한다.
   `PaidSlotPreview`·`LgcomSlotPreview` 둘 다: headline/subcopy `<p>`의 `offsetHeight`를 `useLayoutEffect`로 실측하고,

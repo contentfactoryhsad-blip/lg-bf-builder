@@ -904,5 +904,6 @@
   "Zoom out": "Zoom out",
   "{n} cutout-ready first": "{n} cutout-ready first",
   "{succeeded} succeeded, {failed} failed": "{succeeded} succeeded, {failed} failed",
-  "* When downloading from the META Media channel, a version without the LG logo is also downloaded.": "* When downloading from the META Media channel, a version without the LG logo is also downloaded."
+  "* When downloading from the META Media channel, a version without the LG logo is also downloaded.": "* When downloading from the META Media channel, a version without the LG logo is also downloaded.",
+  "Content Banner": "Content Banner"
 }

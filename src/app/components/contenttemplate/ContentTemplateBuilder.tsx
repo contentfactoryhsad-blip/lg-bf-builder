@@ -12,7 +12,7 @@
  * "Content Template Builder", frame 26:2): rail 80 / palette 320 / edit 384,
  * 66px thumbnails on an 8px gutter.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Draggable sidebar width, persisted per key. Browser windows differ wildly and
@@ -87,6 +87,9 @@ import { artFor, bareOnExport, lgcomSlotsFor, productSlotCount, type IconRowStyl
 import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
+import { useDraftSave } from '../../hooks/useDraftSave';
+import { SaveForLaterButton } from '../SaveForLaterButton';
+import type { ContentBannerPayloadV1 } from '../../drafts/contentBannerPayload';
 import { renderMotionCutLive, stripAudioTrack } from './exportMotion';
 import { logUsage } from '../../utils/usageClient';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
@@ -113,17 +116,20 @@ interface Props {
   railActive: NavRailKey;
   onRailNavigate: (target: NavRailKey) => void;
   onOpenDraft: (rec: DraftRecord) => void;
+  /** Resume a saved session — seeds every edit state below. */
+  initialDraft?: { id: string; title: string; payload: ContentBannerPayloadV1 };
 }
 
-export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onOpenDraft }: Props) {
+export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onOpenDraft, initialDraft }: Props) {
   const t = useT();
+  const seed = initialDraft?.payload;
   /** Exactly one asset is in play at a time, across all three groups. */
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(seed?.selectedId ?? null);
   /** null until a channel is picked — that is what switches the screen from
    *  "study the asset" to "lay out the banners". */
-  const [channelKey, setChannelKey] = useState<string | null>(null);
+  const [channelKey, setChannelKey] = useState<string | null>(seed?.channelKey ?? null);
   /** Shorts go out at a fixed size instead of to a channel. */
-  const [sizeKey, setSizeKey] = useState<string | null>(null);
+  const [sizeKey, setSizeKey] = useState<string | null>(seed?.sizeKey ?? null);
   /** Shorts preview audio. On by default — the tile click that mounts the
       video is the user gesture Chrome wants for audible autoplay. */
   const [soundOn, setSoundOn] = useState(true);
@@ -131,59 +137,66 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [shortsPlaying, setShortsPlaying] = useState(true);
   const shortsVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  const [copy, setCopy] = useState<SlotCopy>(EMPTY_COPY);
+  const [copy, setCopy] = useState<SlotCopy>(seed?.copy ?? EMPTY_COPY);
   /**
    * Icon row settings, ported from promotion-banner-variation: None / Solid /
    * Line, a colour, how many groups, and which benefit each group shows —
    * solid and line keep separate picks, matching the source app.
    */
-  const [iconKind, setIconKind] = useState<'none' | 'solid' | 'line'>('none');
+  const [iconKind, setIconKind] = useState<'none' | 'solid' | 'line'>(seed?.iconKind ?? 'none');
   /** Panel checkbox — off drops the disclaimer from every size. */
-  const [showDisclaimer, setShowDisclaimer] = useState(true);
+  const [showDisclaimer, setShowDisclaimer] = useState(seed?.showDisclaimer ?? true);
   /** Panel checkbox — the hero sizes' carousel indicator. */
-  const [showIndicator, setShowIndicator] = useState(true);
-  const [iconColor, setIconColor] = useState<'black' | 'white'>('white');
-  const [iconCount, setIconCount] = useState<1 | 2 | 3>(3);
-  const [solidIconIds, setSolidIconIds] = useState<string[]>(['free-delivery', 'free-disposal', 'free-installation']);
-  const [lineIconIds, setLineIconIds] = useState<string[]>(['free-delivery', 'free-disposal', 'free-installation']);
+  const [showIndicator, setShowIndicator] = useState(seed?.showIndicator ?? true);
+  const [iconColor, setIconColor] = useState<'black' | 'white'>(seed?.iconColor ?? 'white');
+  const [iconCount, setIconCount] = useState<1 | 2 | 3>(seed?.iconCount ?? 3);
+  const [solidIconIds, setSolidIconIds] = useState<string[]>(seed?.solidIconIds ?? ['free-delivery', 'free-disposal', 'free-installation']);
+  const [lineIconIds, setLineIconIds] = useState<string[]>(seed?.lineIconIds ?? ['free-delivery', 'free-disposal', 'free-installation']);
   /** Caption overrides per slot — operators localise the labels. null = registry text. */
-  const [solidIconLabels, setSolidIconLabels] = useState<(string | null)[]>([null, null, null]);
-  const [lineIconLabels, setLineIconLabels] = useState<(string | null)[]>([null, null, null]);
+  const [solidIconLabels, setSolidIconLabels] = useState<(string | null)[]>(seed?.solidIconLabels ?? [null, null, null]);
+  const [lineIconLabels, setLineIconLabels] = useState<(string | null)[]>(seed?.lineIconLabels ?? [null, null, null]);
   const showIconRow = iconKind !== 'none';
   const iconStyle = `${iconKind === 'none' ? 'solid' : iconKind}-${iconColor}` as IconRowStyle;
   const iconIds = (iconKind === 'line' ? lineIconIds : solidIconIds).slice(0, iconCount);
   const iconLabels = (iconKind === 'line' ? lineIconLabels : solidIconLabels).slice(0, iconCount);
   /** Products keyed by asset — switching key visual keeps each one's fills. */
-  const [products, setProducts] = useState<Record<string, ProductSlots>>({});
+  const [products, setProducts] = useState<Record<string, ProductSlots>>(seed?.products ?? {});
   /** The AD Benefit boxes — see BenefitSlotsEditor. Skeleton for now. */
-  const [benefitSlots, setBenefitSlots] = useState<BenefitSlots>(emptyBenefitSlots());
+  const [benefitSlots, setBenefitSlots] = useState<BenefitSlots>(seed?.benefitSlots ?? emptyBenefitSlots());
   /** Plate fill on the paid boards; starts on the Figma value. */
-  const [plateColor, setPlateColor] = useState(PD_PLATE_FILL);
+  const [plateColor, setPlateColor] = useState(seed?.plateColor ?? PD_PLATE_FILL);
   /**
    * The operator's uploaded 3000×3000, as an object URL. Mirrored into the
    * asset registry (`setCustomArt`) so every URL helper resolves it; kept in
    * state as well so uploads re-render and the old URL can be revoked.
    */
-  const [uploadUrl, setUploadUrl] = useState<string | null>(null);
+  const [uploadUrl, setUploadUrl] = useState<string | null>(seed?.uploadDataUrl ?? null);
   const uploadInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (seed?.uploadDataUrl) setCustomArt(seed.uploadDataUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleUploadFile(file: File) {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      // the Main skeleton places a square — anything else would render distorted
-      if (Math.abs(img.width - img.height) > img.width * 0.01) {
-        URL.revokeObjectURL(url);
-        window.alert(t('Please upload a square image (3000×3000).'));
-        return;
-      }
-      if (uploadUrl) URL.revokeObjectURL(uploadUrl);
-      setCustomArt(url);
-      setUploadUrl(url);
-      setSelectedId(CUSTOM_ASSET_ID);
+    // dataURL rather than a blob URL, so the upload survives into saved drafts
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = String(reader.result);
+      const img = new Image();
+      img.onload = () => {
+        // the Main skeleton places a square — anything else would render distorted
+        if (Math.abs(img.width - img.height) > img.width * 0.01) {
+          window.alert(t('Please upload a square image (3000×3000).'));
+          return;
+        }
+        setCustomArt(url);
+        setUploadUrl(url);
+        setSelectedId(CUSTOM_ASSET_ID);
+      };
+      img.onerror = () => window.alert(t('That file could not be read as an image.'));
+      img.src = url;
     };
-    img.onerror = () => { URL.revokeObjectURL(url); window.alert(t('That file could not be read as an image.')); };
-    img.src = url;
+    reader.readAsDataURL(file);
   }
 
   /** The one size mounted in the hidden export host, and how far along we are. */
@@ -401,6 +414,31 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
 
   const exporting = exportedCount !== null;
 
+  // ── Save for Later — same flow as the Promotion Page Builder ──
+  const draftState = useMemo<ContentBannerPayloadV1>(() => ({
+    selectedId, channelKey, sizeKey, copy,
+    iconKind, iconColor, iconCount,
+    solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
+    showDisclaimer, showIndicator, plateColor,
+    products, benefitSlots,
+    uploadDataUrl: uploadUrl && uploadUrl.startsWith('data:') ? uploadUrl : null,
+  }), [selectedId, channelKey, sizeKey, copy, iconKind, iconColor, iconCount,
+       solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
+       showDisclaimer, showIndicator, plateColor, products, benefitSlots, uploadUrl]);
+  const channelLabelForName = outputKind === 'size'
+    ? (shortsSize?.label ?? '')
+    : (channelKey === 'all' ? 'ALL' : channel?.label ?? '');
+  const defaultDraftName = initialDraft?.title
+    ?? (asset
+      ? `${groupLabel(asset.id)} - ${asset.label}${channelLabelForName ? ` - ${channelLabelForName}` : ''}`
+      : t('Content Banner'));
+  const draft = useDraftSave({
+    builder: 'content-banner',
+    initialDraftId: initialDraft?.id,
+    state: draftState,
+    title: defaultDraftName,
+  });
+
   return (
     <div className="flex flex-col h-screen bg-[#f8f7f5]">
       <AppHeader
@@ -415,17 +453,6 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         }
         right={
           <>
-            {/* Save for Later is parked, not removed — flip SHOW_SAVE_FOR_LATER
-                when the draft flow for this builder lands. */}
-            {SHOW_SAVE_FOR_LATER && (
-              <button
-                type="button"
-                disabled
-                className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border border-gray-300 text-gray-600 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                {t('Save for Later')}
-              </button>
-            )}
             {/* BF working-file package on Frame.io — disabled until the link lands */}
             <a
               href={WORKING_FILES_URL || undefined}
@@ -433,17 +460,18 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               rel="noreferrer"
               title={WORKING_FILES_URL ? undefined : t('Link coming soon')}
               aria-disabled={!WORKING_FILES_URL}
-              className={`flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border transition-colors border-gray-300 text-gray-600 hover:border-gray-400 ${
+              className={`flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-full border transition-colors border-gray-300 text-gray-600 hover:border-gray-400 ${
                 WORKING_FILES_URL ? '' : 'opacity-40 pointer-events-none'
               }`}
             >
               {t('BF Working Files')}
             </a>
+            <SaveForLaterButton draft={draft} defaultName={defaultDraftName} disabled={!asset} compact />
             <button
               type="button"
               onClick={() => void handleDownload()}
               disabled={!asset || (!showBanners && !asset.video) || exporting}
-              className="flex items-center gap-2 text-sm font-medium px-5 py-2 rounded-full border transition-colors border-[#FD312E] text-[#FD312E] hover:bg-[#FD312E] hover:text-white disabled:opacity-40 disabled:pointer-events-none"
+              className="flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-full border transition-colors border-[#FD312E] text-[#FD312E] hover:bg-[#FD312E] hover:text-white disabled:opacity-40 disabled:pointer-events-none"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path
@@ -1177,9 +1205,6 @@ function PreviewBox({ asset }: { asset: ContentAsset | undefined }) {
  * artworks share the `PAID_SLOTS` layout; the rest override it per size from
  * `paidBoards.ts` — the PD Slot pair with plates, PD Centric without.
  */
-/** Parked header button — hidden for now, likely to return with the draft flow. */
-const SHOW_SAVE_FOR_LATER = false;
-
 /**
  * Frame.io links — fill in as the share links arrive; a button renders
  * disabled while its link is empty.

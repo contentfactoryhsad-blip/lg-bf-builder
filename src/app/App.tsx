@@ -10,6 +10,7 @@ import { makeInitialThumbnailStates, ThumbnailAllStates } from './components/thu
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { getDraftKind } from './drafts/draftKinds';
 import type { DraftRecord } from './utils/draftStore';
+import type { ContentBannerPayloadV1 } from './drafts/contentBannerPayload';
 import type { StoreModulesPayloadV1 } from './drafts/storeModulesPayload';
 import type { DealPagePayloadV1 } from './drafts/dealPagePayload';
 import type { IdBannerDefaultPayloadV1, IdBannerPromotionPayloadV1 } from './drafts/idBannerPayload';
@@ -86,6 +87,8 @@ function AppInner() {
       setStep('brand-shop');
     } else if (rec.builder === 'deal-page') {
       setStep('deal-page');
+    } else if (rec.builder === 'content-banner') {
+      setStep('content-template');
     } else if (rec.builder === 'thumbnail-single') {
       const restored = restoreThumbnailSingle(migrated as ThumbnailSinglePayloadV1, t);
       setSelectedThumbnail(restored.slotId);
@@ -133,12 +136,15 @@ function AppInner() {
   }
 
   if (step === 'content-template') {
+    const cbDraft = resumeDraft?.builder === 'content-banner' ? resumeDraft : null;
     return (
       <ContentTemplateBuilder
+        key={cbDraft?.id ?? 'fresh'}
         onBack={() => setStep('home')}
         railActive="content-template"
         onRailNavigate={handleRailNavigate}
         onOpenDraft={handleOpenDraft}
+        initialDraft={cbDraft ? { id: cbDraft.id, title: cbDraft.title, payload: cbDraft.payload as ContentBannerPayloadV1 } : undefined}
       />
     );
   }
