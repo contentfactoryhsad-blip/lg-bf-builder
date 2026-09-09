@@ -53,6 +53,7 @@ import {
 } from './dealEditStates';
 import { heroArtFor, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
 import { logUsage } from '../../utils/usageClient';
+import { buildCopySheetXlsx } from './copySheet';
 import { MO_HERO_ART } from './DealModuleRendererMo';
 import { renderMotionCutLive } from '../contenttemplate/exportMotion';
 import { CarouselSideArrow, DealModuleRenderer } from './DealModuleRenderer';
@@ -790,6 +791,11 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       }
 
       root.unmount();
+
+      // Copy sheet — every module's editable copy in one xlsx at the ZIP
+      // root, for the AEM authoring hand-off.
+      zip.file('Copy Sheet.xlsx', await buildCopySheetXlsx(exportItems));
+
       const blob = await zip.generateAsync({ type: 'blob' });
       await save(blob);
       // `item` = which key visual each exported module used, pipe-joined
