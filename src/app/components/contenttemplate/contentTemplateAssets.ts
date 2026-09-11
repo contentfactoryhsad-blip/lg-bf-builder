@@ -28,6 +28,51 @@ let customArtUrl: string | null = null;
 export const setCustomArt = (url: string | null) => { customArtUrl = url; };
 export const hasCustomArt = () => customArtUrl !== null;
 
+/**
+ * The uploaded image's own ground color, sampled from its border at upload
+ * time. The Main skeleton assumes a black ground (slot background, LG.com
+ * scrim, paid masks all fade to black) — a light upload gets its sampled
+ * tone instead, and ONLY the custom asset reads this. null = default black.
+ */
+let customArtBg: string | null = null;
+export const setCustomArtBg = (hex: string | null) => { customArtBg = hex; };
+export const getCustomArtBg = () => customArtBg;
+
+/** Perceptual lightness check — light grounds flip the copy to dark ink. */
+export const isLightHex = (hex: string): boolean => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 150;
+};
+
+/** Average color of the image's border pixels (its background tone). */
+export function sampleEdgeColor(src: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const N = 64;
+        const cv = document.createElement('canvas');
+        cv.width = N; cv.height = N;
+        const ctx = cv.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, N, N);
+        const d = ctx.getImageData(0, 0, N, N).data;
+        let r = 0, g = 0, b = 0, n = 0;
+        const px = (x: number, y: number) => {
+          const i = (y * N + x) * 4;
+          r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
+        };
+        for (let i = 0; i < N; i++) { px(i, 0); px(i, N - 1); px(0, i); px(N - 1, i); }
+        const byte = (v: number) => Math.round(v / n).toString(16).padStart(2, '0');
+        resolve(`#${byte(r)}${byte(g)}${byte(b)}`.toUpperCase());
+      } catch { resolve('#000000'); }
+    };
+    img.onerror = () => resolve('#000000');
+    img.src = src;
+  });
+}
+
 
 export interface ContentAsset {
   /** Stable key for selection. Unique across groups. */

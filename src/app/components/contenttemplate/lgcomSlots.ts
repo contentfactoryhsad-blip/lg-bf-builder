@@ -248,21 +248,21 @@ export interface Gradation { x: number; y: number; w: number; h: number; stop: n
  * art clears the copy. Sizes without an entry simply have no scrim.
  */
 const GRAD: Record<string, Partial<Record<SlotId, Gradation>>> = {
-  'kv-main':                   { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'kv-main-character':         { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'kv-product-centric-1':      { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'kv-product-centric-2':      { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'kv-product-slot':           { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'kv-product-slot-character': { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'kv-product-slot2':          { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 832, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'kv-product-slot2-character': { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 806, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'deal-type-bundle':          { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 1268, h: 717, stop: 0.565 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 1052, h: 397, stop: 0.54 } },
-  'deal-type-time-sale':       { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 1296, h: 717, stop: 0.512 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 1072, h: 397, stop: 0.543 } },
-  'deal-type-gift':            { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 1300, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 1016, h: 397, stop: 0.591 } },
-  'deal-type-hot-deal':        { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 1320, h: 717, stop: 0.518 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 1132, h: 397, stop: 0.555 } },
-  'ad-teasing':                { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'ad-joy-ryder':              { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 994, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 721, h: 397, stop: 0.441 } },
-  'ad-benefit':                { 'ST0001-pc-1920x720': { x: 4, y: 3, w: 1252, h: 717, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 4, y: 3, w: 1090, h: 397, stop: 0.441 } },
+  'kv-main':                   { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'kv-main-character':         { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'kv-product-centric-1':      { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'kv-product-centric-2':      { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'kv-product-slot':           { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'kv-product-slot-character': { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'kv-product-slot2':          { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'kv-product-slot2-character': { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'deal-type-bundle':          { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'deal-type-time-sale':       { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'deal-type-gift':            { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'deal-type-hot-deal':        { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'ad-teasing':                { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'ad-joy-ryder':              { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'ad-benefit':                { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
 };
 
 /** The scrim for this asset in this slot, if the slot has one. */
@@ -271,8 +271,12 @@ export function gradFor(assetId: string, slot: SlotId): Gradation | undefined {
 }
 
 /** CSS for a scrim, keeping Figma's three stops. */
-export const gradCss = (g: Gradation) =>
-  `linear-gradient(90deg, #000 0%, #000 ${(g.stop * 100).toFixed(1)}%, rgba(0,0,0,0) 100%)`;
+export const gradCss = (g: Gradation, ground = '#000000') => {
+  const r = parseInt(ground.slice(1, 3), 16);
+  const gr = parseInt(ground.slice(3, 5), 16);
+  const b = parseInt(ground.slice(5, 7), 16);
+  return `linear-gradient(90deg, ${ground} 0%, ${ground} ${(g.stop * 100).toFixed(1)}%, rgba(${r},${gr},${b},0) 100%)`;
+};
 
 /* ------------------------------------------------------------------ */
 /* Product slots                                                       */

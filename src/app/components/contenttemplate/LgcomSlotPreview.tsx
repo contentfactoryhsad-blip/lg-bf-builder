@@ -14,11 +14,12 @@
  */
 import React from 'react';
 import { useT } from '../../i18n/LanguageContext';
-import { artUrl, fullUrl, motionUrl, type ContentAsset } from './contentTemplateAssets';
+import { CUSTOM_ASSET_ID, artUrl, fullUrl, getCustomArtBg, isLightHex, motionUrl, type ContentAsset } from './contentTemplateAssets';
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
 import { IconRowInline } from './icons/IconRowInline';
+import { MirrorFill } from './MirrorFill';
 import { AD_BENEFIT_BOXES } from './paidBoards';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import {
@@ -41,13 +42,15 @@ import {
 /** Figma reports tracking as a % of font size; CSS wants an em value. */
 const tracking = (pct: number) => `${pct / 100}em`;
 
-function SlotLine({ spec, text, slotH, dy = 0, pRef }: {
+function SlotLine({ spec, text, slotH, dy = 0, pRef, ink = '#FFFFFF' }: {
   spec: SlotText;
   text: string;
   slotH?: number;
   /** How far the Figma auto-layout pulls this line up (see `pullUp`). */
   dy?: number;
   pRef?: React.Ref<HTMLParagraphElement>;
+  /** Copy color — dark on a light custom-upload ground. */
+  ink?: string;
 }) {
   const type = {
     margin: 0,
@@ -58,7 +61,9 @@ function SlotLine({ spec, text, slotH, dy = 0, pRef }: {
     letterSpacing: tracking(spec.trackingPct),
     textAlign: spec.align,
     // the disclaimer reads at 50% strength across the builder (2026-09-03)
-    color: spec.role === 'disclaimer' ? 'rgba(255,255,255,0.5)' : '#fff',
+    color: spec.role === 'disclaimer'
+      ? `rgba(${parseInt(ink.slice(1, 3), 16)},${parseInt(ink.slice(3, 5), 16)},${parseInt(ink.slice(5, 7), 16)},0.5)`
+      : ink,
     whiteSpace: 'pre-line' as const,
   };
 
@@ -169,6 +174,10 @@ export function LgcomSlotPreview({
   const plates = asset && art ? slotBoxesFor(asset.id, slot.id) : [];
   // this size may call for the asset's other artwork — see Placement.src
   const stillUrl = asset ? (art?.src ? artUrl(art.src) : fullUrl(asset)) : null;
+  // the custom upload brings its own ground tone; every real asset stays black
+  const customBg = asset?.id === CUSTOM_ASSET_ID ? getCustomArtBg() : null;
+  const ground = customBg ?? SLOT_BG;
+  const ink = customBg && isLightHex(customBg) ? '#111111' : '#FFFFFF';
 
   // Figma stacks headline → subcopy → CTA in a vertical auto-layout. The four
   // ST0001 sizes top-pack it (primary=MIN), so shorter copy pulls everything
@@ -217,7 +226,7 @@ export function LgcomSlotPreview({
       <div
         data-export-box
         className="relative overflow-hidden rounded-lg"
-        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : SLOT_BG }}
+        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : ground }}
       >
         <div
           style={{
@@ -230,6 +239,10 @@ export function LgcomSlotPreview({
             transformOrigin: 'top left',
           }}
         >
+          {/* custom upload: mirror-stretch the art's edges into uncovered frame */}
+          {!hideArt && customBg && art && stillUrl && (
+            <MirrorFill src={stillUrl} art={art} w={slot.w} h={slot.h} />
+          )}
           {!hideArt && asset && art && (
             motion ? (
               <video
@@ -328,7 +341,9 @@ export function LgcomSlotPreview({
             );
           })}
 
-          {!hideArt && grad && (
+          {/* the flat ground-colored scrim reads as a hole on a custom upload —
+              the mirror fill already extends the image, so skip it there */}
+          {!hideArt && grad && !customBg && (
             <div
               style={{
                 position: 'absolute',
@@ -336,7 +351,7 @@ export function LgcomSlotPreview({
                 top: grad.y,
                 width: grad.w,
                 height: grad.h,
-                background: gradCss(grad),
+                background: gradCss(grad, ground),
               }}
             />
           )}
@@ -352,7 +367,7 @@ export function LgcomSlotPreview({
             if (spec.role === 'disclaimer' && !showDisclaimer) return null;
             // small sizes lock the disclaimer to the short version
             if (spec.role === 'disclaimer' && !lgcomDisclaimerEditable(slot)) {
-              return <SlotLine key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} />;
+              return <SlotLine key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
             }
             let typed = copy[spec.role].trim();
             if (spec.role === 'disclaimer') typed = typed.slice(0, disclaimerMaxChars(slot.id));
@@ -363,6 +378,7 @@ export function LgcomSlotPreview({
                 spec={spec}
                 text={typed || COPY_PLACEHOLDER[spec.role]}
                 slotH={slot.h}
+                ink={ink}
                 dy={pullUp(spec.y)}
                 pRef={flows ? el => { flowRef.current[spec.role] = el; } : undefined}
               />

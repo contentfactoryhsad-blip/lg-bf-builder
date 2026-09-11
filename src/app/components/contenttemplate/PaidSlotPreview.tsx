@@ -8,11 +8,12 @@
  * where the `slot` frame sits on the PD Slot boards.
  */
 import React from 'react';
-import { artUrl, type ContentAsset } from './contentTemplateAssets';
+import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
 import { type SlotCopy } from './SlotCopyEditor';
 import { CTA_COLOR, SHORT_DISCLAIMER, SLOT_BG, disclaimerMaxChars, longDisclaimer } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
 import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor } from './paidBoards';
+import { MirrorFill } from './MirrorFill';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import { type ProductSlots } from './ProductSlotsEditor';
 
@@ -28,13 +29,15 @@ const maskCss = (m: PaidMask) =>
     .map(([pos, a]) => `rgba(255,255,255,${a}) ${(pos * 100).toFixed(1)}%`)
     .join(', ')})`;
 
-function Line({ spec, text, slotH, dy = 0, pRef }: {
+function Line({ spec, text, slotH, dy = 0, pRef, ink = '#FFFFFF' }: {
   spec: PaidText;
   text: string;
   slotH?: number;
   /** How far the Figma auto-layout pulls this line up (see `pullUp`). */
   dy?: number;
   pRef?: React.Ref<HTMLParagraphElement>;
+  /** Copy color — dark on a light custom-upload ground. */
+  ink?: string;
 }) {
   return (
     <p
@@ -56,7 +59,9 @@ function Line({ spec, text, slotH, dy = 0, pRef }: {
         letterSpacing: tracking(spec.trackingPct),
         textAlign: spec.align,
         // the disclaimer reads at 50% strength across the builder (2026-09-03)
-        color: spec.role === 'disclaimer' ? 'rgba(255,255,255,0.5)' : '#fff',
+        color: spec.role === 'disclaimer'
+          ? `rgba(${parseInt(ink.slice(1, 3), 16)},${parseInt(ink.slice(3, 5), 16)},${parseInt(ink.slice(5, 7), 16)},0.5)`
+          : ink,
         whiteSpace: 'pre-line',
       }}
     >
@@ -109,9 +114,16 @@ export function PaidSlotPreview({
   const pd = paidPlacementFor(asset.id, slot.key);
   const art = pd ? pd.art : slot.art;
   // those boards switch the soft edge off at most sizes, so the mask travels
-  // with the placement rather than with the size
-  const mask = pd ? pd.mask : slot.mask;
+  // with the placement rather than with the size. The custom upload drops the
+  // mask entirely — fading into a mirror-filled ground would punch flat holes
+  // into the image, and the upload has no black ground to fade into.
+  const isCustom = asset?.id === CUSTOM_ASSET_ID;
+  const mask = isCustom ? undefined : (pd ? pd.mask : slot.mask);
   const artSrc = pd?.artId ?? asset.src ?? asset.id;
+  // the custom upload brings its own ground tone; every real asset stays black
+  const customBg = asset?.id === CUSTOM_ASSET_ID ? getCustomArtBg() : null;
+  const ground = customBg ?? SLOT_BG;
+  const ink = customBg && isLightHex(customBg) ? '#111111' : '#FFFFFF';
   const ctaLabel = copy.cta.trim() || PAID_PLACEHOLDER.cta;
   const ctaSpec = slot.text.find(s => s.role === 'cta');
 
@@ -158,7 +170,7 @@ export function PaidSlotPreview({
       <div
         data-export-box
         className="relative overflow-hidden rounded"
-        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : SLOT_BG }}
+        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : ground }}
       >
         <div
           style={{
@@ -171,6 +183,10 @@ export function PaidSlotPreview({
             transformOrigin: 'top left',
           }}
         >
+          {/* custom upload: mirror-stretch the art's edges into uncovered frame */}
+          {!hideArt && customBg && (
+            <MirrorFill src={artUrl(artSrc)} art={art} w={slot.w} h={slot.h} />
+          )}
           {/* The mask covers the frame, not the art, so it is applied to a
               frame-sized wrapper — matching how Figma masks the whole layer. */}
           <div
@@ -261,7 +277,7 @@ export function PaidSlotPreview({
               }}
             >
               <img
-                src="/off-site/lg-logo-white.svg"
+                src={ink === '#111111' ? '/off-site/lg-logo-black.svg' : '/off-site/lg-logo-white.svg'}
                 alt="LG"
                 style={{ width: '100%', height: '100%', objectFit: 'contain', maxWidth: 'none' }}
                 draggable={false}
@@ -275,7 +291,7 @@ export function PaidSlotPreview({
               if (spec.role === 'disclaimer' && !showDisclaimer) return null;
               // small sizes lock the disclaimer to the short version
               if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
-                return <Line key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} />;
+                return <Line key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
               }
               let typed = copy[spec.role].trim();
               if (spec.role === 'disclaimer') typed = typed.slice(0, disclaimerMaxChars());
@@ -286,6 +302,7 @@ export function PaidSlotPreview({
                   spec={spec}
                   text={typed || PAID_PLACEHOLDER[spec.role]}
                   slotH={slot.h}
+                  ink={ink}
                   dy={pullUp(spec.y)}
                   pRef={flows ? el => { flowRef.current[spec.role] = el; } : undefined}
                 />

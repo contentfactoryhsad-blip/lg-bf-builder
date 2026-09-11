@@ -95,7 +95,7 @@ import { logUsage } from '../../utils/usageClient';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
 import { BenefitSlotsEditor, emptyBenefitSlots, type BenefitSlots } from './BenefitSlotsEditor';
-import { CUSTOM_ASSET_ID, hasCustomArt, setCustomArt,
+import { CUSTOM_ASSET_ID, hasCustomArt, setCustomArt, setCustomArtBg, sampleEdgeColor,
   ASSET_ROWS,
   SHORTS_SIZES,
   TILE_H,
@@ -172,8 +172,13 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
    */
   const [uploadUrl, setUploadUrl] = useState<string | null>(seed?.uploadDataUrl ?? null);
   const uploadInput = useRef<HTMLInputElement>(null);
+  /** Bumped when the sampled upload ground lands (async) — re-renders previews. */
+  const [, setBgTick] = useState(0);
   useEffect(() => {
-    if (seed?.uploadDataUrl) setCustomArt(seed.uploadDataUrl);
+    if (seed?.uploadDataUrl) {
+      setCustomArt(seed.uploadDataUrl);
+      void sampleEdgeColor(seed.uploadDataUrl).then(bg => { setCustomArtBg(bg); setUploadUrl(u => u); setBgTick(v => v + 1); });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -190,6 +195,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           return;
         }
         setCustomArt(url);
+        // light uploads get their own ground tone (slot bg / scrim / ink)
+        void sampleEdgeColor(url).then(bg => { setCustomArtBg(bg); setBgTick(v => v + 1); });
         setUploadUrl(url);
         setSelectedId(CUSTOM_ASSET_ID);
       };

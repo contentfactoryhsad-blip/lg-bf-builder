@@ -130,6 +130,12 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   Slot Color(+투명도), 제품·베네핏 이미지(dataURL), 업로드 이미지(dataURL — 이를 위해 업로드가 blob URL 대신
   dataURL 로 저장된다). 복원은 App.tsx가 `initialDraft` prop 으로 seed. "Unsaved changes" 상태 문구는 표시하지 않는다.
 
+- **업로드 이미지의 배경 적응** (2026-09-11). 업로드/드래프트 복원 시 테두리 픽셀 평균색을 샘플링(`sampleEdgeColor` →
+  `customArtBg`)해 **custom-upload 에셋에만** 적용: 슬롯 배경·LG.com 스크림(`gradCss(g, ground)`)이 샘플색,
+  밝은 배경(luma>150)이면 카피/디스클레이머가 검정 잉크 + LG 로고 블랙 버전. 남는 프레임 영역은
+  `MirrorFill`(04 플러그인 "Color Expand" 이식 — 가장자리 1% 띠를 미러로 뒤집어 갭만큼 스트레치, 모서리는 양방향)로
+  이음새 없이 채운다. 기존 에셋은 `customBg`가 null이라 전부 기존 검정 그대로.
+
 - 🔴 **카피 스택은 Figma 오토레이아웃을 실측으로 흉내 낸다** (2026-09-02). Figma는 headline → (subcopy) → CTA를
   세로 오토레이아웃으로 묶어 두므로, 카피가 디자인 박스보다 짧아지면 아래 레이어가 그만큼 당겨 올라와야 한다.
   `PaidSlotPreview`·`LgcomSlotPreview` 둘 다: headline/subcopy `<p>`의 `offsetHeight`를 `useLayoutEffect`로 실측하고,
