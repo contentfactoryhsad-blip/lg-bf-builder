@@ -772,6 +772,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
             <p className="text-xs text-gray-400 mt-0.5">
               {t('You can modify the elements included in the banner.')}
             </p>
+            <p className="text-xs text-[#FD312E] mt-1">
+              {t('* If the KV needs overall changes, please request them from the Creative Hub.')}
+            </p>
           </div>
           {!asset ? (
             <div className="flex-1" />

@@ -32,7 +32,8 @@ export type SlotId =
   | 'ST0001-mo-720x960'
   | 'ST0001-mo-720x830'
   | 'ST0044-mo-656x436'
-  | 'ST0044-pc-342x228';
+  | 'ST0044-pc-342x228'
+  | 'PR0001-pc-960x600';
 
 
 export interface SlotText {
@@ -59,7 +60,7 @@ export interface SlotText {
    */
   h?: number;
   vAlign?: 'top' | 'bottom';
-  /** Headline uses LG EI Headline on ST0001; ST0044 uses the text face. */
+  /** Headline uses LG EI Headline on ST0001; ST0007 uses the text face. */
   face: 'headline' | 'text';
   align: 'left' | 'center';
   text: string;
@@ -68,7 +69,7 @@ export interface SlotText {
 export interface LgcomSlot {
   id: SlotId;
   /** Slot code as it appears in the trafficking sheet. */
-  code: 'ST0001' | 'ST0044';
+  code: 'ST0001' | 'ST0007' | 'PR0001';
   device: Device;
   w: number;
   h: number;
@@ -87,7 +88,8 @@ export interface LgcomSlot {
   indicator?: string;
   iconRow?: { x: number; y: number; w: number; h: number };
   text: SlotText[];
-  cta: { x: number; y: number; w: number; h: number; radius: number; size: number; label: string };
+  /** Absent on art-only sizes (PR0001 ships without copy or a button). */
+  cta?: { x: number; y: number; w: number; h: number; radius: number; size: number; label: string };
 }
 
 const CTA_RED = '#FD312E';
@@ -155,7 +157,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     cta: { x: 32, y: 339, w: 181.7, h: 72.2, radius: 14.81, size: 27.77, label: 'Shop now' },
   },  {
     id: 'ST0044-mo-656x436',
-    code: 'ST0044',
+    code: 'ST0007',
     device: 'MO',
     w: 656,
     h: 436,
@@ -165,7 +167,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
     cta: { x: 238, y: 337, w: 180, h: 72, radius: 14.81, size: 27.77, label: 'Shop now' },
   },  {
     id: 'ST0044-pc-342x228',
-    code: 'ST0044',
+    code: 'ST0007',
     device: 'PC',
     w: 342,
     h: 228,
@@ -173,6 +175,17 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
       { role: 'headline', x: 32, y: 104, w: 278, h: 52, vAlign: 'bottom', size: 24, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: 'Lorem ipsum dolor sit ametap consectetur' },
     ],
     cta: { x: 126, y: 172, w: 90.6, h: 36, radius: 7.38, size: 13.85, label: 'Shop now' },
+  },
+  {
+    // Art only — the boards hide the layout master's copy and CTA on this
+    // size, so nothing but the artwork ships (no disclaimer/logo/indicator
+    // either).
+    id: 'PR0001-pc-960x600',
+    code: 'PR0001',
+    device: 'PC',
+    w: 960,
+    h: 600,
+    text: [],
   },
 ];
 
@@ -200,12 +213,12 @@ export interface Placement {
  * their own row, because their boards are tuned independently.
  */
 const ART: Record<string, Partial<Record<SlotId, Placement>>> = {
-  'kv-main':                   { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -355, y: -131, size: 1431 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
+  'kv-main':                   { 'PR0001-pc-960x600': { x: -263, y: -447, size: 1488 }, 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -355, y: -131, size: 1431 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
   'kv-main-character':         { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -355, y: -131, size: 1431 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
   'kv-product-centric-1':      { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -342, y: -119, size: 1405 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
   'kv-product-centric-2':      { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -342, y: -119, size: 1405 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
-  'kv-product-slot':           { 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873, src: 'kv-product-slot-clean' }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092, src: 'kv-product-slot-clean' }, 'ST0001-mo-720x960': { x: -344, y: -67, size: 1409 , src: 'kv-product-slot2-clean' }, 'ST0001-mo-720x830': { x: -295, y: -50, size: 1315 , src: 'kv-product-slot2-clean' }, 'ST0044-mo-656x436': { x: -59, y: -266, size: 786 , src: 'kv-product-slot2-clean' }, 'ST0044-pc-342x228': { x: -7, y: -124, size: 365 , src: 'kv-product-slot2-clean' } },
-  'kv-product-slot-character': { 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873, src: 'kv-product-slot-character-clean' }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092, src: 'kv-product-slot-character-clean' }, 'ST0001-mo-720x960': { x: -344, y: -67, size: 1409 , src: 'kv-product-slot2-character-clean' }, 'ST0001-mo-720x830': { x: -295, y: -50, size: 1315 , src: 'kv-product-slot2-character-clean' }, 'ST0044-mo-656x436': { x: -59, y: -266, size: 786 , src: 'kv-product-slot2-character-clean' }, 'ST0044-pc-342x228': { x: -7, y: -124, size: 365 , src: 'kv-product-slot2-character-clean' } },
+  'kv-product-slot':           { 'PR0001-pc-960x600': { x: -263, y: -447, size: 1488, src: 'kv-product-slot-clean' }, 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873, src: 'kv-product-slot-clean' }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092, src: 'kv-product-slot-clean' }, 'ST0001-mo-720x960': { x: -344, y: -67, size: 1409 , src: 'kv-product-slot2-clean' }, 'ST0001-mo-720x830': { x: -295, y: -50, size: 1315 , src: 'kv-product-slot2-clean' }, 'ST0044-mo-656x436': { x: -59, y: -266, size: 786 , src: 'kv-product-slot2-clean' }, 'ST0044-pc-342x228': { x: -7, y: -124, size: 365 , src: 'kv-product-slot2-clean' } },
+  'kv-product-slot-character': { 'PR0001-pc-960x600': { x: -263, y: -447, size: 1488, src: 'kv-product-slot-character-clean' }, 'ST0001-pc-1920x720': { x: 411, y: -594, size: 1873, src: 'kv-product-slot-character-clean' }, 'ST0001-pc-1600x400': { x: 644, y: -349, size: 1092, src: 'kv-product-slot-character-clean' }, 'ST0001-mo-720x960': { x: -344, y: -67, size: 1409 , src: 'kv-product-slot2-character-clean' }, 'ST0001-mo-720x830': { x: -295, y: -50, size: 1315 , src: 'kv-product-slot2-character-clean' }, 'ST0044-mo-656x436': { x: -59, y: -266, size: 786 , src: 'kv-product-slot2-character-clean' }, 'ST0044-pc-342x228': { x: -7, y: -124, size: 365 , src: 'kv-product-slot2-character-clean' } },
   'kv-product-slot2':          { 'ST0001-pc-1920x720': { x: 300, y: -673, size: 2075 }, 'ST0001-pc-1600x400': { x: 495, y: -441, size: 1298 }, 'ST0001-mo-720x960': { x: -342, y: -45, size: 1396 }, 'ST0001-mo-720x830': { x: -291, y: -51, size: 1296 }, 'ST0044-mo-656x436': { x: -90, y: -284, size: 836 }, 'ST0044-pc-342x228': { x: -18, y: -128, size: 378 } },
   'kv-product-slot2-character': { 'ST0001-pc-1920x720': { x: 300, y: -673, size: 2075 }, 'ST0001-pc-1600x400': { x: 495, y: -441, size: 1298 }, 'ST0001-mo-720x960': { x: -342, y: -45, size: 1396 }, 'ST0001-mo-720x830': { x: -291, y: -51, size: 1296 }, 'ST0044-mo-656x436': { x: -90, y: -284, size: 836 }, 'ST0044-pc-342x228': { x: -18, y: -128, size: 378 } },
   'deal-type-bundle':          { 'ST0001-pc-1920x720': { x: 409, y: -645, size: 2009 }, 'ST0001-pc-1600x400': { x: 529, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -289, y: -67, size: 1307 }, 'ST0001-mo-720x830': { x: -262, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -66, y: -270, size: 788 }, 'ST0044-pc-342x228': { x: -18, y: -132, size: 378 } },
@@ -292,6 +305,12 @@ export const SLOT_BOX_FILL = '#333333';
  */
 export const SLOT_BOXES: Record<string, Partial<Record<SlotId, SlotBox[]>>> = {
   'kv-product-slot': {
+    'PR0001-pc-960x600': [
+      { x: 0.27554, y: 0.56724, w: 0.10417, h: 0.10349, r: 0.00342 },
+      { x: 0.39046, y: 0.56724, w: 0.10349, h: 0.10349, r: 0.00342 },
+      { x: 0.50470, y: 0.56724, w: 0.10349, h: 0.10349, r: 0.00342 },
+      { x: 0.61895, y: 0.56724, w: 0.10417, h: 0.10349, r: 0.00342 },
+    ],
     'ST0001-pc-1920x720': [
       { x: 0.31800, y: 0.57067, w: 0.08467, h: 0.08433, r: 0.00467 },
       { x: 0.41111, y: 0.57067, w: 0.08467, h: 0.08433, r: 0.00467 },
@@ -330,6 +349,12 @@ export const SLOT_BOXES: Record<string, Partial<Record<SlotId, SlotBox[]>>> = {
     ],
   },
   'kv-product-slot-character': {
+    'PR0001-pc-960x600': [
+      { x: 0.27554, y: 0.56724, w: 0.10417, h: 0.10349, r: 0.00342 },
+      { x: 0.39046, y: 0.56724, w: 0.10349, h: 0.10349, r: 0.00342 },
+      { x: 0.50470, y: 0.56724, w: 0.10349, h: 0.10349, r: 0.00342 },
+      { x: 0.61895, y: 0.56724, w: 0.10417, h: 0.10349, r: 0.00342 },
+    ],
     'ST0001-pc-1920x720': [
       { x: 0.31800, y: 0.57067, w: 0.08467, h: 0.08433, r: 0.00467 },
       { x: 0.41111, y: 0.57067, w: 0.08467, h: 0.08433, r: 0.00467 },
@@ -452,7 +477,7 @@ export const productSlotCount = (assetId: string) =>
   Object.values(SLOT_BOXES[assetId] ?? {})[0]?.length ?? 0;
 export const hasProductSlots = (assetId: string) => productSlotCount(assetId) > 0;
 
-export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device}`;
+export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device} [${s.code}]`;
 
 /**
  * Sizes delivered as artwork and benefit icons only — no eyebrow, headline,
@@ -486,16 +511,18 @@ export const disclaimerMaxChars = (slotId?: string) =>
   slotId === 'ST0001-pc-1920x720' ? 400 : 180;
 
 export const bareOnExport = (slotId: string) =>
-  slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960';
+  slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960' || slotId === 'PR0001-pc-960x600';
 
 /**
  * Which LG.com sizes an asset runs at all. The Dynamic (motion) asset ships
- * video, and video goes out on the two hero placements only — the
- * `LG.com — Dynamic` board (`6210:73073`) hides the other four frames, and the
- * hero flag marks exactly that pair. Everything else runs the full set.
+ * video: the two hero placements plus the art-only 960×600 — everything else
+ * on the `LG.com — Dynamic` board (`6210:73073`) stays hidden. Every other
+ * asset runs the full set.
  */
 export const lgcomSlotsFor = (assetId: string): LgcomSlot[] =>
-  assetId === 'ad-teasing' ? LGCOM_SLOTS.filter(s => s.hero) : LGCOM_SLOTS;
+  assetId === 'ad-teasing'
+    ? LGCOM_SLOTS.filter(s => s.hero || s.id === 'PR0001-pc-960x600')
+    : LGCOM_SLOTS;
 
 /* ------------------------------------------------------------------ */
 /* Icon row                                                            */

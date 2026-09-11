@@ -162,7 +162,7 @@ export function LgcomSlotPreview({
   // placement is per asset per size — the 15 key visuals are framed differently
   const art = asset ? artFor(asset.id, slot.id) : null;
   // the motion cut is the same square frame as the still, so it takes the same box
-  const motion = asset && slot.hero ? motionUrl(asset) : null;
+  const motion = asset && (slot.hero || slot.id === 'PR0001-pc-960x600') ? motionUrl(asset) : null;
   // the scrim is tuned per asset too — deal-type objects need a wider one
   const grad = asset ? gradFor(asset.id, slot.id) : undefined;
   // the plates live in the artwork, so they ride the same square as the art does
@@ -369,16 +369,16 @@ export function LgcomSlotPreview({
             );
           })}
 
-          {!bare && (
+          {!bare && slot.cta && (
             <div
               style={{
                 position: 'absolute',
                 /* The two ST0044 placements centre their copy, so a growing
                    pill grows from its middle; the four left-anchored layouts
                    keep their left edge and grow rightward. */
-                left: slot.code === 'ST0044' ? slot.cta.x + slot.cta.w / 2 : slot.cta.x,
+                left: slot.code !== 'ST0001' ? slot.cta.x + slot.cta.w / 2 : slot.cta.x,
                 top: slot.cta.y - pullUp(slot.cta.y),
-                transform: slot.code === 'ST0044' ? 'translateX(-50%)' : undefined,
+                transform: slot.code !== 'ST0001' ? 'translateX(-50%)' : undefined,
                 minWidth: slot.cta.w,
                 width: 'fit-content',
                 padding: `0 ${Math.round(slot.cta.h * 0.46)}px`,
