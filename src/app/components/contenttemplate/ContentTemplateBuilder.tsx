@@ -780,7 +780,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               {t('You can modify the elements included in the banner.')}
             </p>
             <p className="text-xs text-[#FD312E] mt-1">
-              {t('* If the KV needs overall changes, please request them from the Creative Hub.')}
+              {t('* If the KV needs overall changes, please request them from the D2C Creative Hub. (The D2C Creative Hub currently supports subsidiaries in Asia, Europe, Canada and MEA only)')}
             </p>
           </div>
           {!asset ? (
