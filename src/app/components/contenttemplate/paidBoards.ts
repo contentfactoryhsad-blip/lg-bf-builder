@@ -152,6 +152,8 @@ export const PD_SLOT_PLACEMENT: Record<string, PdSlotPlacement> = {
     plates: [P(46.5, 537, 245.74, 19.4), P(46.5, 798.26, 245.74, 19.4), P(907.76, 537, 245.74, 19.4), P(907.76, 798.26, 245.74, 19.4)] },
   'meta-1080x1440': { ver: 'v2', art: { x: -404, y: -40, size: 1912 },
     plates: [P(41.85, 694, 202.65, 16), P(41.85, 909.45, 202.65, 16), P(835.5, 694, 202.65, 16), P(835.5, 909.45, 202.65, 16)] },
+  'meta-1080x1080': { ver: 'v2', art: { x: -436, y: -228, size: 1976 },
+    plates: [P(49.7, 519, 200.58, 15.84), P(49.7, 732.25, 200.58, 15.84), P(835.24, 519, 200.58, 15.84), P(835.24, 732.25, 200.58, 15.84)] },
   'meta-398x208': { ver: 'v2', art: { x: 87, y: -51, size: 377 },
     mask: { angle: 90, stops: [[0, 0], [0.36, 0], [0.51, 1], [1, 1]] },
     plates: [P(158, 89, 50.15, 3.96), P(158, 142.32, 50.15, 3.96), P(333.28, 89, 50.15, 3.96), P(333.28, 142.32, 50.15, 3.96)] },
@@ -258,6 +260,7 @@ export const PD_CENTRIC_PLACEMENT: Record<string, BoardPlacement> = {
   'pmax-1200x1200': { art: { x: -434, y: -220, size: 2077 } },
   'pmax-1200x628': { art: { x: 0, y: -489, size: 1607 } },
   'meta-1080x1440': { art: { x: -647, y: -264, size: 2384 } },
+  'meta-1080x1080': { art: { x: -296, y: -113, size: 1682 } },
   'meta-398x208': { art: { x: 112, y: -52, size: 377 }, mask: { angle: 90, stops: [[0, 0], [0.36, 0], [0.51, 1], [1, 1]] } },
   'meta-1080x1920': { art: { x: -777, y: -168, size: 2642 } },
 };
@@ -325,6 +328,7 @@ export const DEAL_AD_PLACEMENT: Record<string, BoardPlacement> = {
   'pmax-1200x1200': { art: { x: -561, y: -330, size: 2324 } },
   'pmax-1200x628': { art: { x: -33, y: -554, size: 1737 }, mask: { angle: 90, stops: [[0, 0], [0.25, 0.5], [0.47, 1], [1, 1]] } },
   'meta-1080x1440': { art: { x: -753, y: -360, size: 2592 } },
+  'meta-1080x1080': { art: { x: -414, y: -201, size: 1914 } },
   'meta-398x208': { art: { x: 102, y: -72, size: 413 }, mask: { angle: 90, stops: [[0, 0], [0.36, 0], [0.51, 1], [1, 1]] } },
   'meta-1080x1920': { art: { x: -1041, y: -431, size: 3204 } },
 };
@@ -409,6 +413,7 @@ export const AD_BENEFIT_PLACEMENT: Record<string, BoardPlacement> = {
   'pmax-1200x1200': { art: { x: -561.5, y: -329.7, size: 2323.5 } },
   'pmax-1200x628': { art: { x: -33, y: -554, size: 1737 }, mask: { angle: 90, stops: [[0, 0], [0.25, 0.5], [0.47, 1], [1, 1]] } },
   'meta-1080x1440': { art: { x: -753, y: -360, size: 2592 } },
+  'meta-1080x1080': { art: { x: -422, y: -201, size: 1930 } },
   'meta-398x208': { art: { x: 102, y: -72, size: 413 }, mask: { angle: 90, stops: [[0, 0], [0.36, 0], [0.51, 1], [1, 1]] } },
   'meta-1080x1920': { art: { x: -1041, y: -431, size: 3204 } },
 };

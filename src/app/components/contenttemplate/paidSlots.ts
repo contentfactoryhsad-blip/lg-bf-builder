@@ -579,6 +579,18 @@ export const PAID_SLOTS: PaidSlot[] = [
     ],
   },
   {
+    key: 'meta-1080x1080', w: 1080, h: 1080,
+    art: { x: -376, y: -168.5, size: 1836 },
+    logo: { x: 33, y: 33, w: 114, h: 50 },
+    cta: { x: 447, y: 347, w: 196, h: 78, radius: 16 },
+    text: [
+      { role: 'disclaimer', x: 30, y: 1015, w: 1020, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
+      { role: 'headline', x: 145, y: 95, w: 800, h: 144, size: 68, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
+      { role: 'subcopy', x: 145, y: 251, w: 800, h: 60, size: 28, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
+      { role: 'cta', x: 483, y: 371, w: 124, h: 30, size: 30, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
+    ],
+  },
+  {
     key: 'meta-398x208', w: 398, h: 208,
     art: { x: 112, y: -52, size: 377 },
     mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
