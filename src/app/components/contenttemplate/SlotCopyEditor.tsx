@@ -52,7 +52,7 @@ const FIELDS: {
   { key: 'cta', label: 'CTA button', maxLength: 15 },
   // no length cap (2026-09-16); sizes under 1000px are still locked to the
   // short version — see longDisclaimer
-  { key: 'disclaimer', label: 'Disclaimer', hint: 'Sizes under 1000px use *T&C\u2019s apply' },
+  { key: 'disclaimer', label: 'Disclaimer', hint: 'Media sizes Max 180 · Sizes under 1000px use *T&C\u2019s apply' },
 ];
 
 /**

@@ -293,7 +293,10 @@ export function PaidSlotPreview({
               if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
                 return <Line key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
               }
-              const typed = copy[spec.role].trim();
+              let typed = copy[spec.role].trim();
+              // Paid sizes on the ≥1000px rule cap the disclaimer at 180
+              // chars (re-added 2026-09-16) — the LG.com heroes run uncapped.
+              if (spec.role === 'disclaimer') typed = typed.slice(0, 180);
               const flows = spec.role === 'headline' || spec.role === 'subcopy';
               return (
                 <Line
