@@ -50,8 +50,9 @@ const FIELDS: {
   { key: 'subcopy', label: 'Subcopy', hint: 'Optional', multiline: true, rows: 2 },
   // The pill hugs its label, so length is the one thing that must be bounded.
   { key: 'cta', label: 'CTA button', maxLength: 15 },
-  // sizes under 1000px are locked to the short version — see longDisclaimer
-  { key: 'disclaimer', label: 'Disclaimer', hint: '1920×720 Max 400 · Others Max 180 or *T&C\u2019s apply', maxLength: 400 },
+  // no length cap (2026-09-16); sizes under 1000px are still locked to the
+  // short version — see longDisclaimer
+  { key: 'disclaimer', label: 'Disclaimer', hint: 'Sizes under 1000px use *T&C\u2019s apply' },
 ];
 
 /**

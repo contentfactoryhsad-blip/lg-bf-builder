@@ -24,7 +24,6 @@ import { AD_BENEFIT_BOXES } from './paidBoards';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import {
   SHORT_DISCLAIMER,
-  disclaimerMaxChars,
   lgcomDisclaimerEditable,
   CTA_COLOR,
   overlayUrl,
@@ -369,8 +368,7 @@ export function LgcomSlotPreview({
             if (spec.role === 'disclaimer' && !lgcomDisclaimerEditable(slot)) {
               return <SlotLine key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
             }
-            let typed = copy[spec.role].trim();
-            if (spec.role === 'disclaimer') typed = typed.slice(0, disclaimerMaxChars(slot.id));
+            const typed = copy[spec.role].trim();
             const flows = flowSpecs.some(fs => fs.role === spec.role);
             return (
               <SlotLine

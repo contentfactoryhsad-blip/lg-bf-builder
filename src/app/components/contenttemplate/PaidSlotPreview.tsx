@@ -10,7 +10,7 @@
 import React from 'react';
 import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
 import { type SlotCopy } from './SlotCopyEditor';
-import { CTA_COLOR, SHORT_DISCLAIMER, SLOT_BG, disclaimerMaxChars, longDisclaimer } from './lgcomSlots';
+import { CTA_COLOR, SHORT_DISCLAIMER, SLOT_BG, longDisclaimer } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
 import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor } from './paidBoards';
 import { MirrorFill } from './MirrorFill';
@@ -293,8 +293,7 @@ export function PaidSlotPreview({
               if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
                 return <Line key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
               }
-              let typed = copy[spec.role].trim();
-              if (spec.role === 'disclaimer') typed = typed.slice(0, disclaimerMaxChars());
+              const typed = copy[spec.role].trim();
               const flows = spec.role === 'headline' || spec.role === 'subcopy';
               return (
                 <Line

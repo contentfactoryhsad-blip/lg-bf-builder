@@ -110,7 +110,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
       { role: 'eyebrow',    x: 240, y: 72,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
       { role: 'headline',   x: 240, y: 94,  w: 680, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
       { role: 'subcopy',    x: 240, y: 228, w: 542, h: 18,  size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, maxLines: 2, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
+      { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
     cta: { x: 240, y: 275, w: 110.6, h: 44, radius: 9.03, size: 16.93, label: 'Shop now' },
   },  {
@@ -126,7 +126,7 @@ export const LGCOM_SLOTS: LgcomSlot[] = [  {
       { role: 'eyebrow',    x: 32, y: 50,  w: 656, size: 32,   lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
       { role: 'headline',   x: 32, y: 101, w: 656, h: 124, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
       { role: 'subcopy',    x: 32, y: 241, w: 656, h: 70,  size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 32, y: 884, w: 656, h: 44, vAlign: 'bottom', maxLines: 2, size: 18, lineHeightPct: 156, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
+      { role: 'disclaimer', x: 32, y: 884, w: 656, h: 44, vAlign: 'bottom', size: 18, lineHeightPct: 156, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
     ],
     cta: { x: 32, y: 339, w: 181.7, h: 72.2, radius: 14.81, size: 27.77, label: 'Shop now' },
   },  {
@@ -505,14 +505,6 @@ export const longDisclaimer = (w: number, h: number) => w >= 1000 || h >= 1000;
 export const lgcomDisclaimerEditable = (slot: { id: string; w: number; h: number }) =>
   longDisclaimer(slot.w, slot.h) || slot.id === 'ST0001-mo-720x960';
 export const SHORT_DISCLAIMER = '*T&C\u2019s apply';
-
-/**
- * How much of the typed disclaimer a size renders. Only the widened 1920×720
- * takes the full 400-character field; every other long-disclaimer size cuts at
- * 180 — the field accepts 400 so the wide hero keeps its tail.
- */
-export const disclaimerMaxChars = (slotId?: string) =>
-  slotId === 'ST0001-pc-1920x720' ? 400 : 180;
 
 export const bareOnExport = (slotId: string) =>
   slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960' || slotId === 'PR0001-pc-960x600';
