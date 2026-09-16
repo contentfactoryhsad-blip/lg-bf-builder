@@ -393,6 +393,32 @@ function DealHeroTemplate({ data, artOnly, exportMode }: { data: DealHeroState; 
             background: HERO_SCRIM,
           }}
         />
+
+        {/* Disclaimer — the CBB's LG.com 1920×720 hero spot (lgcomSlots
+            x240 y658, bottom-anchored so long copy grows upward; 14/110%
+            text face at 50% white) — width 1440 — out to the Main KV's shopping-bag right edge (~x1680),
+            per request 2026-09-16 (was 1147, the CBB width). NO line clip (2026-09-16): the copy wraps
+            to as many lines as it needs, growing upward off the bottom
+            anchor. Inside the plate, so the export crop ships it burned in. */}
+        {data.showDisclaimer && data.disclaimer && (
+          <p
+            style={{
+              position: 'absolute',
+              left: 240,
+              bottom: 32,
+              width: 1440,
+              margin: 0,
+              fontFamily: FONT_TEXT,
+              fontSize: 14,
+              lineHeight: '110%',
+              fontWeight: 400,
+              color: 'rgba(255,255,255,0.5)',
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {data.disclaimer}
+          </p>
+        )}
       </div>
   );
 

@@ -72,6 +72,16 @@ export interface DealHeroState extends CountdownFields {
   /** PD Slot plate fill — drawn over the baked plates so it can be recoloured. */
   plateColor: string;
   /**
+   * Disclaimer on the hero plate — ONE text for both canvases (2026-09-16,
+   * merged back from a PC/MO split: the legal copy must be identical), no
+   * character cap. PC draws it at the CBB's LG.com 1920×720 hero spot (x240,
+   * bottom-anchored 32 up, w1147, 14px text face at 50% white), MO at the
+   * 720×960 spot halved for the 360 canvas. Wraps to as many lines as it
+   * needs, growing upward; ships burned into both export crops.
+   */
+  disclaimer: string;
+  showDisclaimer: boolean;
+  /**
    * Operator-uploaded 3000×3000 square (data URL), drawn with Main's framing
    * when `kvAsset` is 'custom-upload' — the deal-page counterpart of the
    * Content Banner Builder's UPLOAD group. Banners and deal cards reuse their
@@ -551,6 +561,8 @@ export function createDealDefaultState(type: DealModuleType, t: TFunction = iden
           kvNudgeXMo: 0,
           kvNudgeYMo: 0,
           kvScaleMo: 1,
+          disclaimer: '*T&C’s apply',
+          showDisclaimer: true,
           products: [],
           plateColor: PD_PLATE_FILL,
           customImage: null,

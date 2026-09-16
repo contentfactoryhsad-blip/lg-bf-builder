@@ -672,6 +672,17 @@ function DealHeroPanel({ data, onUpdate, device }: { data: DealHeroState; onUpda
           className={`${INPUT_CLASS} resize-none`}
         />
       </ToggleField>
+      {/* ONE disclaimer for both canvases (the legal copy must be identical
+          on PC and MO) — no character cap; each canvas wraps it to as many
+          lines as it needs. */}
+      <ToggleField label={t('Disclaimer')} shown={data.showDisclaimer} onShownChange={v => set({ showDisclaimer: v })}>
+        <textarea
+          value={data.disclaimer}
+          onChange={e => set({ disclaimer: e.target.value })}
+          rows={3}
+          className={`${INPUT_CLASS} resize-none`}
+        />
+      </ToggleField>
 
       {/* The countdown the board hangs under the hero copy (6236:143805). */}
       <SectionDivider>{t('Countdown')}</SectionDivider>

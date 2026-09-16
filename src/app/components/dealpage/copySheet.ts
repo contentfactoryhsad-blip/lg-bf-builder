@@ -47,6 +47,7 @@ export function collectCopyBlocks(items: DealCanvasItem[]): CopyBlock[] {
       fields.push(['Headline', d.headline]);
       if (d.showSubCopy) fields.push(['Sub copy', d.subCopy]);
       if (d.showCountdown) fields.push(['Countdown labels', [d.dayLabel, d.hourLabel, d.minuteLabel, d.secondLabel].join(' / ')]);
+      if (d.showDisclaimer && d.disclaimer) fields.push(['Disclaimer', d.disclaimer]);
     } else if (item.type === 'deal-cards') {
       const d = item.editState.data as DealCardsState;
       if (d.showSectionTitle) fields.push(['Section title', d.sectionTitle]);

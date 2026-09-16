@@ -351,6 +351,31 @@ function MoHeroTemplate({ data, artOnly, exportMode }: { data: DealHeroState; ar
         </div>
       )}
       {!artOnly && data.showCountdown && <CountdownRowMo x={12.7} y={175.9} data={data} />}
+
+      {/* Disclaimer — the SAME text as the PC hero (one legal copy for both
+          canvases) at the CBB LG.com 720×960 hero spot, halved for this
+          canvas (x32→16, bottom 32→16, 18px→9px, w656→328). No line clip —
+          it grows upward off the bottom anchor. Outside the artOnly guard:
+          ships burned into the crop. */}
+      {data.showDisclaimer && data.disclaimer && (
+        <p
+          style={{
+            position: 'absolute',
+            left: 16,
+            bottom: 16,
+            width: 328,
+            margin: 0,
+            fontFamily: FONT_TEXT,
+            fontSize: 9,
+            lineHeight: '156%',
+            fontWeight: 400,
+            color: 'rgba(255,255,255,0.5)',
+            whiteSpace: 'pre-line',
+          }}
+        >
+          {data.disclaimer}
+        </p>
+      )}
     </Band>
   );
 }

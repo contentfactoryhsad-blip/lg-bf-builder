@@ -82,6 +82,12 @@ export function restoreDealCanvasItems(payload: DealPagePayloadV1, t?: TFunction
       };
     }
 
+    // The hero disclaimer arrived 2026-09-16 defaulting ON — a draft saved
+    // before it exists comes back with it OFF so the page looks unchanged.
+    if (type === 'deal-hero' && savedData && !('disclaimer' in savedData)) {
+      savedData = { ...savedData, showDisclaimer: false };
+    }
+
     const defaults = createDealDefaultState(type, t);
     restored.push({
       id: typeof item.id === 'string' && item.id ? item.id : crypto.randomUUID(),
