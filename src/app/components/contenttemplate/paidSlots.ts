@@ -144,7 +144,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-1024x768', w: 1024, h: 768,
-    art: { x: -117, y: -423, size: 1614 },
+    art: { x: -174, y: -508, size: 1784 },
     mask: { angle: 90, stops: [[0, 0], [0.245, 0.5], [0.435, 1], [1, 1]] },
     logo: { x: 41, y: 40, w: 136, h: 60 },
     cta: { x: 40, y: 402, w: 204, h: 81, radius: 16.64 },
@@ -168,7 +168,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-480x320', w: 480, h: 320,
-    art: { x: -68, y: -233, size: 786 },
+    art: { x: -62, y: -231, size: 790 },
     logo: { x: 18, y: 19, w: 64, h: 28 },
     cta: { x: 18, y: 187, w: 96, h: 38, radius: 7.84 },
     text: [
@@ -179,7 +179,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-468x60', w: 468, h: 60,
-    art: { x: 17, y: -51, size: 162 },
+    art: { x: 15, y: -59, size: 176 },
     logo: { x: 10, y: 8, w: 30, h: 13 },
     cta: { x: 387, y: 19, w: 55, h: 22, radius: 4.51 },
     text: [
@@ -202,7 +202,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-728x90', w: 728, h: 90,
-    art: { x: 34, y: -73, size: 236 },
+    art: { x: 24, y: -79, size: 247 },
     logo: { x: 12, y: 8, w: 36, h: 16 },
     cta: { x: 595, y: 28, w: 85, h: 34, radius: 6.97 },
     text: [
@@ -213,7 +213,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-336x280', w: 336, h: 280,
-    art: { x: -81, y: -67, size: 497 },
+    art: { x: -96, y: -83, size: 527 },
     logo: { x: 10, y: 10, w: 43, h: 19 },
     text: [
       { role: 'headline', x: 20, y: 37, w: 296, h: 50, size: 24, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
@@ -233,7 +233,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-320x100', w: 320, h: 100,
-    art: { x: 93, y: -77, size: 253 },
+    art: { x: 74, y: -88, size: 277 },
     mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
     logo: { x: 281, y: 8, w: 31, h: 14 },
     cta: { x: 8, y: 61, w: 51, h: 20, radius: 4.12 },
@@ -245,7 +245,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-320x50', w: 320, h: 50,
-    art: { x: 6, y: -41, size: 133 },
+    art: { x: 2, y: -45, size: 140 },
     logo: { x: 6, y: 5, w: 27, h: 12 },
     cta: { x: 265, y: 17, w: 43, h: 17, radius: 3.46 },
     text: [
@@ -267,7 +267,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'criteo-300x250', w: 300, h: 250,
-    art: { x: -69, y: -55, size: 438 },
+    art: { x: -75, y: -63, size: 451 },
     logo: { x: 10, y: 10, w: 42, h: 19 },
     text: [
       { role: 'headline', x: 20, y: 34, w: 260, h: 46, size: 22, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
@@ -339,7 +339,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-120x60', w: 120, h: 60,
-    art: { x: 24, y: -29, size: 123 },
+    art: { x: 15, y: -37, size: 140 },
     mask: { angle: 90, stops: [[0, 0], [0.253, 0], [0.515, 1], [1, 1]] },
     logo: { x: 96, y: 4, w: 20, h: 9 },
     text: [
@@ -348,7 +348,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-125x125', w: 125, h: 125,
-    art: { x: -49, y: -31, size: 223 },
+    art: { x: -62, y: -45, size: 251 },
     logo: { x: 6, y: 4, w: 20, h: 9 },
     text: [
       { role: 'headline', x: 8, y: 17, w: 109, h: 20, size: 9, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
@@ -356,7 +356,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-120x240', w: 120, h: 240,
-    art: { x: -116, y: -21, size: 356 },
+    art: { x: -127, y: -32, size: 381.5 },
     mask: { angle: 0, stops: [[0, 1], [0.55, 1], [0.72, 0], [1, 0]] },
     logo: { x: 7, y: 8, w: 34, h: 15 },
     text: [
@@ -402,7 +402,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-160x600', w: 160, h: 600,
-    art: { x: -146, y: 156, size: 456 },
+    art: { x: -146, y: 155.5, size: 456 },
     mask: { angle: 180, stops: [[0, 0], [0.365, 0], [0.518, 1], [1, 1]] },
     logo: { x: 11, y: 12, w: 41, h: 18 },
     cta: { x: 34, y: 155, w: 91, h: 36, radius: 7.38 },
@@ -423,7 +423,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-320x320', w: 320, h: 320,
-    art: { x: -150, y: -110, size: 620 },
+    art: { x: -149.99, y: -110.43, size: 619.99 },
     logo: { x: 11, y: 11, w: 50, h: 22 },
     text: [
       { role: 'headline', x: 20, y: 41, w: 280, h: 48, size: 23, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
@@ -443,7 +443,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-320x100', w: 320, h: 100,
-    art: { x: 77, y: -87, size: 273 },
+    art: { x: 76.72, y: -88, size: 276.28 },
     mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
     logo: { x: 281, y: 8, w: 31, h: 14 },
     cta: { x: 8, y: 61, w: 50, h: 20, radius: 4.1 },
@@ -455,7 +455,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-320x50', w: 320, h: 50,
-    art: { x: 3, y: -43, size: 137 },
+    art: { x: -0.62, y: -45, size: 140.38 },
     logo: { x: 6, y: 5, w: 27, h: 12 },
     cta: { x: 265, y: 17, w: 43, h: 17, radius: 3.46 },
     text: [
@@ -522,7 +522,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'dv360-250x250', w: 250, h: 250,
-    art: { x: -98, y: -67, size: 446 },
+    art: { x: -102, y: -71, size: 460 },
     logo: { x: 10, y: 10, w: 35, h: 16 },
     text: [
       { role: 'headline', x: 10, y: 33, w: 230, h: 38, size: 18, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
@@ -531,7 +531,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'pmax-960x1200', w: 960, h: 1200,
-    art: { x: -513, y: -175, size: 1987 },
+    art: { x: -513.5, y: -175.5, size: 1987.5 },
     logo: { x: 34, y: 33, w: 123, h: 54 },
     cta: { x: 380, y: 376, w: 201, h: 80, radius: 16.4 },
     text: [
@@ -592,7 +592,7 @@ export const PAID_SLOTS: PaidSlot[] = [
   },
   {
     key: 'meta-398x208', w: 398, h: 208,
-    art: { x: 112, y: -52, size: 377 },
+    art: { x: 112, y: -52.5, size: 377 },
     mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
     logo: { x: 341, y: 10, w: 47, h: 21 },
     cta: { x: 20, y: 76, w: 101, h: 40, radius: 8.21 },
