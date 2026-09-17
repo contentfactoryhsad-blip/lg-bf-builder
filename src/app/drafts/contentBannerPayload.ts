@@ -28,6 +28,8 @@ export interface ContentBannerPayloadV1 {
   lineIconLabels: (string | null)[];
   showDisclaimer: boolean;
   showIndicator: boolean;
+  /** Added 2026-09-16 — older drafts have no key, so restore defaults to on. */
+  showTagline?: boolean;
   plateColor: string;
   /** Per-asset product slots; images are dataURLs. */
   products: Record<string, ProductSlots>;

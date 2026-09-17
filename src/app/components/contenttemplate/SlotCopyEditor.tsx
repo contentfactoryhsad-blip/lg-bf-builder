@@ -18,6 +18,14 @@ export interface SlotCopy {
   subcopy: string;
   cta: string;
   disclaimer: string;
+  /**
+   * The endorsement that sits on the KV lockup, in two runs: Regular then Bold.
+   * Split because markets rewrite them independently — the lead translates
+   * ("Nur bei", "Solo en") while the brand run picks up a country path
+   * (`LG.com/uk`). Drawn only on the artworks that do not bake it in.
+   */
+  taglineLead: string;
+  taglineBrand: string;
 }
 
 export const EMPTY_COPY: SlotCopy = {
@@ -26,6 +34,8 @@ export const EMPTY_COPY: SlotCopy = {
   subcopy: '',
   cta: '',
   disclaimer: '',
+  taglineLead: '',
+  taglineBrand: '',
 };
 
 /** Figma's own placeholder strings, shown until the field is filled. */
@@ -35,6 +45,8 @@ export const COPY_PLACEHOLDER: SlotCopy = {
   subcopy: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
   cta: 'Shop now',
   disclaimer: '*T&C’s apply',
+  taglineLead: 'Only at',
+  taglineBrand: 'LG.com',
 };
 
 const FIELDS: {
@@ -64,6 +76,10 @@ const FIELDS: {
  * correctly (about 7 KO characters). "Zero-interest", the registry's widest
  * line, still fits under it.
  */
+/** Both KV Tagline boxes start one line tall; the lead grows by one line. */
+const TAG_ROW_H = 36;
+const TAG_LINE_H = 16;
+
 const LABEL_CAP = 'nnnnnnnnnnn'; // 11 × the average-width Latin glyph
 const LABEL_FONT = '600 24px "LG EI Text", sans-serif';
 let measureCtx: CanvasRenderingContext2D | null = null;
@@ -102,6 +118,9 @@ export function SlotCopyEditor({
   onShowIndicator,
   showIndicatorToggle,
   showIconRowToggle,
+  showTaglineToggle,
+  showTagline,
+  onShowTagline,
 }: {
   channelLabel: string;
   copy: SlotCopy;
@@ -130,6 +149,15 @@ export function SlotCopyEditor({
   onShowIndicator: (next: boolean) => void;
   showIndicatorToggle: boolean;
   /**
+   * Whether the KV Tagline section appears at all. Only the artworks that ship
+   * without the line baked in carry it, and only LG.com draws it — see
+   * `hasTagline` / `onlyAtFor`.
+   */
+  showTaglineToggle: boolean;
+  /** Checkbox before the section heading — off drops the line from every size. */
+  showTagline: boolean;
+  onShowTagline: (next: boolean) => void;
+  /**
    * LG.com only. The icon row exists on the two hero sizes of that channel and
    * nowhere else, so the paid channels get the copy fields alone. Every other
    * element is fixed — the panel writes copy, it does not compose the layout.
@@ -143,6 +171,9 @@ export function SlotCopyEditor({
   if (iconKind !== 'none') lastIconKind.current = iconKind;
 
   const field = (key: keyof SlotCopy, value: string) => onChange({ ...copy, [key]: value });
+
+  /** 1 until the operator types the single allowed break, then 2. */
+  const leadLines = Math.min(2, (copy.taglineLead ?? '').split('\n').length);
 
   return (
     <div className="p-5 flex flex-col gap-4">
@@ -332,6 +363,61 @@ export function SlotCopyEditor({
       >
         {t('Reset to placeholder')}
       </button>
+
+      {showTaglineToggle && (
+        <div className="flex flex-col gap-2 pt-5 border-t border-gray-100">
+          <span className="flex items-center gap-2 font-lgei font-bold text-[13px] text-gray-900">
+            <input
+              type="checkbox"
+              checked={showTagline}
+              onChange={e => onShowTagline(e.target.checked)}
+              className="w-3.5 h-3.5 accent-[#FD312E]"
+            />
+            {t('KV Tagline')}
+          </span>
+          {/* `items-start` so the Bold box keeps its own height when the lead
+              grows — the two read as one row until an Enter is typed. */}
+          <div className="flex gap-2 items-start">
+            {/* The lead takes ONE Enter — a long localisation ("Nur exklusiv bei")
+                breaks to a second line rather than running off the lockup. The
+                brand run stays one line: it is a domain. */}
+            <label className="flex-1 flex flex-col gap-1">
+              <span className="self-start text-[11px] text-gray-400">{t('Regular Text')}</span>
+              <textarea
+                rows={leadLines}
+                value={copy.taglineLead ?? ''}
+                onChange={e => {
+                  const v = e.target.value;
+                  // one break, two lines — the lockup has no room for a third
+                  if (v.split('\n').length > 2) return;
+                  onChange({ ...copy, taglineLead: v });
+                }}
+                placeholder={COPY_PLACEHOLDER.taglineLead}
+                // starts at the Bold box's height and grows by exactly one line
+                // on the break: 9+9 padding + 2 border + 16 per line
+                style={{ height: TAG_ROW_H + (leadLines - 1) * TAG_LINE_H, lineHeight: `${TAG_LINE_H}px` }}
+                className="w-full text-xs text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-[9px] focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 resize-none overflow-hidden"
+              />
+            </label>
+            <label className="flex-1 flex flex-col gap-1">
+              <span className="self-start text-[11px] text-gray-400">{t('Bold Text')}</span>
+              <input
+                type="text"
+                value={copy.taglineBrand ?? ''}
+                onChange={e => onChange({ ...copy, taglineBrand: e.target.value })}
+                placeholder={COPY_PLACEHOLDER.taglineBrand}
+                style={{ height: TAG_ROW_H }}
+                className="w-full text-xs text-gray-800 bg-white border border-gray-200 rounded-lg px-3 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300"
+              />
+            </label>
+          </div>
+          {/* full width, under both boxes — inside the Regular column it only
+              had half the panel and wrapped to two lines */}
+          <span className="text-[10px] text-gray-400 whitespace-nowrap">
+            {t('*Enter adds a line break — 2 lines max')}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

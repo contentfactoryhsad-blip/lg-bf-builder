@@ -9,11 +9,12 @@
  */
 import React from 'react';
 import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
-import { type SlotCopy } from './SlotCopyEditor';
+import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import { CTA_COLOR, SHORT_DISCLAIMER, SLOT_BG, longDisclaimer } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
-import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor } from './paidBoards';
+import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor, paidTaglineRatios } from './paidBoards';
 import { MirrorFill } from './MirrorFill';
+import { KvTagline, cleanArtId, taglineSpec } from './kvTagline';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import { type ProductSlots } from './ProductSlotsEditor';
 
@@ -78,6 +79,7 @@ export function PaidSlotPreview({
   products,
   plateColor = PD_PLATE_FILL,
   hideArt = false,
+  showTagline = true,
   motionSrc = null,
   showDisclaimer = true,
   benefitSlots,
@@ -97,6 +99,8 @@ export function PaidSlotPreview({
    * rasterises this and composites it over the video cut.
    */
   hideArt?: boolean;
+  /** Panel toggle — off drops the KV tagline from every size. */
+  showTagline?: boolean;
   /** Play the motion master in the art box instead of the still — Dynamic sizes. */
   motionSrc?: string | null;
   /** Panel toggle — off drops the disclaimer from every size. */
@@ -119,7 +123,16 @@ export function PaidSlotPreview({
   // into the image, and the upload has no black ground to fade into.
   const isCustom = asset?.id === CUSTOM_ASSET_ID;
   const mask = isCustom ? undefined : (pd ? pd.mask : slot.mask);
-  const artSrc = pd?.artId ?? asset.src ?? asset.id;
+  // The boards set this line as live text inside the art component, so the
+  // artwork must be the cut WITHOUT it burnt in — otherwise the two print on
+  // top of each other. Swapped whenever the asset supports the line at all, so
+  // the panel's checkbox actually removes it rather than revealing a baked one.
+  const taglineRatios = paidTaglineRatios(asset.id, slot.key);
+  const rawArtSrc = pd?.artId ?? asset.src ?? asset.id;
+  const artSrc = taglineRatios ? cleanArtId(rawArtSrc) : rawArtSrc;
+  const tagline = !hideArt && showTagline && taglineRatios ? taglineSpec(art, taglineRatios) : null;
+  const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '') || COPY_PLACEHOLDER.taglineLead;
+  const taglineBrand = (copy.taglineBrand ?? '').trim() || COPY_PLACEHOLDER.taglineBrand;
   // the custom upload brings its own ground tone; every real asset stays black
   const customBg = asset?.id === CUSTOM_ASSET_ID ? getCustomArtBg() : null;
   const ground = customBg ?? SLOT_BG;
@@ -234,6 +247,11 @@ export function PaidSlotPreview({
               }}
               draggable={false}
             />
+            )}
+            {/* Inside the mask wrapper because the board keeps it inside the art
+                component — the soft edge fades the line with the artwork. */}
+            {tagline && (
+              <KvTagline spec={tagline} ink={ink} lead={taglineLead} brand={taglineBrand} />
             )}
             {/* Benefit boxes ride the art's transform (component 2000-space) */}
             {benefitSlots && benefitSlots.map((bs, i) => {

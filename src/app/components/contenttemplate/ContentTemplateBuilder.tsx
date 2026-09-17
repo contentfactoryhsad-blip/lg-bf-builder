@@ -83,8 +83,8 @@ import type { DraftRecord } from '../../utils/draftStore';
 import { LgcomSlotPreview } from './LgcomSlotPreview';
 import { PaidSlotPreview } from './PaidSlotPreview';
 import { paidSlotsFor, type PaidSlot } from './paidSlots';
-import { artFor, bareOnExport, lgcomSlotsFor, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
-import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset } from './paidBoards';
+import { artFor, bareOnExport, hasTagline, lgcomSlotsFor, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
+import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset, paidHasTagline } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
 import { useDraftSave } from '../../hooks/useDraftSave';
@@ -148,6 +148,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [showDisclaimer, setShowDisclaimer] = useState(seed?.showDisclaimer ?? true);
   /** Panel checkbox — the hero sizes' carousel indicator. */
   const [showIndicator, setShowIndicator] = useState(seed?.showIndicator ?? true);
+  const [showTagline, setShowTagline] = useState(seed?.showTagline ?? true);
   const [iconColor, setIconColor] = useState<'black' | 'white'>(seed?.iconColor ?? 'white');
   const [iconCount, setIconCount] = useState<1 | 2 | 3>(seed?.iconCount ?? 3);
   const [solidIconIds, setSolidIconIds] = useState<string[]>(seed?.solidIconIds ?? ['free-delivery', 'free-disposal', 'free-installation']);
@@ -426,12 +427,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     selectedId, channelKey, sizeKey, copy,
     iconKind, iconColor, iconCount,
     solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-    showDisclaimer, showIndicator, plateColor,
+    showDisclaimer, showIndicator, showTagline, plateColor,
     products, benefitSlots,
     uploadDataUrl: uploadUrl && uploadUrl.startsWith('data:') ? uploadUrl : null,
   }), [selectedId, channelKey, sizeKey, copy, iconKind, iconColor, iconCount,
        solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-       showDisclaimer, showIndicator, plateColor, products, benefitSlots, uploadUrl]);
+       showDisclaimer, showIndicator, showTagline, plateColor, products, benefitSlots, uploadUrl]);
   const channelLabelForName = outputKind === 'size'
     ? (shortsSize?.label ?? '')
     : (channelKey === 'all' ? 'ALL' : channel?.label ?? '');
@@ -753,6 +754,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   iconLabels={iconLabels}
                   showDisclaimer={showDisclaimer}
                   showIndicator={showIndicator}
+                  showTagline={showTagline}
                 />
               ))}
             </>
@@ -860,6 +862,10 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 onShowIndicator={setShowIndicator}
                 showIndicatorToggle={channelKey === 'lgcom' || channelKey === 'all'}
                 showIconRowToggle={(channelKey === 'lgcom' || channelKey === 'all') && iconRowAvailable}
+                // only LG.com draws the line, and only for the artworks that ship without it
+                showTaglineToggle={hasTagline(asset.id) || paidHasTagline(asset.id)}
+                showTagline={showTagline}
+                onShowTagline={setShowTagline}
               />
               {plateCount > 0 && assetProducts && (
                 <ProductSlotsEditor
@@ -958,6 +964,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               iconLabels={iconLabels}
               showDisclaimer={showDisclaimer}
               showIndicator={showIndicator}
+              showTagline={showTagline}
               bare={bareOnExport(renderSlot.id)}
             />
           ) : (
@@ -970,6 +977,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               benefitSlots={asset.id === 'ad-benefit' ? benefitSlots : undefined}
               plateColor={plateColor}
               showDisclaimer={showDisclaimer}
+              showTagline={showTagline}
               showIndicator={showIndicator}
               hideLogo={renderNoLogo}
             />
@@ -1255,6 +1263,7 @@ function ChannelSlots({
   iconLabels,
   showDisclaimer,
   showIndicator,
+  showTagline,
 }: {
   channelKey: string;
   channelLabel: string;
@@ -1269,6 +1278,7 @@ function ChannelSlots({
   iconLabels: (string | null)[];
   showDisclaimer: boolean;
   showIndicator: boolean;
+  showTagline: boolean;
 }) {
   const t = useT();
   const slots = channelKey === 'lgcom' && asset ? lgcomSlotsFor(asset.id) : [];
@@ -1310,6 +1320,7 @@ function ChannelSlots({
               plateColor={plateColor}
               motionSrc={paidMotion}
               showDisclaimer={showDisclaimer}
+              showTagline={showTagline}
               showIndicator={showIndicator}
             />
           ))}
@@ -1340,6 +1351,7 @@ function ChannelSlots({
               iconLabels={iconLabels}
               showDisclaimer={showDisclaimer}
               showIndicator={showIndicator}
+              showTagline={showTagline}
             />
           ))}
         </div>

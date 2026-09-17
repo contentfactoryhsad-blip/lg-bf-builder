@@ -34,6 +34,7 @@
  * the first plate in that order.
  */
 import type { PaidArt, PaidMask, PaidSlot } from './paidSlots';
+import type { TaglineRatios } from './kvTagline';
 
 /** What a board says about one size. */
 export interface BoardPlacement {
@@ -467,6 +468,52 @@ export const DYNAMIC_PAID_SLOTS: Record<string, PaidSlot[]> = (() => {
 /* ==================================================================== */
 
 /** What a size renders: where the art goes, its mask, its plates, which file. */
+/* ------------------------------------------------------------------ */
+/* "Only at LG.com"                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Where the endorsement sits on each key visual, as fractions of the 2000²
+ * artwork square. Read straight off the `Black Friday Image — *` masters on
+ * `Banner Template 2`, where the line is a live text layer inside the art
+ * component — so unlike the LG.com boards there is ONE row per KV family and
+ * every size inherits it through the art placement.
+ *
+ * 🔴 Membership is the allow-list. The deal-type, AD and Dynamic artworks carry
+ * no tagline layer at all and must stay out, or a drawn line would print on
+ * artwork that has none.
+ */
+const TAGLINE_MAIN: TaglineRatios       = { x: 0.4220, y: 0.5855, size: 0.0203085, figmaLineHeight: 0.0142267, w: 0.1305 };
+const TAGLINE_PD_CENTRIC: TaglineRatios = { x: 0.4415, y: 0.5945, size: 0.0192970, figmaLineHeight: 0.0135180, w: 0.1240 };
+/** Board 001 only. Board 002 reuses the Main lockup, so it reuses Main's row. */
+const TAGLINE_PD_SLOT_1: TaglineRatios  = { x: 0.4405, y: 0.5355, size: 0.0175073, figmaLineHeight: 0.0122644, w: 0.1125 };
+
+const TAGLINE_BY_ASSET: Record<string, TaglineRatios> = {
+  'kv-main': TAGLINE_MAIN,
+  'kv-main-character': TAGLINE_MAIN,
+  'kv-product-centric-1': TAGLINE_PD_CENTRIC,
+  'kv-product-centric-2': TAGLINE_PD_CENTRIC,
+};
+
+/**
+ * The line's ratios for this asset at this size, or null when the artwork has
+ * none. The PD Slot pair splits by board: the row-of-four sizes frame the
+ * lockup higher and smaller than the 2x2 ones, which match Main.
+ */
+export function paidTaglineRatios(assetId: string, sizeKey: string): TaglineRatios | null {
+  if (isPdSlotAsset(assetId)) {
+    const p = PD_SLOT_PLACEMENT[sizeKey];
+    // no placement means the size is one of the fifteen not being trafficked;
+    // it falls back to the Main art framing, which is not this lockup
+    return p ? (p.ver === 'v1' ? TAGLINE_PD_SLOT_1 : TAGLINE_MAIN) : null;
+  }
+  return TAGLINE_BY_ASSET[assetId] ?? null;
+}
+
+/** Whether any paid size draws the line for this asset. */
+export const paidHasTagline = (assetId: string) =>
+  assetId in TAGLINE_BY_ASSET || isPdSlotAsset(assetId);
+
 export interface PaidPlacement extends BoardPlacement {
   /**
    * Artwork stem to load, when the board decides it rather than the asset. Only

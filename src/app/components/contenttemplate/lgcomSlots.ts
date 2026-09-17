@@ -24,6 +24,8 @@
  * from Figma rather than guessing when the design moves.
  */
 
+import { taglineSpec, type TaglineRatios, type TaglineSpec } from './kvTagline';
+
 export type Device = 'PC' | 'MO';
 
 export type SlotId =
@@ -236,8 +238,13 @@ const ART: Record<string, Partial<Record<SlotId, Placement>>> = {
 
 /** Where this asset's art sits in this slot. Falls back to the Main framing. */
 export function artFor(assetId: string, slot: SlotId): Placement {
-  const row = ART[assetId] ?? ART['kv-main'];
-  return row[slot] ?? ART['kv-main'][slot]!;
+  const own = ART[assetId]?.[slot];
+  if (own) return own;
+  // 🔴 Fall back to Main's FRAMING only — never to its artwork. `src` names a
+  // file, so inheriting it draws Main's picture for an asset that has its own;
+  // the custom upload silently rendered the Main key visual that way.
+  const { src: _artworkIsNotInherited, ...framing } = ART['kv-main'][slot]!;
+  return framing;
 }
 
 /** Left-edge scrim on the two wide PC sizes: black, opaque to `stop`, then out. */
@@ -277,6 +284,80 @@ export const gradCss = (g: Gradation, ground = '#000000') => {
   const b = parseInt(ground.slice(5, 7), 16);
   return `linear-gradient(90deg, ${ground} 0%, ${ground} ${(g.stop * 100).toFixed(1)}%, rgba(${r},${gr},${b},0) 100%)`;
 };
+
+/* ------------------------------------------------------------------ */
+/* "Only at LG.com" endorsement                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The Main key visuals ship WITHOUT this line in the artwork — it is set as
+ * live text on the Figma board so it stays crisp at every size. The
+ * product-centric and deal-type artworks already carry it inside the image, so
+ * drawing it for them double-prints (seen on `LG.com — Hero Product`,
+ * 2026-09-16). Hence the allow-list rather than a blanket overlay.
+ *
+ * Read off `Banner Template 2 › LG.com — Main › lgcom-ST0001-pc-1920x720`
+ * (`6453:38895`): 39.066px at (1215, 518), art square (385, −631) size 1961.
+ *
+ * 🔴 Every number is a fraction of the ART SQUARE, not the frame. The line sits
+ * on the lockup, and each size reframes the art differently — anchoring to the
+ * frame walks it off the logo on the small sizes.
+ */
+type OnlyAtRatios = TaglineRatios;
+
+/* Read off each board's own frames; every value is a fraction of the ART
+   SQUARE, so it survives the reframing each size does. */
+const MAIN_RATIOS: OnlyAtRatios      = { x: 0.4232534, y: 0.5859255, size: 0.0199215, figmaLineHeight: 0.0139556, w: 0.1279959 };
+const PD_CENTRIC_RATIOS: OnlyAtRatios = { x: 0.4421214, y: 0.5946535, size: 0.0191279, figmaLineHeight: 0.0133996, w: 0.1228965 };
+/* 🔴 PD Slot needs TWO — the tile hides two artworks (see `Placement.src`), and
+   the row-of-four PC art frames the lockup differently from the 2x2 one. Means
+   per size, not per asset. */
+const PD_SLOT_PC_RATIOS: OnlyAtRatios = { x: 0.4406833, y: 0.5360409, size: 0.0174230, figmaLineHeight: 0.0122054, w: 0.1119429 };
+const PD_SLOT_MO_RATIOS: OnlyAtRatios = { x: 0.4224426, y: 0.5858881, size: 0.0201172, figmaLineHeight: 0.0140929, w: 0.1294875 };
+
+/** The same ratios at every size — most families frame the lockup identically. */
+const everySize = (r: OnlyAtRatios): Partial<Record<SlotId, OnlyAtRatios>> => ({
+  'ST0001-pc-1920x720': r, 'ST0001-pc-1600x400': r, 'ST0001-mo-720x960': r,
+  'ST0001-mo-720x830': r, 'ST0044-mo-656x436': r, 'ST0044-pc-342x228': r,
+  'PR0001-pc-960x600': r,
+});
+
+/** The PD Slot split: the three wide PC sizes take the row-of-four art. */
+const pdSlotSizes = (): Partial<Record<SlotId, OnlyAtRatios>> => ({
+  'ST0001-pc-1920x720': PD_SLOT_PC_RATIOS,
+  'ST0001-pc-1600x400': PD_SLOT_PC_RATIOS,
+  'PR0001-pc-960x600': PD_SLOT_PC_RATIOS,
+  'ST0001-mo-720x960': PD_SLOT_MO_RATIOS,
+  'ST0001-mo-720x830': PD_SLOT_MO_RATIOS,
+  'ST0044-mo-656x436': PD_SLOT_MO_RATIOS,
+  'ST0044-pc-342x228': PD_SLOT_MO_RATIOS,
+});
+
+/**
+ * Asset id → slot id → where the line sits on that artwork.
+ *
+ * Membership is also the allow-list: an artwork that bakes the line into the
+ * image must NOT be here, or it double-prints.
+ */
+const ONLY_AT: Record<string, Partial<Record<SlotId, OnlyAtRatios>>> = {
+  'kv-main': everySize(MAIN_RATIOS),
+  'kv-main-character': everySize(MAIN_RATIOS),
+  'kv-product-centric-1': everySize(PD_CENTRIC_RATIOS),
+  'kv-product-centric-2': everySize(PD_CENTRIC_RATIOS),
+  'kv-product-slot': pdSlotSizes(),
+  'kv-product-slot-character': pdSlotSizes(),
+};
+/** Re-exported so callers need not know which module owns the geometry. */
+export type OnlyAtSpec = TaglineSpec;
+
+/** Frame-space box for the endorsement, or undefined when the art bakes it in. */
+export function onlyAtFor(assetId: string, slot: SlotId): OnlyAtSpec | undefined {
+  const r = ONLY_AT[assetId]?.[slot];
+  return r ? taglineSpec(artFor(assetId, slot), r) : undefined;
+}
+
+/** Whether this asset draws the tagline at all (see `onlyAtFor`). */
+export const hasTagline = (assetId: string) => assetId in ONLY_AT;
 
 /* ------------------------------------------------------------------ */
 /* Product slots                                                       */

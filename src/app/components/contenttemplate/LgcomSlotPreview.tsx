@@ -14,12 +14,13 @@
  */
 import React from 'react';
 import { useT } from '../../i18n/LanguageContext';
-import { CUSTOM_ASSET_ID, artUrl, fullUrl, getCustomArtBg, isLightHex, motionUrl, type ContentAsset } from './contentTemplateAssets';
+import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, motionUrl, type ContentAsset } from './contentTemplateAssets';
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
 import { IconRowInline } from './icons/IconRowInline';
 import { MirrorFill } from './MirrorFill';
+import { KvTagline, cleanArtId } from './kvTagline';
 import { AD_BENEFIT_BOXES } from './paidBoards';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import {
@@ -32,6 +33,8 @@ import {
   artFor,
   gradCss,
   gradFor,
+  hasTagline,
+  onlyAtFor,
   slotBoxesFor,
   slotLabel,
   type LgcomSlot,
@@ -113,6 +116,7 @@ export function LgcomSlotPreview({
   iconLabels,
   showDisclaimer = true,
   showIndicator = true,
+  showTagline = true,
   bare = false,
   hideArt = false,
   benefitSlots,
@@ -144,6 +148,8 @@ export function LgcomSlotPreview({
   iconLabels?: (string | null)[];
   /** Panel toggle — off drops the disclaimer from every size. */
   showDisclaimer?: boolean;
+  /** Panel toggle — off drops the KV tagline from every size. */
+  showTagline?: boolean;
   /** Panel toggle — off drops the carousel indicator from the two hero sizes. */
   showIndicator?: boolean;
   /**
@@ -171,8 +177,24 @@ export function LgcomSlotPreview({
   const grad = asset ? gradFor(asset.id, slot.id) : undefined;
   // the plates live in the artwork, so they ride the same square as the art does
   const plates = asset && art ? slotBoxesFor(asset.id, slot.id) : [];
+  // the Main artworks leave "Only at LG.com" to live text; the rest bake it in
+  const onlyAt = asset && !hideArt && showTagline ? onlyAtFor(asset.id, slot.id) : undefined;
+  // empty falls back to the placeholder, the same rule the other copy fields use
+  // a trailing newline is the operator's own break, so only spaces are trimmed
+  // off the ends — `\n` survives into the render
+  const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '') || COPY_PLACEHOLDER.taglineLead;
+  const taglineBrand = (copy.taglineBrand ?? '').trim() || COPY_PLACEHOLDER.taglineBrand;
   // this size may call for the asset's other artwork — see Placement.src
-  const stillUrl = asset ? (art?.src ? artUrl(art.src) : fullUrl(asset)) : null;
+  // The tagline is live text here, so the artwork must be the cut WITHOUT it
+  // burnt in. Resolved from the stem rather than recorded in `ART`, so the
+  // placement table stays about placement and no fallback can drag a file name
+  // with it.
+  // `artUrl` already routes the custom upload to its object URL, so one path
+  // covers every asset.
+  const artStem = asset ? (art?.src ?? asset.src ?? asset.id) : null;
+  const stillUrl = asset && artStem
+    ? artUrl(hasTagline(asset.id) ? cleanArtId(artStem) : artStem)
+    : null;
   // the custom upload brings its own ground tone; every real asset stays black
   const customBg = asset?.id === CUSTOM_ASSET_ID ? getCustomArtBg() : null;
   const ground = customBg ?? SLOT_BG;
@@ -421,6 +443,12 @@ export function LgcomSlotPreview({
               style={{ position: 'absolute', inset: 0, width: slot.w, height: slot.h, maxWidth: 'none' }}
               draggable={false}
             />
+          )}
+
+          {/* part of the KV lockup, not live copy — so it survives `bare`, and
+              it sits above the indicator exactly as it does on the board */}
+          {onlyAt && (
+            <KvTagline spec={onlyAt} ink={ink} lead={taglineLead} brand={taglineBrand} />
           )}
         </div>
       </div>
