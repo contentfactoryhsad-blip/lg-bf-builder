@@ -360,7 +360,7 @@ const PD_SLOT_MO_RATIOS: OnlyAtRatios = { x: 0.4224426, y: 0.5858881, size: 0.02
  * Dynamic is the exception on this side: its line sits inside the
  * `KV — Teasing Content` master, so every size inherits one row.
  */
-const TEASING_RATIOS: OnlyAtRatios   = { x: 0.4218750, y: 0.5953125, size: 0.0211547, figmaLineHeight: 0.0148194, w: 0.1359375 };
+const TEASING_RATIOS: OnlyAtRatios   = { x: 0.4203125, y: 0.5937500, size: 0.0211547, figmaLineHeight: 0.0148194, w: 0.1359375 };
 
 /** The same ratios at every size — used where one row really does cover them. */
 const everySize = (r: OnlyAtRatios): Partial<Record<SlotId, OnlyAtRatios>> => ({

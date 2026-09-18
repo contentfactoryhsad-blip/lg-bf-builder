@@ -487,10 +487,15 @@ export const DYNAMIC_PAID_SLOTS: Record<string, PaidSlot[]> = (() => {
  * no tagline layer at all and must stay out, or a drawn line would print on
  * artwork that has none.
  */
-const TAGLINE_MAIN: TaglineRatios       = { x: 0.4220, y: 0.5855, size: 0.0203085, figmaLineHeight: 0.0142267, w: 0.1305 };
-const TAGLINE_PD_CENTRIC: TaglineRatios = { x: 0.4415, y: 0.5945, size: 0.0192970, figmaLineHeight: 0.0135180, w: 0.1240 };
-/** Board 001 only. Board 002 reuses the Main lockup, so it reuses Main's row. */
+const TAGLINE_MAIN: TaglineRatios       = { x: 0.4250, y: 0.5855, size: 0.0203085, figmaLineHeight: 0.0142267, w: 0.1305 };
+const TAGLINE_PD_CENTRIC: TaglineRatios = { x: 0.4365, y: 0.5945, size: 0.0192970, figmaLineHeight: 0.0135180, w: 0.1240 };
 const TAGLINE_PD_SLOT_1: TaglineRatios  = { x: 0.4405, y: 0.5355, size: 0.0175073, figmaLineHeight: 0.0122644, w: 0.1125 };
+/**
+ * Board 002 draws the Main lockup, so this started out as Main's row — but the
+ * two masters are nudged independently and parted company on 2026-09-18
+ * (Main moved to 0.4250, this stayed at 0.4220). Keep it separate.
+ */
+const TAGLINE_PD_SLOT_2: TaglineRatios  = { x: 0.4220, y: 0.5855, size: 0.0203085, figmaLineHeight: 0.0142267, w: 0.1305 };
 
 /**
  * Read off the Dynamic master (2026-09-18), which carries the line as live text
@@ -503,7 +508,7 @@ const TAGLINE_PD_SLOT_1: TaglineRatios  = { x: 0.4405, y: 0.5355, size: 0.017507
  * board has no tagline layer at all and keeps playing the delivered one. See
  * `cleanMotionId` and `motionUrl`'s `clean` argument.
  */
-const TAGLINE_DYNAMIC: TaglineRatios = { x: 0.4195, y: 0.5936113, size: 0.0208532, figmaLineHeight: 0.0146082, w: 0.1340 };
+const TAGLINE_DYNAMIC: TaglineRatios = { x: 0.4235, y: 0.5936113, size: 0.0208532, figmaLineHeight: 0.0146082, w: 0.1340 };
 
 const TAGLINE_BY_ASSET: Record<string, TaglineRatios> = {
   'ad-teasing': TAGLINE_DYNAMIC,
@@ -523,7 +528,7 @@ export function paidTaglineRatios(assetId: string, sizeKey: string): TaglineRati
     const p = PD_SLOT_PLACEMENT[sizeKey];
     // no placement means the size is one of the fifteen not being trafficked;
     // it falls back to the Main art framing, which is not this lockup
-    return p ? (p.ver === 'v1' ? TAGLINE_PD_SLOT_1 : TAGLINE_MAIN) : null;
+    return p ? (p.ver === 'v1' ? TAGLINE_PD_SLOT_1 : TAGLINE_PD_SLOT_2) : null;
   }
   return TAGLINE_BY_ASSET[assetId] ?? null;
 }
