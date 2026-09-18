@@ -137,7 +137,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [shortsPlaying, setShortsPlaying] = useState(true);
   const shortsVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  const [copy, setCopy] = useState<SlotCopy>(seed?.copy ?? EMPTY_COPY);
+  // a draft saved before the disclaimer split has no `disclaimerMedia`; spread
+  // over EMPTY_COPY so the state always has the full shape
+  const [copy, setCopy] = useState<SlotCopy>(seed?.copy ? { ...EMPTY_COPY, ...seed.copy } : EMPTY_COPY);
   /**
    * Icon row settings, ported from promotion-banner-variation: None / Solid /
    * Line, a colour, how many groups, and which benefit each group shows —
@@ -860,6 +862,10 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 iconStyle={iconStyle}
                 showDisclaimer={showDisclaimer}
                 onShowDisclaimer={setShowDisclaimer}
+                // only "All channels" writes both disclaimers; the rest grey
+                // out the one their sizes never render
+                lgcomActive={channelKey === 'lgcom' || channelKey === 'all'}
+                mediaActive={channelKey !== 'lgcom'}
                 showIndicator={showIndicator}
                 onShowIndicator={setShowIndicator}
                 showIndicatorToggle={channelKey === 'lgcom' || channelKey === 'all'}

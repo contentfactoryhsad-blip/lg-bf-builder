@@ -17,7 +17,14 @@ export interface SlotCopy {
   headline: string;
   subcopy: string;
   cta: string;
+  /**
+   * LG.com runs the disclaimer uncapped — its frames have room. Media sizes do
+   * not, so they carry their own short line rather than a truncation of this
+   * one; see `disclaimerMedia`.
+   */
   disclaimer: string;
+  /** Media sizes only. Capped at 24 — longer simply does not fit the frames. */
+  disclaimerMedia: string;
   /**
    * The endorsement that sits on the KV lockup, in two runs: Regular then Bold.
    * Split because markets rewrite them independently — the lead translates
@@ -34,6 +41,7 @@ export const EMPTY_COPY: SlotCopy = {
   subcopy: '',
   cta: '',
   disclaimer: '',
+  disclaimerMedia: '',
   taglineLead: '',
   taglineBrand: '',
 };
@@ -45,6 +53,7 @@ export const COPY_PLACEHOLDER: SlotCopy = {
   subcopy: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
   cta: 'Shop now',
   disclaimer: '*T&C’s apply',
+  disclaimerMedia: '*T&C’s apply',
   taglineLead: 'Only at',
   taglineBrand: 'LG.com',
 };
@@ -62,9 +71,6 @@ const FIELDS: {
   { key: 'subcopy', label: 'Subcopy', hint: 'Optional', multiline: true, rows: 2 },
   // The pill hugs its label, so length is the one thing that must be bounded.
   { key: 'cta', label: 'CTA button', maxLength: 15 },
-  // no length cap (2026-09-16); sizes under 1000px are still locked to the
-  // short version — see longDisclaimer
-  { key: 'disclaimer', label: 'Disclaimer', hint: 'Media sizes Max 180 · Sizes under 1000px use *T&C\u2019s apply' },
 ];
 
 /**
@@ -114,6 +120,8 @@ export function SlotCopyEditor({
   iconStyle,
   showDisclaimer,
   onShowDisclaimer,
+  lgcomActive,
+  mediaActive,
   showIndicator,
   onShowIndicator,
   showIndicatorToggle,
@@ -144,6 +152,13 @@ export function SlotCopyEditor({
   /** Checkbox before the Disclaimer field — off drops it from every size. */
   showDisclaimer: boolean;
   onShowDisclaimer: (next: boolean) => void;
+  /**
+   * Which of the two disclaimers the chosen channel actually renders. Only
+   * "All channels" writes both, so the other box greys out rather than
+   * inviting copy that nothing will use.
+   */
+  lgcomActive: boolean;
+  mediaActive: boolean;
   /** Checkbox for the hero-size carousel indicator; shown on LG.com only. */
   showIndicator: boolean;
   onShowIndicator: (next: boolean) => void;
@@ -165,7 +180,7 @@ export function SlotCopyEditor({
   showIconRowToggle: boolean;
 }) {
   const t = useT();
-  const touched = Object.values(copy).some(v => v.trim() !== '');
+  const touched = Object.values(copy).some(v => (v ?? '').trim() !== '');
   /** What the Icons checkbox re-enables — the kind in use before it went off. */
   const lastIconKind = useRef<'solid' | 'line'>(iconKind === 'line' ? 'line' : 'solid');
   if (iconKind !== 'none') lastIconKind.current = iconKind;
@@ -227,6 +242,40 @@ export function SlotCopyEditor({
           )}
         </div>
       ))}
+
+      {/* Two disclaimers, because the two channels have different room. The
+          checkbox governs both — it drops the line everywhere. */}
+      <div className="flex flex-col gap-2">
+        <span className="flex items-center gap-2 text-xs font-medium text-gray-700">
+          <input
+            type="checkbox"
+            checked={showDisclaimer}
+            onChange={e => onShowDisclaimer(e.target.checked)}
+            className="w-3.5 h-3.5 accent-[#FD312E]"
+          />
+          {t('Disclaimer')}
+        </span>
+        {([
+          { key: 'disclaimer', label: 'LG.com', hint: 'No limit · small sizes use *T&C\u2019s apply', max: undefined, on: lgcomActive },
+          { key: 'disclaimerMedia', label: 'Media', hint: 'Max 24 · *T&C\u2019s apply recommended, in your local language', max: 24, on: mediaActive },
+        ] as const).map(d => (
+          <label key={d.key} className="flex flex-col gap-1">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className={`text-[11px] ${d.on ? 'text-gray-500' : 'text-gray-300'}`}>{t(d.label)}</span>
+              <span className={`text-[10px] text-right ${d.on ? 'text-gray-400' : 'text-gray-300'}`}>{t(d.hint)}</span>
+            </span>
+            <input
+              type="text"
+              value={copy[d.key] ?? ''}
+              onChange={e => field(d.key, e.target.value)}
+              placeholder={COPY_PLACEHOLDER[d.key]}
+              maxLength={d.max}
+              disabled={!showDisclaimer || !d.on}
+              className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40 disabled:bg-gray-50"
+            />
+          </label>
+        ))}
+      </div>
 
       {showIndicatorToggle && (
         <div className="flex items-baseline gap-2">

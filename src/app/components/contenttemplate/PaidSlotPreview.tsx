@@ -10,7 +10,7 @@
 import React from 'react';
 import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
-import { CTA_COLOR, SHORT_DISCLAIMER, SLOT_BG, longDisclaimer } from './lgcomSlots';
+import { CTA_COLOR, MEDIA_DISCLAIMER_MAX, SHORT_DISCLAIMER, SLOT_BG, longDisclaimer } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
 import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor, paidTaglineRatios } from './paidBoards';
 import { MirrorFill } from './MirrorFill';
@@ -314,10 +314,12 @@ export function PaidSlotPreview({
               if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
                 return <Line key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
               }
-              let typed = copy[spec.role].trim();
-              // Paid sizes on the ≥1000px rule cap the disclaimer at 180
-              // chars (re-added 2026-09-16) — the LG.com heroes run uncapped.
-              if (spec.role === 'disclaimer') typed = typed.slice(0, 180);
+              // the media disclaimer is its own field — LG.com's runs uncapped
+              // and would not fit these frames
+              let typed = (spec.role === 'disclaimer'
+                ? (copy.disclaimerMedia ?? '')
+                : copy[spec.role]).trim();
+              if (spec.role === 'disclaimer') typed = typed.slice(0, MEDIA_DISCLAIMER_MAX);
               const flows = spec.role === 'headline' || spec.role === 'subcopy';
               return (
                 <Line

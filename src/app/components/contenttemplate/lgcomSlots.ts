@@ -636,6 +636,11 @@ export const longDisclaimer = (w: number, h: number) => w >= 1000 || h >= 1000;
 export const lgcomDisclaimerEditable = (slot: { id: string; w: number; h: number }) =>
   longDisclaimer(slot.w, slot.h) || slot.id === 'ST0001-mo-720x960';
 export const SHORT_DISCLAIMER = '*T&C\u2019s apply';
+/**
+ * Media frames give the disclaimer a single short line. LG.com has room for a
+ * paragraph and takes its own field, so this caps only the media one.
+ */
+export const MEDIA_DISCLAIMER_MAX = 24;
 
 export const bareOnExport = (slotId: string) =>
   slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960' || slotId === 'PR0001-pc-960x600';
