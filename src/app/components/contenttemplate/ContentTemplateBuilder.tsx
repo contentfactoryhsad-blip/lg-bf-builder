@@ -915,7 +915,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           aria-hidden
         >
           <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
-          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} hideLogo={renderNoLogo} />
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showTagline={showTagline} hideLogo={renderNoLogo} />
         </div>
       )}
       {!renderPaidOverlaySlot && renderIconRowSlot && (
@@ -938,6 +938,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
             iconIds={iconIds}
             iconLabels={iconLabels}
             showDisclaimer={showDisclaimer}
+            showTagline={showTagline}
             bare
             hideArt
           />

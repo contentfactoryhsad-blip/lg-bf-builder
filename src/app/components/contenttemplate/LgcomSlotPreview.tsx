@@ -181,7 +181,9 @@ export function LgcomSlotPreview({
   // the plates live in the artwork, so they ride the same square as the art does
   const plates = asset && art ? slotBoxesFor(asset.id, slot.id) : [];
   // the Main artworks leave "Only at LG.com" to live text; the rest bake it in
-  const onlyAt = asset && !hideArt && showTagline ? onlyAtFor(asset.id, slot.id) : undefined;
+  // kept on through `hideArt`: that pass is the overlay composited onto the
+  // exported mp4, whose video is the clean cut — see PaidSlotPreview
+  const onlyAt = asset && showTagline ? onlyAtFor(asset.id, slot.id) : undefined;
   // empty falls back to the placeholder, the same rule the other copy fields use
   // a trailing newline is the operator's own break, so only spaces are trimmed
   // off the ends — `\n` survives into the render

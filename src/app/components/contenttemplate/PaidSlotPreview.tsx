@@ -130,7 +130,10 @@ export function PaidSlotPreview({
   const taglineRatios = paidTaglineRatios(asset.id, slot.key);
   const rawArtSrc = pd?.artId ?? asset.src ?? asset.id;
   const artSrc = taglineRatios ? cleanArtId(rawArtSrc) : rawArtSrc;
-  const tagline = !hideArt && showTagline && taglineRatios ? taglineSpec(art, taglineRatios) : null;
+  // 🔴 drawn even when `hideArt` is on. That pass rasterises the overlay that
+  // gets composited onto the exported mp4, and the video underneath is the
+  // CLEAN cut — so the line has to come from here or it is lost on download.
+  const tagline = showTagline && taglineRatios ? taglineSpec(art, taglineRatios) : null;
   const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '') || COPY_PLACEHOLDER.taglineLead;
   const taglineBrand = (copy.taglineBrand ?? '').trim() || COPY_PLACEHOLDER.taglineBrand;
   // the custom upload brings its own ground tone; every real asset stays black
