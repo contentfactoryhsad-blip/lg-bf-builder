@@ -307,16 +307,62 @@ type OnlyAtRatios = TaglineRatios;
 
 /* Read off each board's own frames; every value is a fraction of the ART
    SQUARE, so it survives the reframing each size does. */
-const MAIN_RATIOS: OnlyAtRatios      = { x: 0.4232534, y: 0.5859255, size: 0.0199215, figmaLineHeight: 0.0139556, w: 0.1279959 };
-const PD_CENTRIC_RATIOS: OnlyAtRatios = { x: 0.4421214, y: 0.5946535, size: 0.0191279, figmaLineHeight: 0.0133996, w: 0.1228965 };
+/**
+ * 🔴 On LG.com the endorsement is NOT inside the artwork component — it is a
+ * separate text layer placed on each size's frame, one per frame, nudged by
+ * hand. So the ratios are per size, not per family, and a single row per asset
+ * cannot stand in for them. (Paid media is the other way round: the layer lives
+ * inside `Black Friday Image — *`, so one row per family covers every size.)
+ *
+ * Re-read from the boards when they move; do not average or interpolate.
+ */
+const R = (x: number, y: number, size: number, figmaLineHeight: number, w: number): OnlyAtRatios =>
+  ({ x, y, size, figmaLineHeight, w });
+
+const MAIN_SIZES: Partial<Record<SlotId, OnlyAtRatios>> = {
+  'ST0001-pc-1920x720': R(0.427333, 0.5859255, 0.0199215, 0.0139556, 0.1279959),
+  'ST0001-pc-1600x400': R(0.4294283, 0.5859255, 0.0199215, 0.0139556, 0.1279959),
+  'ST0001-mo-720x960': R(0.4288413, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'ST0001-mo-720x830': R(0.4294167, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'ST0044-mo-656x436': R(0.4344581, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'ST0044-pc-342x228': R(0.4454861, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'PR0001-pc-960x600': R(0.4286322, 0.5859255, 0.0199215, 0.0139556, 0.1279959),
+};
+
+const MAIN_CHARACTER_SIZES: Partial<Record<SlotId, OnlyAtRatios>> = {
+  'ST0001-pc-1920x720': R(0.427333, 0.5859255, 0.0199215, 0.0139556, 0.1279959),
+  'ST0001-pc-1600x400': R(0.4294253, 0.5859255, 0.0199215, 0.0139556, 0.1279959),
+  'ST0001-mo-720x960': R(0.4288413, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'ST0001-mo-720x830': R(0.4294167, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'ST0044-mo-656x436': R(0.4344581, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'ST0044-pc-342x228': R(0.4454753, 0.5859256, 0.0199215, 0.0139556, 0.1279959),
+  'PR0001-pc-960x600': R(0.4286296, 0.5859255, 0.0199215, 0.0139556, 0.1279959),
+};
+
+/** Hero Product and its Non AC twin were nudged together — identical values. */
+const PD_CENTRIC_SIZES: Partial<Record<SlotId, OnlyAtRatios>> = {
+  'ST0001-pc-1920x720': R(0.4370219, 0.5946535, 0.0191279, 0.0133996, 0.1228965),
+  'ST0001-pc-1600x400': R(0.4344136, 0.5941358, 0.0190811, 0.0133669, 0.1226852),
+  'ST0001-mo-720x960': R(0.4348754, 0.5948487, 0.0191645, 0.0134252, 0.1231317),
+  'ST0001-mo-720x830': R(0.4345146, 0.5947612, 0.0191855, 0.0134399, 0.1232666),
+  'ST0044-mo-656x436': R(0.4285714, 0.5945261, 0.0189648, 0.0132853, 0.1218487),
+  'ST0044-pc-342x228': R(0.4138889, 0.5944444, 0.0192391, 0.0134775, 0.125),
+  'PR0001-pc-960x600': R(0.4354839, 0.5947581, 0.0191415, 0.0134091, 0.1229839),
+};
+
 /* 🔴 PD Slot needs TWO — the tile hides two artworks (see `Placement.src`), and
    the row-of-four PC art frames the lockup differently from the 2x2 one. Means
    per size, not per asset. */
-const TEASING_RATIOS: OnlyAtRatios   = { x: 0.4171875, y: 0.5953125, size: 0.0211547, figmaLineHeight: 0.0148194, w: 0.1359375 };
 const PD_SLOT_PC_RATIOS: OnlyAtRatios = { x: 0.4406833, y: 0.5360409, size: 0.0174230, figmaLineHeight: 0.0122054, w: 0.1119429 };
 const PD_SLOT_MO_RATIOS: OnlyAtRatios = { x: 0.4224426, y: 0.5858881, size: 0.0201172, figmaLineHeight: 0.0140929, w: 0.1294875 };
 
-/** The same ratios at every size — most families frame the lockup identically. */
+/**
+ * Dynamic is the exception on this side: its line sits inside the
+ * `KV — Teasing Content` master, so every size inherits one row.
+ */
+const TEASING_RATIOS: OnlyAtRatios   = { x: 0.4218750, y: 0.5953125, size: 0.0211547, figmaLineHeight: 0.0148194, w: 0.1359375 };
+
+/** The same ratios at every size — used where one row really does cover them. */
 const everySize = (r: OnlyAtRatios): Partial<Record<SlotId, OnlyAtRatios>> => ({
   'ST0001-pc-1920x720': r, 'ST0001-pc-1600x400': r, 'ST0001-mo-720x960': r,
   'ST0001-mo-720x830': r, 'ST0044-mo-656x436': r, 'ST0044-pc-342x228': r,
@@ -341,10 +387,10 @@ const pdSlotSizes = (): Partial<Record<SlotId, OnlyAtRatios>> => ({
  * image must NOT be here, or it double-prints.
  */
 const ONLY_AT: Record<string, Partial<Record<SlotId, OnlyAtRatios>>> = {
-  'kv-main': everySize(MAIN_RATIOS),
-  'kv-main-character': everySize(MAIN_RATIOS),
-  'kv-product-centric-1': everySize(PD_CENTRIC_RATIOS),
-  'kv-product-centric-2': everySize(PD_CENTRIC_RATIOS),
+  'kv-main': MAIN_SIZES,
+  'kv-main-character': MAIN_CHARACTER_SIZES,
+  'kv-product-centric-1': PD_CENTRIC_SIZES,
+  'kv-product-centric-2': PD_CENTRIC_SIZES,
   // the Dynamic board runs the two heroes plus PR0001 — `everySize` is
   // harmless for the rest, which `lgcomSlotsFor` filters out anyway
   'ad-teasing': everySize(TEASING_RATIOS),
