@@ -449,9 +449,13 @@ export const DYNAMIC_PAID_SLOTS: Record<string, PaidSlot[]> = (() => {
     ],
   });
   const L_1_1 = { art: { x: -360, y: -157, size: 1810 }, ...L_1080(1080, 95, 251, 347, 1015) };
-  const L_3_4 = { art: { x: -694, y: -295, size: 2478 }, ...L_1080(1440, 113, 269, 365, 1375) };
+  const L_3_4 = { art: { x: -739, y: -344, size: 2576 }, ...L_1080(1440, 113, 269, 365, 1375) };
   const L_9_16 = { art: { x: -1006, y: -400, size: 3130 }, ...L_1080(1920, 137, 293, 389, 1855) };
-  const L_4_5 = { art: { x: -614, y: -254, size: 2318 }, ...L_1080(1350, 109, 265, 361, 1285) };
+  const L_4_5 = { art: { x: -731, y: -382, size: 2552 }, ...L_1080(1350, 109, 265, 361, 1285) };
+  /* Meta's 1:1 is back on the board (2026-09-18) and frames the art a touch
+     tighter than the Criteo/Pmax square, so it takes its own row. The layout
+     around it is the same 1080 stack. */
+  const L_META_1_1 = { art: { x: -355, y: -148, size: 1804 }, ...L_1080(1080, 95, 251, 347, 1015) };
 
   const slot = (ch: string, w: number, h: number, layout: typeof L_1_1): PaidSlot =>
     ({ key: `${ch}-${w}x${h}`, w, h, ...layout });
@@ -459,7 +463,7 @@ export const DYNAMIC_PAID_SLOTS: Record<string, PaidSlot[]> = (() => {
     criteo: [slot('criteo', 1920, 1080, L_16_9 as never), slot('criteo', 1080, 1080, L_1_1), slot('criteo', 1080, 1920, L_9_16)],
     dv360: [slot('dv360', 1920, 1080, L_16_9 as never), slot('dv360', 1080, 1920, L_9_16)],
     pmax: [slot('pmax', 1920, 1080, L_16_9 as never), slot('pmax', 1080, 1920, L_9_16), slot('pmax', 1080, 1080, L_1_1)],
-    meta: [slot('meta', 1080, 1440, L_3_4), slot('meta', 1080, 1920, L_9_16), slot('meta', 1080, 1350, L_4_5)],
+    meta: [slot('meta', 1080, 1440, L_3_4), slot('meta', 1080, 1920, L_9_16), slot('meta', 1080, 1350, L_4_5), slot('meta', 1080, 1080, L_META_1_1)],
   };
 })();
 
@@ -488,7 +492,21 @@ const TAGLINE_PD_CENTRIC: TaglineRatios = { x: 0.4415, y: 0.5945, size: 0.019297
 /** Board 001 only. Board 002 reuses the Main lockup, so it reuses Main's row. */
 const TAGLINE_PD_SLOT_1: TaglineRatios  = { x: 0.4405, y: 0.5355, size: 0.0175073, figmaLineHeight: 0.0122644, w: 0.1125 };
 
+/**
+ * Read off the Dynamic master (2026-09-18), which carries the line as live text
+ * over a clean video fill — verified by hiding the text layer: nothing is left
+ * behind it.
+ *
+ * 🔴 Dynamic's artwork is a VIDEO, so its clean cut is an mp4
+ * (`kv-main-motion-clean`) rather than a still, and the choice is per channel:
+ * paid draws the line live and needs the clean cut, while the `LG.com — Dynamic`
+ * board has no tagline layer at all and keeps playing the delivered one. See
+ * `cleanMotionId` and `motionUrl`'s `clean` argument.
+ */
+const TAGLINE_DYNAMIC: TaglineRatios = { x: 0.4195, y: 0.5936113, size: 0.0208532, figmaLineHeight: 0.0146082, w: 0.1340 };
+
 const TAGLINE_BY_ASSET: Record<string, TaglineRatios> = {
+  'ad-teasing': TAGLINE_DYNAMIC,
   'kv-main': TAGLINE_MAIN,
   'kv-main-character': TAGLINE_MAIN,
   'kv-product-centric-1': TAGLINE_PD_CENTRIC,

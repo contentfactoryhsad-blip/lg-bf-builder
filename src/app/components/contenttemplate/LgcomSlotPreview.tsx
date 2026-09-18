@@ -172,7 +172,10 @@ export function LgcomSlotPreview({
   // placement is per asset per size — the 15 key visuals are framed differently
   const art = asset ? artFor(asset.id, slot.id) : null;
   // the motion cut is the same square frame as the still, so it takes the same box
-  const motion = asset && (slot.hero || slot.id === 'PR0001-pc-960x600') ? motionUrl(asset) : null;
+  // a live tagline means the clean cut, exactly as for the still
+  const motion = asset && (slot.hero || slot.id === 'PR0001-pc-960x600')
+    ? motionUrl(asset, hasTagline(asset.id))
+    : null;
   // the scrim is tuned per asset too — deal-type objects need a wider one
   const grad = asset ? gradFor(asset.id, slot.id) : undefined;
   // the plates live in the artwork, so they ride the same square as the art does

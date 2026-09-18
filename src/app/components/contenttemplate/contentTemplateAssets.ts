@@ -13,6 +13,7 @@
  */
 
 import { ASSET_STAMP } from './assetStamp';
+import { cleanMotionId } from './kvTagline';
 
 export type AssetGroupKey = 'key-visual' | 'deal-type' | 'dynamic' | 'ad-creative' | 'shorts' | 'upload';
 
@@ -281,8 +282,8 @@ export const fullUrl = (a: ContentAsset) =>
  */
 export const artUrl = (stem: string) =>
   stem === CUSTOM_ASSET_ID && customArtUrl ? customArtUrl : `/content-template/full/${stem}.webp${V}`;
-export const motionUrl = (a: ContentAsset) =>
-  a.motion ? `/content-template/motion/${a.motion}.mp4${V}` : null;
+export const motionUrl = (a: ContentAsset, clean = false) =>
+  a.motion ? `/content-template/motion/${clean ? cleanMotionId(a.motion) : a.motion}.mp4${V}` : null;
 /** The finished Shorts cut for one output size (`1080x1920` / `1080x1440`). */
 export const shortsVideoUrl = (a: ContentAsset, sizeKey: string) =>
   a.video ? `/content-template/motion/shorts-${a.video}-${sizeKey}.mp4${V}` : null;

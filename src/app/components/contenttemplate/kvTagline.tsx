@@ -100,6 +100,19 @@ const CLEAN_ART: Record<string, string> = {
 export const cleanArtId = (stem: string) => CLEAN_ART[stem] ?? stem;
 
 /**
+ * The same split for the motion master. The Dynamic key visual is a video, so
+ * its clean cut is an mp4 rather than a still — and the two are not
+ * interchangeable per channel: paid media draws the line live over the clean
+ * video, while LG.com has no tagline layer on its Dynamic board and so keeps
+ * playing the delivered cut with the line in it.
+ */
+const CLEAN_MOTION: Record<string, string> = {
+  'kv-main-motion': 'kv-main-motion-clean',
+};
+
+export const cleanMotionId = (stem: string) => CLEAN_MOTION[stem] ?? stem;
+
+/**
  * The line itself: two runs on one line, Regular then Bold, centred on the
  * lockup so a longer localisation grows both ways instead of drifting off it.
  */

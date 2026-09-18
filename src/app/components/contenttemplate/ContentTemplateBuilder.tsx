@@ -345,7 +345,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           // papered over with a stale file
           try {
             const art = dynamicPaid ? (slot as PaidSlot).art : artFor(asset.id, lg!.id);
-            const src = motionUrl(asset);
+            // paid draws the endorsement live, so it needs the clean cut;
+            // the LG.com heroes have no tagline layer and keep the delivered one
+            const src = motionUrl(asset, dynamicPaid ? paidHasTagline(asset.id) : hasTagline(asset.id));
             if (!art || !src) throw new Error('no art placement or motion source');
             // whatever rides over the video gets rasterised from the same
             // components the canvas uses: the icon row on LG.com heroes, the
@@ -1290,7 +1292,7 @@ function ChannelSlots({
     : channelKey === 'lgcom' || !asset || !PAID_ASSETS.has(asset.id)
       ? []
       : paidSlotsFor(channelKey);
-  const paidMotion = dynamicPaid && asset ? motionUrl(asset) : null;
+  const paidMotion = dynamicPaid && asset ? motionUrl(asset, paidHasTagline(asset.id)) : null;
   // The banners scale to the width the canvas really has — fixed 980 made them
   // needlessly small on wide windows and cramped on narrow ones.
   const { ref: measureRef, w: availW } = useMeasuredWidth<HTMLDivElement>();

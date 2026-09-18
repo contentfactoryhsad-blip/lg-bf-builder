@@ -231,7 +231,7 @@ const ART: Record<string, Partial<Record<SlotId, Placement>>> = {
   // every size. The `LG.com — Teasing Content` board was rebuilt on 2026-08-29
   // (`6210:73073`, replacing `6018:40892`) and now matches Main at all six sizes,
   // 720×960 included — so this row is what Figma says, not an override.
-  'ad-teasing':                { 'ST0001-pc-1920x720': { x: 385, y: -631, size: 1961 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -355, y: -131, size: 1431 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
+  'ad-teasing':                { 'PR0001-pc-960x600': { x: -345, y: -532, size: 1652 }, 'ST0001-pc-1920x720': { x: 371, y: -648, size: 2004 }, 'ST0001-pc-1600x400': { x: 524, y: -448, size: 1296 }, 'ST0001-mo-720x960': { x: -340, y: -128, size: 1420 }, 'ST0001-mo-720x830': { x: -289, y: -68, size: 1298 }, 'ST0044-mo-656x436': { x: -29, y: -234, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -121, size: 360 } },
   'ad-joy-ryder':              { 'ST0001-pc-1920x720': { x: 317, y: -715, size: 2105 }, 'ST0001-pc-1600x400': { x: 513, y: -446, size: 1296 }, 'ST0001-mo-720x960': { x: -439, y: -232, size: 1599 }, 'ST0001-mo-720x830': { x: -331, y: -108, size: 1382 }, 'ST0044-mo-656x436': { x: -94, y: -296, size: 844 }, 'ST0044-pc-342x228': { x: -9, y: -125, size: 360 } },
   'ad-benefit':                { 'ST0001-pc-1920x720': { x: 389, y: -612, size: 1917 }, 'ST0001-pc-1600x400': { x: 513, y: -443, size: 1296 }, 'ST0001-mo-720x960': { x: -313, y: -78, size: 1347 }, 'ST0001-mo-720x830': { x: -265, y: -28, size: 1250 }, 'ST0044-mo-656x436': { x: -29, y: -239, size: 714 }, 'ST0044-pc-342x228': { x: -9, y: -122, size: 360 } },
 };
@@ -312,6 +312,7 @@ const PD_CENTRIC_RATIOS: OnlyAtRatios = { x: 0.4421214, y: 0.5946535, size: 0.01
 /* 🔴 PD Slot needs TWO — the tile hides two artworks (see `Placement.src`), and
    the row-of-four PC art frames the lockup differently from the 2x2 one. Means
    per size, not per asset. */
+const TEASING_RATIOS: OnlyAtRatios   = { x: 0.4171875, y: 0.5953125, size: 0.0211547, figmaLineHeight: 0.0148194, w: 0.1359375 };
 const PD_SLOT_PC_RATIOS: OnlyAtRatios = { x: 0.4406833, y: 0.5360409, size: 0.0174230, figmaLineHeight: 0.0122054, w: 0.1119429 };
 const PD_SLOT_MO_RATIOS: OnlyAtRatios = { x: 0.4224426, y: 0.5858881, size: 0.0201172, figmaLineHeight: 0.0140929, w: 0.1294875 };
 
@@ -344,6 +345,9 @@ const ONLY_AT: Record<string, Partial<Record<SlotId, OnlyAtRatios>>> = {
   'kv-main-character': everySize(MAIN_RATIOS),
   'kv-product-centric-1': everySize(PD_CENTRIC_RATIOS),
   'kv-product-centric-2': everySize(PD_CENTRIC_RATIOS),
+  // the Dynamic board runs the two heroes plus PR0001 — `everySize` is
+  // harmless for the rest, which `lgcomSlotsFor` filters out anyway
+  'ad-teasing': everySize(TEASING_RATIOS),
   'kv-product-slot': pdSlotSizes(),
   'kv-product-slot-character': pdSlotSizes(),
 };
