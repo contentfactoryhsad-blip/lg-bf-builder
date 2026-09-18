@@ -615,33 +615,17 @@ export const hasProductSlots = (assetId: string) => productSlotCount(assetId) > 
 export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device} [${s.code}]`;
 
 /**
- * Sizes delivered as artwork and benefit icons only — no eyebrow, headline,
- * subcopy, CTA, disclaimer or indicator. LG.com sets the copy live on those two
- * placements, so baking it into the file would double it up. Same pair as
- * `hero`, but kept separate: one is about motion, this one about what ships.
- */
-/**
- * Disclaimer rule (2026-09-01): a size with either dimension at 1000px or more
- * carries the long, editable disclaimer, bottom-anchored so extra lines grow
- * upward. Every smaller size is locked to the short "*T&C's apply" — the copy
- * field does not reach it.
- */
-export const longDisclaimer = (w: number, h: number) => w >= 1000 || h >= 1000;
-
-/**
- * Which LG.com slots take the typed disclaimer. The ≥1000px rule, plus the
- * 720×960 hero — editable by exception, capped at two lines via the spec's
- * `maxLines`.
- */
-export const lgcomDisclaimerEditable = (slot: { id: string; w: number; h: number }) =>
-  longDisclaimer(slot.w, slot.h) || slot.id === 'ST0001-mo-720x960';
-export const SHORT_DISCLAIMER = '*T&C\u2019s apply';
-/**
  * Media frames give the disclaimer a single short line. LG.com has room for a
  * paragraph and takes its own field, so this caps only the media one.
  */
 export const MEDIA_DISCLAIMER_MAX = 24;
 
+/**
+ * Sizes delivered as artwork and benefit icons only — no eyebrow, headline,
+ * subcopy, CTA, disclaimer or indicator. LG.com sets the copy live on those two
+ * placements, so baking it into the file would double it up. Same pair as
+ * `hero`, but kept separate: one is about motion, this one about what ships.
+ */
 export const bareOnExport = (slotId: string) =>
   slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960' || slotId === 'PR0001-pc-960x600';
 

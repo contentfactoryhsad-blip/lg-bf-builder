@@ -24,8 +24,6 @@ import { KvTagline, cleanArtId } from './kvTagline';
 import { AD_BENEFIT_BOXES } from './paidBoards';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import {
-  SHORT_DISCLAIMER,
-  lgcomDisclaimerEditable,
   CTA_COLOR,
   overlayUrl,
   type IconRowStyle,
@@ -392,9 +390,6 @@ export function LgcomSlotPreview({
             if (bare && spec.role !== 'disclaimer') return null;
             if (spec.role === 'disclaimer' && !showDisclaimer) return null;
             // small sizes lock the disclaimer to the short version
-            if (spec.role === 'disclaimer' && !lgcomDisclaimerEditable(slot)) {
-              return <SlotLine key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
-            }
             const typed = copy[spec.role].trim();
             const flows = flowSpecs.some(fs => fs.role === spec.role);
             return (

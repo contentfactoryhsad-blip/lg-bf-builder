@@ -256,13 +256,15 @@ export function SlotCopyEditor({
           {t('Disclaimer')}
         </span>
         {([
-          { key: 'disclaimer', label: 'LG.com', hint: 'No limit · small sizes use *T&C\u2019s apply', max: undefined, on: lgcomActive },
+          { key: 'disclaimer', label: 'LG.com', hint: '', max: undefined, on: lgcomActive },
           { key: 'disclaimerMedia', label: 'Media', hint: 'Max 24 · *T&C\u2019s apply recommended, in your local language', max: 24, on: mediaActive },
         ] as const).map(d => (
           <label key={d.key} className="flex flex-col gap-1">
             <span className="flex items-baseline justify-between gap-2">
               <span className={`text-[11px] ${d.on ? 'text-gray-500' : 'text-gray-300'}`}>{t(d.label)}</span>
-              <span className={`text-[10px] text-right ${d.on ? 'text-gray-400' : 'text-gray-300'}`}>{t(d.hint)}</span>
+              {d.hint && (
+                <span className={`text-[10px] text-right ${d.on ? 'text-gray-400' : 'text-gray-300'}`}>{t(d.hint)}</span>
+              )}
             </span>
             <input
               type="text"

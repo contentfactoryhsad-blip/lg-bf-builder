@@ -10,7 +10,7 @@
 import React from 'react';
 import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
-import { CTA_COLOR, MEDIA_DISCLAIMER_MAX, SHORT_DISCLAIMER, SLOT_BG, longDisclaimer } from './lgcomSlots';
+import { CTA_COLOR, MEDIA_DISCLAIMER_MAX, SLOT_BG } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
 import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor, paidTaglineRatios } from './paidBoards';
 import { MirrorFill } from './MirrorFill';
@@ -310,10 +310,6 @@ export function PaidSlotPreview({
             .filter(s => s.role !== 'cta')
             .map(spec => {
               if (spec.role === 'disclaimer' && !showDisclaimer) return null;
-              // small sizes lock the disclaimer to the short version
-              if (spec.role === 'disclaimer' && !longDisclaimer(slot.w, slot.h)) {
-                return <Line key={spec.role} spec={spec} text={SHORT_DISCLAIMER} slotH={slot.h} ink={ink} />;
-              }
               // the media disclaimer is its own field — LG.com's runs uncapped
               // and would not fit these frames
               let typed = (spec.role === 'disclaimer'
