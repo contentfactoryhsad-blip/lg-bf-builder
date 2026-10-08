@@ -247,12 +247,21 @@ export function artFor(assetId: string, slot: SlotId): Placement {
   return framing;
 }
 
-/** Left-edge scrim on the two wide PC sizes: black, opaque to `stop`, then out. */
-export interface Gradation { x: number; y: number; w: number; h: number; stop: number }
+/**
+ * Left-edge scrim on the two wide PC sizes: black, opaque to `stop`, then out
+ * by `end` (default the rect's right edge). Fractions of `w`.
+ */
+export interface Gradation { x: number; y: number; w: number; h: number; stop: number; end?: number }
 
 /**
  * Also per asset — the scrim is pulled wider for the deal-type objects so their
  * art clears the copy. Sizes without an entry simply have no scrim.
+ *
+ * 🔴 Read each row off its own `Banner Template 2 › LG.com — <asset>` board
+ * (`Gradation` rect in the two PC frames). Figma sets the rect at x4 y3, so
+ * `w` here is x+width to keep the right edge. Bundle / Time Sale / Gift /
+ * Hot Deal / Benefit once carried Main's 998/725 by copy-paste, which left the
+ * art's hard left edge bare at 1600×400 (2026-10-08).
  */
 const GRAD: Record<string, Partial<Record<SlotId, Gradation>>> = {
   'kv-main':                   { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
@@ -263,13 +272,13 @@ const GRAD: Record<string, Partial<Record<SlotId, Gradation>>> = {
   'kv-product-slot-character': { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
   'kv-product-slot2':          { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
   'kv-product-slot2-character': { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
-  'deal-type-bundle':          { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
-  'deal-type-time-sale':       { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
-  'deal-type-gift':            { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
-  'deal-type-hot-deal':        { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'deal-type-bundle':          { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 1272, h: 720, stop: 0.565 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 1056, h: 400, stop: 0.54 } },
+  'deal-type-time-sale':       { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 1300, h: 720, stop: 0.512 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 1076, h: 400, stop: 0.519, end: 0.954 } },
+  'deal-type-gift':            { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 1304, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 1020, h: 400, stop: 0.591 } },
+  'deal-type-hot-deal':        { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 1324, h: 720, stop: 0.518 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 1136, h: 400, stop: 0.555 } },
   'ad-teasing':                { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
   'ad-joy-ryder':              { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
-  'ad-benefit':                { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 998, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 725, h: 400, stop: 0.441 } },
+  'ad-benefit':                { 'ST0001-pc-1920x720': { x: 0, y: 0, w: 1256, h: 720, stop: 0.441 }, 'ST0001-pc-1600x400': { x: 0, y: 0, w: 1094, h: 400, stop: 0.441 } },
 };
 
 /** The scrim for this asset in this slot, if the slot has one. */
@@ -282,7 +291,7 @@ export const gradCss = (g: Gradation, ground = '#000000') => {
   const r = parseInt(ground.slice(1, 3), 16);
   const gr = parseInt(ground.slice(3, 5), 16);
   const b = parseInt(ground.slice(5, 7), 16);
-  return `linear-gradient(90deg, ${ground} 0%, ${ground} ${(g.stop * 100).toFixed(1)}%, rgba(${r},${gr},${b},0) 100%)`;
+  return `linear-gradient(90deg, ${ground} 0%, ${ground} ${(g.stop * 100).toFixed(1)}%, rgba(${r},${gr},${b},0) ${((g.end ?? 1) * 100).toFixed(1)}%)`;
 };
 
 /* ------------------------------------------------------------------ */
