@@ -148,6 +148,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [iconKind, setIconKind] = useState<'none' | 'solid' | 'line'>(seed?.iconKind ?? 'none');
   /** Panel checkbox — off drops the disclaimer from every size. */
   const [showDisclaimer, setShowDisclaimer] = useState(seed?.showDisclaimer ?? true);
+  /** Panel checkboxes for the optional copy lines — off drops them from every size. */
+  const [showEyebrow, setShowEyebrow] = useState(seed?.showEyebrow ?? true);
+  const [showSubcopy, setShowSubcopy] = useState(seed?.showSubcopy ?? true);
   /** Panel checkbox — the hero sizes' carousel indicator. */
   const [showIndicator, setShowIndicator] = useState(seed?.showIndicator ?? true);
   const [showTagline, setShowTagline] = useState(seed?.showTagline ?? true);
@@ -442,12 +445,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     selectedId, channelKey, sizeKey, copy,
     iconKind, iconColor, iconCount,
     solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-    showDisclaimer, showIndicator, showTagline, plateColor,
+    showDisclaimer, showEyebrow, showSubcopy, showIndicator, showTagline, plateColor,
     products, benefitSlots,
     uploadDataUrl: uploadUrl && uploadUrl.startsWith('data:') ? uploadUrl : null,
   }), [selectedId, channelKey, sizeKey, copy, iconKind, iconColor, iconCount,
        solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-       showDisclaimer, showIndicator, showTagline, plateColor, products, benefitSlots, uploadUrl]);
+       showDisclaimer, showEyebrow, showSubcopy, showIndicator, showTagline, plateColor, products, benefitSlots, uploadUrl]);
   const channelLabelForName = outputKind === 'size'
     ? (shortsSize?.label ?? '')
     : (channelKey === 'all' ? 'ALL' : channel?.label ?? '');
@@ -768,6 +771,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   iconIds={iconIds}
                   iconLabels={iconLabels}
                   showDisclaimer={showDisclaimer}
+                  showEyebrow={showEyebrow}
+                  showSubcopy={showSubcopy}
                   showIndicator={showIndicator}
                   showTagline={showTagline}
                 />
@@ -873,6 +878,10 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 iconStyle={iconStyle}
                 showDisclaimer={showDisclaimer}
                 onShowDisclaimer={setShowDisclaimer}
+                showEyebrow={showEyebrow}
+                onShowEyebrow={setShowEyebrow}
+                showSubcopy={showSubcopy}
+                onShowSubcopy={setShowSubcopy}
                 // only "All channels" writes both disclaimers; the rest grey
                 // out the one their sizes never render
                 lgcomActive={channelKey === 'lgcom' || channelKey === 'all'}
@@ -932,7 +941,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           aria-hidden
         >
           <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
-          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showTagline={showTagline} hideLogo={renderNoLogo} />
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showSubcopy={showSubcopy} showTagline={showTagline} hideLogo={renderNoLogo} />
         </div>
       )}
       {!renderPaidOverlaySlot && renderIconRowSlot && (
@@ -955,6 +964,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
             iconIds={iconIds}
             iconLabels={iconLabels}
             showDisclaimer={showDisclaimer}
+            showEyebrow={showEyebrow}
+            showSubcopy={showSubcopy}
             showTagline={showTagline}
             bare
             hideArt
@@ -983,6 +994,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               iconIds={iconIds}
               iconLabels={iconLabels}
               showDisclaimer={showDisclaimer}
+              showEyebrow={showEyebrow}
+              showSubcopy={showSubcopy}
               showIndicator={showIndicator}
               showTagline={showTagline}
               bare={bareOnExport(renderSlot.id)}
@@ -997,6 +1010,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               benefitSlots={asset.id === 'ad-benefit' ? benefitSlots : undefined}
               plateColor={plateColor}
               showDisclaimer={showDisclaimer}
+              showSubcopy={showSubcopy}
               showTagline={showTagline}
               showIndicator={showIndicator}
               hideLogo={renderNoLogo}
@@ -1282,6 +1296,8 @@ function ChannelSlots({
   iconIds,
   iconLabels,
   showDisclaimer,
+  showEyebrow,
+  showSubcopy,
   showIndicator,
   showTagline,
 }: {
@@ -1297,6 +1313,8 @@ function ChannelSlots({
   iconIds: string[];
   iconLabels: (string | null)[];
   showDisclaimer: boolean;
+  showEyebrow: boolean;
+  showSubcopy: boolean;
   showIndicator: boolean;
   showTagline: boolean;
 }) {
@@ -1340,6 +1358,7 @@ function ChannelSlots({
               plateColor={plateColor}
               motionSrc={paidMotion}
               showDisclaimer={showDisclaimer}
+              showSubcopy={showSubcopy}
               showTagline={showTagline}
               showIndicator={showIndicator}
             />
@@ -1370,6 +1389,8 @@ function ChannelSlots({
               iconIds={iconIds}
               iconLabels={iconLabels}
               showDisclaimer={showDisclaimer}
+              showEyebrow={showEyebrow}
+              showSubcopy={showSubcopy}
               showIndicator={showIndicator}
               showTagline={showTagline}
             />

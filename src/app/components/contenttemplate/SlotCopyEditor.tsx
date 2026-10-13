@@ -120,6 +120,10 @@ export function SlotCopyEditor({
   iconStyle,
   showDisclaimer,
   onShowDisclaimer,
+  showEyebrow,
+  onShowEyebrow,
+  showSubcopy,
+  onShowSubcopy,
   lgcomActive,
   mediaActive,
   showIndicator,
@@ -152,6 +156,11 @@ export function SlotCopyEditor({
   /** Checkbox before the Disclaimer field — off drops it from every size. */
   showDisclaimer: boolean;
   onShowDisclaimer: (next: boolean) => void;
+  /** Checkboxes before the two optional fields — off drops the line from every size. */
+  showEyebrow: boolean;
+  onShowEyebrow: (next: boolean) => void;
+  showSubcopy: boolean;
+  onShowSubcopy: (next: boolean) => void;
   /**
    * Which of the two disclaimers the chosen channel actually renders. Only
    * "All channels" writes both, so the other box greys out rather than
@@ -186,6 +195,11 @@ export function SlotCopyEditor({
   if (iconKind !== 'none') lastIconKind.current = iconKind;
 
   const field = (key: keyof SlotCopy, value: string) => onChange({ ...copy, [key]: value });
+  /** The optional lines carry an on/off checkbox, like the disclaimer. */
+  const toggles: Partial<Record<keyof SlotCopy, [boolean, (next: boolean) => void]>> = {
+    eyebrow: [showEyebrow, onShowEyebrow],
+    subcopy: [showSubcopy, onShowSubcopy],
+  };
 
   /** 1 until the operator types the single allowed break, then 2. */
   const leadLines = Math.min(2, (copy.taglineLead ?? '').split('\n').length);
@@ -199,7 +213,10 @@ export function SlotCopyEditor({
         </p>
       </div>
 
-      {FIELDS.map(f => (
+      {FIELDS.map(f => {
+        const toggle = toggles[f.key];
+        const off = toggle ? !toggle[0] : false;
+        return (
         <div key={f.key} className="flex flex-col gap-1">
           {/* the disclaimer's hint is long — it sits under the label, not beside it */}
           <span className="flex items-center justify-between">
@@ -209,6 +226,14 @@ export function SlotCopyEditor({
                   type="checkbox"
                   checked={showDisclaimer}
                   onChange={e => onShowDisclaimer(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-[#FD312E]"
+                />
+              )}
+              {toggle && (
+                <input
+                  type="checkbox"
+                  checked={toggle[0]}
+                  onChange={e => toggle[1](e.target.checked)}
                   className="w-3.5 h-3.5 accent-[#FD312E]"
                 />
               )}
@@ -227,7 +252,8 @@ export function SlotCopyEditor({
               onChange={e => field(f.key, e.target.value)}
               placeholder={COPY_PLACEHOLDER[f.key]}
               rows={f.rows ?? 2}
-              className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 resize-y focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300"
+              disabled={off}
+              className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 resize-y focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40 disabled:bg-gray-50"
             />
           ) : (
             <input
@@ -236,12 +262,13 @@ export function SlotCopyEditor({
               onChange={e => field(f.key, e.target.value)}
               placeholder={COPY_PLACEHOLDER[f.key]}
               maxLength={f.maxLength}
-              disabled={f.key === 'disclaimer' && !showDisclaimer}
-              className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40"
+              disabled={(f.key === 'disclaimer' && !showDisclaimer) || off}
+              className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40 disabled:bg-gray-50"
             />
           )}
         </div>
-      ))}
+        );
+      })}
 
       {/* Two disclaimers, because the two channels have different room. The
           checkbox governs both — it drops the line everywhere. */}

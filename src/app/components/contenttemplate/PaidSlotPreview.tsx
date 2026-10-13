@@ -82,6 +82,7 @@ export function PaidSlotPreview({
   showTagline = true,
   motionSrc = null,
   showDisclaimer = true,
+  showSubcopy = true,
   benefitSlots,
   hideLogo = false,
 }: {
@@ -105,6 +106,8 @@ export function PaidSlotPreview({
   motionSrc?: string | null;
   /** Panel toggle — off drops the disclaimer from every size. */
   showDisclaimer?: boolean;
+  /** Panel toggle — off drops the subcopy and closes its gap, as the Figma stack does. */
+  showSubcopy?: boolean;
   /** The Benefit cube's six boxes — product cut-outs / picked assets. */
   benefitSlots?: BenefitSlots;
   /** META ships a second file without the LG logo — the export's second pass. */
@@ -174,6 +177,12 @@ export function PaidSlotPreview({
   const flowSpecs = slot.text.filter(s => s.role === 'headline' || s.role === 'subcopy');
   const pullUp = (y: number) =>
     flowSpecs.reduce((acc, s) => {
+      // a switched-off subcopy leaves the stack entirely: the layers under it
+      // rise by its box plus the gap above it
+      if (s.role === 'subcopy' && !showSubcopy) {
+        const above = flowSpecs.reduce((m, p) => (p !== s && p.y + p.h <= s.y + 1 ? Math.max(m, p.y + p.h) : m), s.y);
+        return y >= s.y + s.h - 1 ? acc + s.h + (s.y - above) : acc;
+      }
       const h = flowH[s.role];
       return h != null && y >= s.y + s.h - 1 ? acc + (s.h - h) : acc;
     }, 0);
@@ -310,6 +319,7 @@ export function PaidSlotPreview({
             .filter(s => s.role !== 'cta')
             .map(spec => {
               if (spec.role === 'disclaimer' && !showDisclaimer) return null;
+              if (spec.role === 'subcopy' && !showSubcopy) return null;
               // the media disclaimer is its own field — LG.com's runs uncapped
               // and would not fit these frames
               let typed = (spec.role === 'disclaimer'

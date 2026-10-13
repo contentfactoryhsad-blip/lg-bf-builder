@@ -27,6 +27,9 @@ export interface ContentBannerPayloadV1 {
   solidIconLabels: (string | null)[];
   lineIconLabels: (string | null)[];
   showDisclaimer: boolean;
+  /** Added 2026-10-13 — older drafts have no key, so restore defaults to on. */
+  showEyebrow?: boolean;
+  showSubcopy?: boolean;
   showIndicator: boolean;
   /** Added 2026-09-16 — older drafts have no key, so restore defaults to on. */
   showTagline?: boolean;

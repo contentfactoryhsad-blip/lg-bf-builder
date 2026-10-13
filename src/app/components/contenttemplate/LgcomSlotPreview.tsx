@@ -113,6 +113,8 @@ export function LgcomSlotPreview({
   iconIds,
   iconLabels,
   showDisclaimer = true,
+  showEyebrow = true,
+  showSubcopy = true,
   showIndicator = true,
   showTagline = true,
   bare = false,
@@ -146,6 +148,12 @@ export function LgcomSlotPreview({
   iconLabels?: (string | null)[];
   /** Panel toggle — off drops the disclaimer from every size. */
   showDisclaimer?: boolean;
+  /**
+   * Panel toggles for the two optional lines. Off drops the line and closes its
+   * gap — the copy stack is a Figma auto-layout, so what sits under it rises.
+   */
+  showEyebrow?: boolean;
+  showSubcopy?: boolean;
   /** Panel toggle — off drops the KV tagline from every size. */
   showTagline?: boolean;
   /** Panel toggle — off drops the carousel indicator from the two hero sizes. */
@@ -233,11 +241,27 @@ export function LgcomSlotPreview({
   const flowSpecs = slot.text.filter(
     s => (s.role === 'headline' || s.role === 'subcopy') && s.h != null && s.vAlign !== 'bottom',
   );
+  // The eyebrow carries no box height; switched off, everything under it rises
+  // to where it started — i.e. by the distance to the next line in the stack.
+  const eyebrowSpec = !showEyebrow ? slot.text.find(s => s.role === 'eyebrow') : undefined;
+  const eyebrowNext = eyebrowSpec
+    ? slot.text.filter(s => s.role !== 'disclaimer' && s.y > eyebrowSpec.y).reduce((m, s) => Math.min(m, s.y), Infinity)
+    : Infinity;
+  const eyebrowGap = eyebrowSpec && eyebrowNext !== Infinity ? eyebrowNext - eyebrowSpec.y : 0;
   const pullUp = (y: number) =>
     flowSpecs.reduce((acc, s) => {
+      // a switched-off subcopy leaves the stack: the layers under it rise by
+      // its box plus the gap above it
+      if (s.role === 'subcopy' && !showSubcopy) {
+        const above = slot.text.reduce(
+          (m, p) => (p !== s && p.role !== 'disclaimer' && p.h != null && p.y + p.h <= s.y + 1 ? Math.max(m, p.y + p.h) : m),
+          s.y,
+        );
+        return y >= s.y + (s.h ?? 0) - 1 ? acc + (s.h ?? 0) + (s.y - above) : acc;
+      }
       const h = flowH[s.role];
       return h != null && y >= s.y + (s.h ?? 0) - 1 ? acc + ((s.h ?? 0) - h) : acc;
-    }, 0);
+    }, eyebrowSpec && y > eyebrowSpec.y ? eyebrowGap : 0);
 
   return (
     <div className="flex flex-col gap-2">
@@ -389,6 +413,8 @@ export function LgcomSlotPreview({
             // burned into the hero images/video (2026-09-03)
             if (bare && spec.role !== 'disclaimer') return null;
             if (spec.role === 'disclaimer' && !showDisclaimer) return null;
+            if (spec.role === 'eyebrow' && !showEyebrow) return null;
+            if (spec.role === 'subcopy' && !showSubcopy) return null;
             // small sizes lock the disclaimer to the short version
             const typed = copy[spec.role].trim();
             const flows = flowSpecs.some(fs => fs.role === spec.role);
