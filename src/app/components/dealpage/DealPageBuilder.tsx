@@ -52,7 +52,7 @@ import {
   type DealProductSetKey,
 } from './dealEditStates';
 import { heroArtFor, HERO_MOTION_ID, HERO_MOTION_SRC } from './dealHeroArt';
-import { logUsage } from '../../utils/usageClient';
+import { logUsage, makeThumb, newOutputId, thumbName, uploadOutput, type OutputThumb } from '../../utils/usageClient';
 import { buildCopySheetXlsx } from './copySheet';
 import { MO_HERO_ART } from './DealModuleRendererMo';
 import { renderMotionCutLive } from '../contenttemplate/exportMotion';
@@ -687,6 +687,15 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
       2;
     let doneFiles = 0;
     setExportProgress({ done: 0, total: totalFiles });
+    // the stats page's '보기' — a 600px JPEG per PNG crop, named `<device>-<file>`
+    // so the viewer groups PC and MO. Videos get none.
+    const thumbs: OutputThumb[] = [];
+    const keepThumb = async (dataUrl: string, device: string, fileName: string) => {
+      try {
+        const tb = await makeThumb(await (await fetch(dataUrl)).blob());
+        if (tb) thumbs.push({ name: thumbName(`${device}-${fileName}`), blob: tb });
+      } catch { /* a missing thumbnail never blocks the download */ }
+    };
     const container = hiddenRenderRef.current;
     const root = createRoot(container);
     try {
@@ -727,6 +736,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
             await toPng(el);
             const dataUrl = await toPng(el, { cacheBust: true });
             folder.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
+            await keepThumb(dataUrl, deviceTag, fileName);
             doneFiles += 1;
             setExportProgress({ done: doneFiles, total: totalFiles });
 
@@ -785,6 +795,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           await toPng(el);
           const dataUrl = await toPng(el, { cacheBust: true });
           folder.file(fileName, dataUrl.replace(/^data:image\/png;base64,/, ''), { base64: true });
+          await keepThumb(dataUrl, deviceTag, fileName);
           doneFiles += 1;
           setExportProgress({ done: doneFiles, total: totalFiles });
         }
@@ -812,6 +823,7 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           'kv-product-slot-character': 'product-slot-joy-ryder',
           'kv-main-motion': 'dynamic',
         })[id ?? ''] ?? id ?? 'upload';
+      const output = thumbs.length ? newOutputId() : undefined;
       void logUsage({
         builder: 'promotion-page',
         item: exportItems
@@ -832,7 +844,9 @@ export function DealPageBuilder({ onBack, initialDraft, railActive, onRailNaviga
           it => it.type === 'deal-hero' && (it.editState.data as DealHeroState).kvAsset === HERO_MOTION_ID,
         ) ? 'static+motion' : 'static',
         files: doneFiles,
+        output,
       });
+      if (output) void uploadOutput(output, thumbs);
     } catch (err) {
       // Without this the error vanished into the click handler and the picked
       // file stayed at 0 bytes with no clue why.

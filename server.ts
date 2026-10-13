@@ -3,7 +3,10 @@ import compression from 'compression';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as cheerio from 'cheerio';
-import { appendUsage, checkUsageKey, clientIp, readUsageIn, readUsageRows, resetUsage } from './usageLog';
+import {
+  appendUsage, checkUsageKey, clientIp, listOutput, OUTPUT_MAX_BYTES, outputFilePath, readUsageIn, readUsageRows,
+  resetUsage, saveOutputImage,
+} from './usageLog';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -671,6 +674,40 @@ app.get('/api/usage.csv', async (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="usage.csv"');
   // 엑셀이 UTF-8 로 열도록 BOM (없으면 한글이 깨진다)
   return res.send('\uFEFF' + (await readUsageIn((req.query.tz as string) || 'Asia/Seoul')));
+});
+
+// ─── 결과 썸네일 (sales-banner-builder 와 같은 구조) ──────────────────────────
+
+/*
+  다운로드가 끝난 뒤 브라우저가 파일별 썸네일(JPEG)을 한 장씩 올린다.
+    POST /api/output?id=<기록ID>&name=criteo-1200x628   (본문 = JPEG 바이트)
+  기록 남기기처럼 열쇠 없이 받되, 형식·크기·장수는 usageLog 가 막는다.
+*/
+app.post('/api/output', express.raw({ type: 'image/jpeg', limit: OUTPUT_MAX_BYTES }), async (req, res) => {
+  try {
+    await saveOutputImage(req.query.id, req.query.name, Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0));
+    return res.status(200).json({ ok: true });
+  } catch (err: any) {
+    return res.status(err?.status ?? 500).json({ error: err?.message ?? 'Failed to save' });
+  }
+});
+
+/* 보기는 통계와 같은 열쇠가 있어야 한다 */
+app.get('/api/output', async (req, res) => {
+  const k = checkUsageKey(req.query.key);
+  if (k === 'no-key') return res.status(503).json({ error: 'USAGE_KEY not set on server' });
+  if (k !== 'ok') return res.status(403).json({ error: 'Forbidden' });
+  return res.json({ files: await listOutput(req.query.id) });
+});
+
+app.get('/api/output/file', async (req, res) => {
+  const k = checkUsageKey(req.query.key);
+  if (k === 'no-key') return res.status(503).json({ error: 'USAGE_KEY not set on server' });
+  if (k !== 'ok') return res.status(403).json({ error: 'Forbidden' });
+  const file = outputFilePath(req.query.id, req.query.name);
+  if (!file) return res.status(400).json({ error: 'Bad id or name' });
+  res.setHeader('Cache-Control', 'private, max-age=86400');
+  return res.sendFile(file, (err) => { if (err && !res.headersSent) res.status(404).end(); });
 });
 
 // ─── Static + SPA fallback ───────────────────────────────────────────────────

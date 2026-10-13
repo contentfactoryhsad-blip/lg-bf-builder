@@ -91,7 +91,7 @@ import { useDraftSave } from '../../hooks/useDraftSave';
 import { SaveForLaterButton } from '../SaveForLaterButton';
 import type { ContentBannerPayloadV1 } from '../../drafts/contentBannerPayload';
 import { renderMotionCutLive, stripAudioTrack } from './exportMotion';
-import { logUsage } from '../../utils/usageClient';
+import { logUsage, makeThumb, newOutputId, thumbName, uploadOutput, type OutputThumb } from '../../utils/usageClient';
 import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
 import { BenefitSlotsEditor, emptyBenefitSlots, type BenefitSlots } from './BenefitSlotsEditor';
@@ -411,7 +411,18 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
       }
       if (entries.length) {
         await save(await buildZip(entries));
-        void logUsage({ builder: 'content-banner', item: exportStem(asset?.id ?? ''), detail: channelKey ?? '', files: entries.length });
+        // the stats page's '보기' — a 600px JPEG per PNG (videos are skipped),
+        // named `<channel>-<size>` so the viewer can group them by channel
+        const stem = `${exportStem(asset.id)}-`;
+        const thumbs = (await Promise.all(
+          entries.filter(e => e.name.endsWith('.png')).map(async e => {
+            const blob = await makeThumb(e.blob);
+            return blob ? { name: thumbName(e.name.startsWith(stem) ? e.name.slice(stem.length) : e.name), blob } : null;
+          }),
+        )).filter((x): x is OutputThumb => !!x);
+        const output = thumbs.length ? newOutputId() : undefined;
+        void logUsage({ builder: 'content-banner', item: exportStem(asset?.id ?? ''), detail: channelKey ?? '', files: entries.length, output });
+        if (output) void uploadOutput(output, thumbs);
       }
       if (failed.length) {
         window.alert(`${t('Some files could not be rendered and were left out of the ZIP:')}\n${failed.join('\n')}`);

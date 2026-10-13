@@ -156,6 +156,92 @@ function MonthChart({
   );
 }
 
+/**
+ * 다운로드 한 번의 결과 — 파일별 썸네일(긴 변 600px JPEG)을 묶어 보여준다.
+ * 파일 이름 앞부분이 묶음이다: Content Banner 는 채널(lgcom/criteo…),
+ * Promotion Page 는 기기(pc/mo). 썸네일은 이 기능이 생긴 뒤의 기록에만 있다.
+ * sales-banner-builder 의 OutputViewer 를 옮긴 것.
+ */
+function OutputViewer({ id, keyParam, row, onClose }: { id: string; keyParam: string; row: Row; onClose: () => void }) {
+  const [files, setFiles] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<string | null>(null);
+  const src = (name: string) => `/api/output/file?id=${encodeURIComponent(id)}&name=${encodeURIComponent(name)}&key=${encodeURIComponent(keyParam)}`;
+
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/output?id=${encodeURIComponent(id)}&key=${encodeURIComponent(keyParam)}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
+        const j = (await res.json()) as { files: string[] };
+        if (alive) setFiles(j.files);
+      })
+      .catch((e) => { if (alive) setError((e as Error).message); });
+    return () => { alive = false; };
+  }, [id, keyParam]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') (zoom ? setZoom(null) : onClose()); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zoom, onClose]);
+
+  const groups = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const f of files ?? []) {
+      const g = f.split('-')[0];
+      m.set(g, [...(m.get(g) ?? []), f]);
+    }
+    return [...m.entries()];
+  }, [files]);
+
+  const what = row.builder === 'promotion-page'
+    ? `Promotion Page · ${row.detail}`
+    : `${kvName(row.item)} · ${row.detail}`;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="w-full max-w-5xl max-h-full overflow-y-auto rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <p className="font-lgei font-bold text-[16px] text-gray-900">결과 보기</p>
+            <p className="text-[12px] text-gray-400">
+              {stampText(row)} · {row.country} · {what} · 썸네일(긴 변 600px, 영상 제외)
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="text-sm text-gray-400 hover:text-gray-700">닫기</button>
+        </div>
+        {error && <p className="text-sm text-[#FD312E]">{error}</p>}
+        {!error && files === null && <p className="text-sm text-gray-400">불러오는 중…</p>}
+        {files?.length === 0 && <p className="text-sm text-gray-400">저장된 썸네일이 없습니다 (올리는 중 실패했거나 아직 올라오는 중일 수 있습니다).</p>}
+        <div className="flex flex-col gap-6">
+          {groups.map(([g, names]) => (
+            <div key={g}>
+              <p className="text-[13px] font-medium text-gray-700 mb-2">{g.toUpperCase()} <span className="text-gray-400 font-normal">· {names.length}장</span></p>
+              <div className="flex flex-wrap items-end gap-3">
+                {names.map((n) => (
+                  <button key={n} type="button" onClick={() => setZoom(n)} className="flex flex-col items-start gap-1 group">
+                    <img src={src(n)} alt={n} loading="lazy"
+                      className="block max-h-40 max-w-[240px] border border-gray-200 group-hover:border-[#FD312E]" />
+                    <span className="text-[10px] text-gray-400 max-w-[240px] truncate">{n.slice(g.length + 1)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {zoom && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-6 gap-2"
+          onClick={(e) => { e.stopPropagation(); setZoom(null); }}>
+          <img src={src(zoom)} alt={zoom} className="max-w-full max-h-[85vh] object-contain" />
+          <span className="text-[12px] text-white/70">{zoom}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UsageStats() {
   const [key, setKey] = useState(() => localStorage.getItem(KEY_STORE) ?? '');
   const [input, setInput] = useState('');
@@ -164,6 +250,8 @@ export function UsageStats() {
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<Period>({ kind: 'all' });
   const [tab, setTab] = useState<string>('content-banner');
+  /** 결과 보기 창에 띄운 기록 */
+  const [viewing, setViewing] = useState<Row | null>(null);
 
   const load = async (k: string) => {
     setLoading(true);
@@ -298,6 +386,8 @@ export function UsageStats() {
         title="Usage Stats"
         right={
           <>
+            <button type="button" onClick={() => void load(key)} disabled={loading}
+              className="text-xs text-gray-500 hover:text-[#FD312E] disabled:opacity-40">{loading ? '불러오는 중…' : '새로고침'}</button>
             <a href={`/api/usage.csv?key=${encodeURIComponent(key)}&tz=${encodeURIComponent(TZ)}`}
               className="text-xs text-gray-500 hover:text-[#FD312E]">CSV 내려받기</a>
             <button type="button" onClick={() => void reset()}
@@ -388,7 +478,7 @@ export function UsageStats() {
             <div className="overflow-x-auto">
               <table className="w-full text-[12px]">
                 <thead className="text-gray-400">
-                  <tr>{['시각', '국가', ...(tab === 'promotion-page' ? [] : ['에셋']), '채널/구성', '파일 수'].map((h) => (
+                  <tr>{['시각', '국가', ...(tab === 'promotion-page' ? [] : ['에셋']), '채널/구성', '파일 수', '결과'].map((h) => (
                     <th key={h} className="text-left font-normal pb-2 pr-4 whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
@@ -404,6 +494,11 @@ export function UsageStats() {
                       )}
                       <td className="py-1.5 pr-4">{r.detail}</td>
                       <td className="py-1.5 pr-4 tabular-nums">{r.files}</td>
+                      <td className="py-1.5 pr-4">
+                        {r.output
+                          ? <button type="button" onClick={() => setViewing(r)} className="text-[#FD312E] hover:underline">보기</button>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -412,6 +507,9 @@ export function UsageStats() {
           </div>
         </div>
       </div>
+      {viewing?.output && (
+        <OutputViewer id={viewing.output} keyParam={key} row={viewing} onClose={() => setViewing(null)} />
+      )}
     </div>
   );
 }

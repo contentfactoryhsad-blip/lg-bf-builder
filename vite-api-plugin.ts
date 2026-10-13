@@ -1,6 +1,9 @@
 import type { Plugin } from 'vite';
 import * as cheerio from 'cheerio';
-import { appendUsage, clientIp, readUsageIn, readUsageRows, resetUsage } from './usageLog';
+import fs from 'node:fs/promises';
+import {
+  appendUsage, clientIp, listOutput, outputFilePath, readUsageIn, readUsageRows, resetUsage, saveOutputImage,
+} from './usageLog';
 
 // Bypass self-signed certificate issues (company proxy/VPN)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -502,6 +505,34 @@ export function apiPlugin(): Plugin {
         // 개발에서는 열쇠 없이 — 로컬 logs/usage.csv 만 보인다
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ rows: await readUsageRows() }));
+      });
+
+      // 결과 썸네일 — 운영과 같은 핸들러. 개발에서는 보기도 열쇠 없이
+      server.middlewares.use('/api/output', async (req, res) => {
+        const u = new URL(req.originalUrl || req.url || '', 'http://localhost');
+        const q = u.searchParams;
+        const json = (code: number, body: unknown) => {
+          res.writeHead(code, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(body));
+        };
+        if (u.pathname === '/api/output/file') {
+          const file = outputFilePath(q.get('id'), q.get('name'));
+          if (!file) return json(400, { error: 'Bad id or name' });
+          try {
+            const buf = await fs.readFile(file);
+            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+            return res.end(buf);
+          } catch { return json(404, { error: 'Not found' }); }
+        }
+        if (req.method === 'POST') {
+          const chunks: Buffer[] = [];
+          for await (const c of req) chunks.push(c as Buffer);
+          try {
+            await saveOutputImage(q.get('id'), q.get('name'), Buffer.concat(chunks));
+            return json(200, { ok: true });
+          } catch (err: any) { return json(err?.status ?? 500, { error: err?.message }); }
+        }
+        return json(200, { files: await listOutput(q.get('id')) });
       });
 
       server.middlewares.use('/api/usage/reset', async (_req, res) => {
