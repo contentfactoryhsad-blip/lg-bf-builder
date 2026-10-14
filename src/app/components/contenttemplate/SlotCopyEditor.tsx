@@ -11,6 +11,7 @@ import { useRef } from 'react';
 import type { IconRowStyle } from './lgcomSlots';
 import { ICON_LIST, splitLabel } from './icons/IconRegistry';
 import { IconCombobox } from './icons/IconCombobox';
+import { LOGO_VARIANTS } from './logoVariants';
 
 export interface SlotCopy {
   eyebrow: string;
@@ -126,6 +127,11 @@ export function SlotCopyEditor({
   onShowSubcopy,
   showCta,
   onShowCta,
+  showLogoSection,
+  showLogo,
+  onShowLogo,
+  logoId,
+  onLogoId,
   lgcomActive,
   mediaActive,
   showIndicator,
@@ -166,6 +172,17 @@ export function SlotCopyEditor({
   /** Same checkbox for the CTA button. */
   showCta: boolean;
   onShowCta: (next: boolean) => void;
+  /**
+   * Logo section — every channel but LG.com (whose sizes carry no LG logo),
+   * "All channels" included. The checkbox drops the logo from every media size;
+   * the four thumbnails swap it (same set as the Sales Banner Builder), and a
+   * second click on the picked one goes back to the template default.
+   */
+  showLogoSection: boolean;
+  showLogo: boolean;
+  onShowLogo: (next: boolean) => void;
+  logoId: string | null;
+  onLogoId: (next: string | null) => void;
   /**
    * Which of the two disclaimers the chosen channel actually renders. Only
    * "All channels" writes both, so the other box greys out rather than
@@ -212,6 +229,51 @@ export function SlotCopyEditor({
 
   return (
     <div className="p-5 flex flex-col gap-4">
+      {showLogoSection && (
+        <div className="flex flex-col gap-2.5 pb-5 border-b border-gray-100">
+          <span className="flex items-center gap-2 font-lgei font-bold text-[15px] text-gray-900">
+            <input
+              type="checkbox"
+              checked={showLogo}
+              onChange={e => onShowLogo(e.target.checked)}
+              className="w-3.5 h-3.5 accent-[#FD312E]"
+            />
+            {t('Logo')}
+          </span>
+          <div className={`flex items-start gap-2 ${showLogo ? '' : 'opacity-40 pointer-events-none'}`}>
+            {LOGO_VARIANTS.map(v => {
+              const on = logoId === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => onLogoId(on ? null : v.id)}
+                  title={v.label}
+                  disabled={!showLogo}
+                  className="flex-1 flex flex-col items-center gap-1.5 min-w-0"
+                >
+                  <span
+                    className={`w-14 h-14 rounded-full flex items-center justify-center border transition-shadow ${
+                      on ? 'border-transparent ring-[3px] ring-[#FD312E] ring-offset-2' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    style={{ background: v.thumbBg }}
+                  >
+                    {/* the off-site SVGs stretch (preserveAspectRatio none) — box them at the logo's own 2.27:1 */}
+                    <img src={v.src} alt={v.label} style={{ width: 36, height: 15.86 }} draggable={false} />
+                  </span>
+                  <span className={`text-[11px] whitespace-nowrap ${on ? 'text-[#FD312E] font-medium' : 'text-gray-600'}`}>
+                    {v.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-gray-400">
+            {t(logoId ? 'Click again to go back to the design default.' : 'Not selected — each size uses the design default logo.')}
+          </p>
+        </div>
+      )}
+
       <div>
         <p className="font-lgei font-bold text-[15px] text-gray-900 mb-0.5">{t('Copy')}</p>
         <p className="text-xs text-gray-400">

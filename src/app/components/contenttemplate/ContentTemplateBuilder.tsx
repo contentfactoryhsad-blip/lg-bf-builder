@@ -152,6 +152,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [showEyebrow, setShowEyebrow] = useState(seed?.showEyebrow ?? true);
   const [showSubcopy, setShowSubcopy] = useState(seed?.showSubcopy ?? true);
   const [showCta, setShowCta] = useState(seed?.showCta ?? true);
+  /** Media sizes only — the LG logo on/off and the Logo pick (null = template default). */
+  const [showLogo, setShowLogo] = useState(seed?.showLogo ?? true);
+  const [logoId, setLogoId] = useState<string | null>(seed?.logoId ?? null);
   /** Panel checkbox — the hero sizes' carousel indicator. */
   const [showIndicator, setShowIndicator] = useState(seed?.showIndicator ?? true);
   const [showTagline, setShowTagline] = useState(seed?.showTagline ?? true);
@@ -342,7 +345,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           ? `${exportStem(asset.id)}-lgcom-${slot.w}x${slot.h}`
           : `${exportStem(asset.id)}-${(slot as PaidSlot).key}`;
         // META ships every file twice: as-is and without the LG logo
-        const isMetaPaid = !('id' in slot) && (slot as PaidSlot).key.startsWith('meta-');
+        // (with the logo switched off the first file already is the no-logo one)
+        const isMetaPaid = showLogo && !('id' in slot) && (slot as PaidSlot).key.startsWith('meta-');
         const asMotion = !!asset.motion && (dynamicPaid || ('id' in slot && bareOnExport(slot.id)));
         if (asMotion) {
           const lg = dynamicPaid ? null : (slot as LgcomSlot);
@@ -446,12 +450,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     selectedId, channelKey, sizeKey, copy,
     iconKind, iconColor, iconCount,
     solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-    showDisclaimer, showEyebrow, showSubcopy, showCta, showIndicator, showTagline, plateColor,
+    showDisclaimer, showEyebrow, showSubcopy, showCta, showLogo, logoId, showIndicator, showTagline, plateColor,
     products, benefitSlots,
     uploadDataUrl: uploadUrl && uploadUrl.startsWith('data:') ? uploadUrl : null,
   }), [selectedId, channelKey, sizeKey, copy, iconKind, iconColor, iconCount,
        solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-       showDisclaimer, showEyebrow, showSubcopy, showCta, showIndicator, showTagline, plateColor, products, benefitSlots, uploadUrl]);
+       showDisclaimer, showEyebrow, showSubcopy, showCta, showLogo, logoId, showIndicator, showTagline, plateColor, products, benefitSlots, uploadUrl]);
   const channelLabelForName = outputKind === 'size'
     ? (shortsSize?.label ?? '')
     : (channelKey === 'all' ? 'ALL' : channel?.label ?? '');
@@ -775,6 +779,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   showEyebrow={showEyebrow}
                   showSubcopy={showSubcopy}
                   showCta={showCta}
+                  showLogo={showLogo}
+                  logoId={logoId}
                   showIndicator={showIndicator}
                   showTagline={showTagline}
                 />
@@ -886,6 +892,11 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 showCta={showCta}
                 onShowSubcopy={setShowSubcopy}
                 onShowCta={setShowCta}
+                showLogoSection={channelKey !== 'lgcom'}
+                showLogo={showLogo}
+                onShowLogo={setShowLogo}
+                logoId={logoId}
+                onLogoId={setLogoId}
                 // only "All channels" writes both disclaimers; the rest grey
                 // out the one their sizes never render
                 lgcomActive={channelKey === 'lgcom' || channelKey === 'all'}
@@ -945,7 +956,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           aria-hidden
         >
           <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
-          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showSubcopy={showSubcopy} showCta={showCta} showTagline={showTagline} hideLogo={renderNoLogo} />
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showSubcopy={showSubcopy} showCta={showCta} showTagline={showTagline} hideLogo={renderNoLogo || !showLogo} logoId={logoId} />
         </div>
       )}
       {!renderPaidOverlaySlot && renderIconRowSlot && (
@@ -1020,7 +1031,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               showCta={showCta}
               showTagline={showTagline}
               showIndicator={showIndicator}
-              hideLogo={renderNoLogo}
+              hideLogo={renderNoLogo || !showLogo}
+              logoId={logoId}
             />
           )}
         </div>
@@ -1306,6 +1318,8 @@ function ChannelSlots({
   showEyebrow,
   showSubcopy,
   showCta,
+  showLogo,
+  logoId,
   showIndicator,
   showTagline,
 }: {
@@ -1324,6 +1338,8 @@ function ChannelSlots({
   showEyebrow: boolean;
   showSubcopy: boolean;
   showCta: boolean;
+  showLogo: boolean;
+  logoId: string | null;
   showIndicator: boolean;
   showTagline: boolean;
 }) {
@@ -1375,6 +1391,8 @@ function ChannelSlots({
               showCta={showCta}
               showTagline={showTagline}
               showIndicator={showIndicator}
+              hideLogo={!showLogo}
+              logoId={logoId}
             />
             </React.Fragment>
           ))}

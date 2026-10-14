@@ -32,6 +32,9 @@ export interface ContentBannerPayloadV1 {
   showSubcopy?: boolean;
   /** Added 2026-10-14 — older drafts have no key, so restore defaults to on. */
   showCta?: boolean;
+  /** Added 2026-10-14 — media logo on/off and pick; older drafts restore on + default. */
+  showLogo?: boolean;
+  logoId?: string | null;
   showIndicator: boolean;
   /** Added 2026-09-16 — older drafts have no key, so restore defaults to on. */
   showTagline?: boolean;

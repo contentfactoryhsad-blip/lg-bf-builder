@@ -17,6 +17,7 @@ import { MirrorFill } from './MirrorFill';
 import { KvTagline, cleanArtId, taglineSpec } from './kvTagline';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import { type ProductSlots } from './ProductSlotsEditor';
+import { logoVariantSrc } from './logoVariants';
 
 /** Figma reports tracking as a % of font size; CSS wants an em value. */
 const tracking = (pct: number) => `${pct / 100}em`;
@@ -90,6 +91,7 @@ export function PaidSlotPreview({
   showCta = true,
   benefitSlots,
   hideLogo = false,
+  logoId = null,
 }: {
   slot: PaidSlot;
   /** Which artwork this tile stands for. */
@@ -119,6 +121,8 @@ export function PaidSlotPreview({
   benefitSlots?: BenefitSlots;
   /** META ships a second file without the LG logo — the export's second pass. */
   hideLogo?: boolean;
+  /** Edit panel's Logo pick (`LOGO_VARIANTS` id) — null keeps the ink-matched default. */
+  logoId?: string | null;
 }) {
   /**
    * Key visuals with a board of their own bring their own artwork framing, their
@@ -314,7 +318,7 @@ export function PaidSlotPreview({
               }}
             >
               <img
-                src={ink === '#111111' ? '/off-site/lg-logo-black.svg' : '/off-site/lg-logo-white.svg'}
+                src={logoVariantSrc(logoId) ?? (ink === '#111111' ? '/off-site/lg-logo-black.svg' : '/off-site/lg-logo-white.svg')}
                 alt="LG"
                 style={{ width: '100%', height: '100%', objectFit: 'contain', maxWidth: 'none' }}
                 draggable={false}
