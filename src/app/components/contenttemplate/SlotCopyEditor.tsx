@@ -124,6 +124,8 @@ export function SlotCopyEditor({
   onShowEyebrow,
   showSubcopy,
   onShowSubcopy,
+  showCta,
+  onShowCta,
   lgcomActive,
   mediaActive,
   showIndicator,
@@ -161,6 +163,9 @@ export function SlotCopyEditor({
   onShowEyebrow: (next: boolean) => void;
   showSubcopy: boolean;
   onShowSubcopy: (next: boolean) => void;
+  /** Same checkbox for the CTA button. */
+  showCta: boolean;
+  onShowCta: (next: boolean) => void;
   /**
    * Which of the two disclaimers the chosen channel actually renders. Only
    * "All channels" writes both, so the other box greys out rather than
@@ -195,10 +200,11 @@ export function SlotCopyEditor({
   if (iconKind !== 'none') lastIconKind.current = iconKind;
 
   const field = (key: keyof SlotCopy, value: string) => onChange({ ...copy, [key]: value });
-  /** The optional lines carry an on/off checkbox, like the disclaimer. */
+  /** The optional lines and the CTA carry an on/off checkbox, like the disclaimer. */
   const toggles: Partial<Record<keyof SlotCopy, [boolean, (next: boolean) => void]>> = {
     eyebrow: [showEyebrow, onShowEyebrow],
     subcopy: [showSubcopy, onShowSubcopy],
+    cta: [showCta, onShowCta],
   };
 
   /** 1 until the operator types the single allowed break, then 2. */

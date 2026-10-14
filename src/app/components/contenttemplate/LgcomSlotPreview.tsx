@@ -115,6 +115,7 @@ export function LgcomSlotPreview({
   showDisclaimer = true,
   showEyebrow = true,
   showSubcopy = true,
+  showCta = true,
   showIndicator = true,
   showTagline = true,
   bare = false,
@@ -154,6 +155,8 @@ export function LgcomSlotPreview({
    */
   showEyebrow?: boolean;
   showSubcopy?: boolean;
+  /** Panel toggle — off drops the CTA button from every size. */
+  showCta?: boolean;
   /** Panel toggle — off drops the KV tagline from every size. */
   showTagline?: boolean;
   /** Panel toggle — off drops the carousel indicator from the two hero sizes. */
@@ -431,7 +434,7 @@ export function LgcomSlotPreview({
             );
           })}
 
-          {!bare && slot.cta && (
+          {!bare && showCta && slot.cta && (
             <div
               style={{
                 position: 'absolute',

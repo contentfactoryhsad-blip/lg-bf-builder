@@ -83,6 +83,7 @@ export function PaidSlotPreview({
   motionSrc = null,
   showDisclaimer = true,
   showSubcopy = true,
+  showCta = true,
   benefitSlots,
   hideLogo = false,
 }: {
@@ -108,6 +109,8 @@ export function PaidSlotPreview({
   showDisclaimer?: boolean;
   /** Panel toggle — off drops the subcopy and closes its gap, as the Figma stack does. */
   showSubcopy?: boolean;
+  /** Panel toggle — off drops the CTA button from every size. */
+  showCta?: boolean;
   /** The Benefit cube's six boxes — product cut-outs / picked assets. */
   benefitSlots?: BenefitSlots;
   /** META ships a second file without the LG logo — the export's second pass. */
@@ -340,7 +343,7 @@ export function PaidSlotPreview({
               );
             })}
 
-          {slot.cta && (
+          {showCta && slot.cta && (
             /* The pill hugs its label past the design width. Centred layouts
                grow from the middle (the design box's centre), left layouts from
                their left edge — matching how the copy above them is anchored. */

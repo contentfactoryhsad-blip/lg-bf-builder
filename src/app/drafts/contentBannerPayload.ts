@@ -30,6 +30,8 @@ export interface ContentBannerPayloadV1 {
   /** Added 2026-10-13 — older drafts have no key, so restore defaults to on. */
   showEyebrow?: boolean;
   showSubcopy?: boolean;
+  /** Added 2026-10-14 — older drafts have no key, so restore defaults to on. */
+  showCta?: boolean;
   showIndicator: boolean;
   /** Added 2026-09-16 — older drafts have no key, so restore defaults to on. */
   showTagline?: boolean;

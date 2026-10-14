@@ -151,6 +151,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   /** Panel checkboxes for the optional copy lines — off drops them from every size. */
   const [showEyebrow, setShowEyebrow] = useState(seed?.showEyebrow ?? true);
   const [showSubcopy, setShowSubcopy] = useState(seed?.showSubcopy ?? true);
+  const [showCta, setShowCta] = useState(seed?.showCta ?? true);
   /** Panel checkbox — the hero sizes' carousel indicator. */
   const [showIndicator, setShowIndicator] = useState(seed?.showIndicator ?? true);
   const [showTagline, setShowTagline] = useState(seed?.showTagline ?? true);
@@ -445,12 +446,12 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     selectedId, channelKey, sizeKey, copy,
     iconKind, iconColor, iconCount,
     solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-    showDisclaimer, showEyebrow, showSubcopy, showIndicator, showTagline, plateColor,
+    showDisclaimer, showEyebrow, showSubcopy, showCta, showIndicator, showTagline, plateColor,
     products, benefitSlots,
     uploadDataUrl: uploadUrl && uploadUrl.startsWith('data:') ? uploadUrl : null,
   }), [selectedId, channelKey, sizeKey, copy, iconKind, iconColor, iconCount,
        solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
-       showDisclaimer, showEyebrow, showSubcopy, showIndicator, showTagline, plateColor, products, benefitSlots, uploadUrl]);
+       showDisclaimer, showEyebrow, showSubcopy, showCta, showIndicator, showTagline, plateColor, products, benefitSlots, uploadUrl]);
   const channelLabelForName = outputKind === 'size'
     ? (shortsSize?.label ?? '')
     : (channelKey === 'all' ? 'ALL' : channel?.label ?? '');
@@ -773,6 +774,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   showDisclaimer={showDisclaimer}
                   showEyebrow={showEyebrow}
                   showSubcopy={showSubcopy}
+                  showCta={showCta}
                   showIndicator={showIndicator}
                   showTagline={showTagline}
                 />
@@ -881,7 +883,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 showEyebrow={showEyebrow}
                 onShowEyebrow={setShowEyebrow}
                 showSubcopy={showSubcopy}
+                showCta={showCta}
                 onShowSubcopy={setShowSubcopy}
+                onShowCta={setShowCta}
                 // only "All channels" writes both disclaimers; the rest grey
                 // out the one their sizes never render
                 lgcomActive={channelKey === 'lgcom' || channelKey === 'all'}
@@ -941,7 +945,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           aria-hidden
         >
           <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
-          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showSubcopy={showSubcopy} showTagline={showTagline} hideLogo={renderNoLogo} />
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showSubcopy={showSubcopy} showCta={showCta} showTagline={showTagline} hideLogo={renderNoLogo} />
         </div>
       )}
       {!renderPaidOverlaySlot && renderIconRowSlot && (
@@ -966,6 +970,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
             showDisclaimer={showDisclaimer}
             showEyebrow={showEyebrow}
             showSubcopy={showSubcopy}
+            showCta={showCta}
             showTagline={showTagline}
             bare
             hideArt
@@ -996,6 +1001,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               showDisclaimer={showDisclaimer}
               showEyebrow={showEyebrow}
               showSubcopy={showSubcopy}
+              showCta={showCta}
               showIndicator={showIndicator}
               showTagline={showTagline}
               bare={bareOnExport(renderSlot.id)}
@@ -1011,6 +1017,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               plateColor={plateColor}
               showDisclaimer={showDisclaimer}
               showSubcopy={showSubcopy}
+              showCta={showCta}
               showTagline={showTagline}
               showIndicator={showIndicator}
               hideLogo={renderNoLogo}
@@ -1298,6 +1305,7 @@ function ChannelSlots({
   showDisclaimer,
   showEyebrow,
   showSubcopy,
+  showCta,
   showIndicator,
   showTagline,
 }: {
@@ -1315,6 +1323,7 @@ function ChannelSlots({
   showDisclaimer: boolean;
   showEyebrow: boolean;
   showSubcopy: boolean;
+  showCta: boolean;
   showIndicator: boolean;
   showTagline: boolean;
 }) {
@@ -1359,6 +1368,7 @@ function ChannelSlots({
               motionSrc={paidMotion}
               showDisclaimer={showDisclaimer}
               showSubcopy={showSubcopy}
+              showCta={showCta}
               showTagline={showTagline}
               showIndicator={showIndicator}
             />
@@ -1391,6 +1401,7 @@ function ChannelSlots({
               showDisclaimer={showDisclaimer}
               showEyebrow={showEyebrow}
               showSubcopy={showSubcopy}
+              showCta={showCta}
               showIndicator={showIndicator}
               showTagline={showTagline}
             />
