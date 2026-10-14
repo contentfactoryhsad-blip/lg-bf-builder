@@ -343,6 +343,7 @@ export const CHANNELS: Channel[] = [
   { key: 'dv360', label: 'DV360', kind: 'paid', sizes: [] },
   { key: 'pmax', label: 'Pmax', kind: 'paid', sizes: [] },
   { key: 'meta', label: 'Meta', kind: 'paid', sizes: [] },
+  { key: 'sem', label: 'Google SEM', kind: 'paid', sizes: [] },
 ];
 
 /**
