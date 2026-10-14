@@ -52,6 +52,12 @@ export interface PaidText {
   lineHeightPct: number | null;
   trackingPct: number;
   align: 'left' | 'center' | 'right';
+  /**
+   * Line cap where the template stops the box from growing (a Max height or a
+   * fixed-height box in Figma). Longer copy ends in an ellipsis, as it does on
+   * the board. Absent means the line grows with the copy.
+   */
+  maxLines?: number;
 }
 
 export interface PaidSlot {
@@ -189,7 +195,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     cta: { x: 386, y: 19, w: 55.32, h: 22.01, radius: 4.51 },
     text: [
       { role: 'headline', x: 208, y: 5, w: 170, h: 28, size: 13, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 208, y: 37, w: 170, h: 7, size: 7, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
+      { role: 'subcopy', x: 208, y: 37, w: 170, h: 7, size: 7, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
       { role: 'cta', x: 396.16, y: 26, w: 35, h: 8, size: 8.47, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
       { role: 'disclaimer', x: 207.33, y: 48.67, w: 241.33, h: 6, size: 5, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],
@@ -214,7 +220,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     cta: { x: 602, y: 28.01, w: 85.37, h: 33.98, radius: 6.97 },
     text: [
       { role: 'headline', x: 332, y: 8, w: 300, h: 42, size: 20, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 332, y: 56, w: 246, h: 12, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
+      { role: 'subcopy', x: 332, y: 56, w: 246, h: 12, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
       { role: 'cta', x: 617.68, y: 38.5, w: 54, h: 13, size: 13.07, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
       { role: 'disclaimer', x: 332, y: 74, w: 328, h: 8, size: 7, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],
@@ -225,7 +231,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     logo: { x: 10, y: 10, w: 42.59, h: 18.76 },
     text: [
       { role: 'headline', x: 20, y: 37, w: 296, h: 50, size: 24, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 48, y: 91, w: 240, h: 29, size: 13.5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
+      { role: 'subcopy', x: 48, y: 91, w: 240, h: 29, size: 13.5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center', maxLines: 2 },
       { role: 'disclaimer', x: 10, y: 262, w: 316, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],
   },
@@ -261,7 +267,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     cta: { x: 264, y: 16.57, w: 42.57, h: 16.87, radius: 3.46 },
     text: [
       { role: 'headline', x: 132, y: 4.44, w: 122, h: 22, size: 10, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 132, y: 28.44, w: 122, h: 6, size: 5.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
+      { role: 'subcopy', x: 132, y: 28.44, w: 122, h: 6, size: 5.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
       { role: 'cta', x: 271.79, y: 22, w: 27, h: 6, size: 6.49, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
       { role: 'disclaimer', x: 132, y: 41, w: 176, h: 5, size: 4.5, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],
@@ -387,7 +393,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     cta: { x: 840, y: 23, w: 91.23, h: 36, radius: 7.38 },
     text: [
       { role: 'headline', x: 548, y: 8, w: 272, h: 46, size: 22, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 548, y: 58, w: 272, h: 11, size: 10.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
+      { role: 'subcopy', x: 548, y: 58, w: 272, h: 11, size: 10.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
       { role: 'cta', x: 856.62, y: 34, w: 58, h: 14, size: 13.85, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
       { role: 'disclaimer', x: 548, y: 74, w: 402, h: 8, size: 7, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],
@@ -435,7 +441,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     logo: { x: 10, y: 10, w: 42.59, h: 18.76 },
     text: [
       { role: 'headline', x: 20, y: 37, w: 296, h: 50, size: 24, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 48, y: 91, w: 240, h: 29, size: 13.5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
+      { role: 'subcopy', x: 48, y: 91, w: 240, h: 29, size: 13.5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center', maxLines: 2 },
       { role: 'disclaimer', x: 10, y: 262, w: 316, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],
   },
@@ -481,7 +487,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     cta: { x: 264, y: 16.57, w: 42.57, h: 16.87, radius: 3.46 },
     text: [
       { role: 'headline', x: 132, y: 4.44, w: 122, h: 22, size: 10, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 132, y: 28.44, w: 122, h: 6, size: 5.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
+      { role: 'subcopy', x: 132, y: 28.44, w: 122, h: 6, size: 5.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
       { role: 'cta', x: 271.79, y: 22, w: 27, h: 6, size: 6.49, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
       { role: 'disclaimer', x: 132, y: 41, w: 176, h: 5, size: 4.5, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],
@@ -505,7 +511,7 @@ export const PAID_SLOTS: PaidSlot[] = [
     cta: { x: 602, y: 28.01, w: 85.37, h: 33.98, radius: 6.97 },
     text: [
       { role: 'headline', x: 332, y: 8, w: 300, h: 42, size: 20, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 332, y: 56, w: 246, h: 12, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
+      { role: 'subcopy', x: 332, y: 56, w: 246, h: 12, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
       { role: 'cta', x: 617.68, y: 38.5, w: 54, h: 13, size: 13.07, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
       { role: 'disclaimer', x: 332, y: 74, w: 328, h: 8, size: 7, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
     ],

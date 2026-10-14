@@ -64,6 +64,10 @@ function Line({ spec, text, slotH, dy = 0, pRef, ink = '#FFFFFF' }: {
           ? `rgba(${parseInt(ink.slice(1, 3), 16)},${parseInt(ink.slice(3, 5), 16)},${parseInt(ink.slice(5, 7), 16)},0.5)`
           : ink,
         whiteSpace: 'pre-line',
+        // the template's line cap: clamp and end in an ellipsis like the board
+        ...(spec.maxLines
+          ? { display: '-webkit-box', WebkitBoxOrient: 'vertical' as const, WebkitLineClamp: spec.maxLines, overflow: 'hidden' }
+          : null),
       }}
     >
       {text}
