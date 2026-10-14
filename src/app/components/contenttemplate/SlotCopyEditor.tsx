@@ -173,10 +173,10 @@ export function SlotCopyEditor({
   showCta: boolean;
   onShowCta: (next: boolean) => void;
   /**
-   * Logo section — every channel but LG.com (whose sizes carry no LG logo),
-   * "All channels" included. The checkbox drops the logo from every media size;
-   * the four thumbnails swap it (same set as the Sales Banner Builder), and a
-   * second click on the picked one goes back to the template default.
+   * Logo section, above Icons — every channel but LG.com (whose sizes carry no
+   * LG logo), "All channels" included. The checkbox drops the logo from every
+   * media size; the thumbnails swap it. White is the template default, so it
+   * shows picked when nothing is, and clicking the picked one goes back to it.
    */
   showLogoSection: boolean;
   showLogo: boolean;
@@ -229,51 +229,6 @@ export function SlotCopyEditor({
 
   return (
     <div className="p-5 flex flex-col gap-4">
-      {showLogoSection && (
-        <div className="flex flex-col gap-2.5 pb-5 border-b border-gray-100">
-          <span className="flex items-center gap-2 font-lgei font-bold text-[15px] text-gray-900">
-            <input
-              type="checkbox"
-              checked={showLogo}
-              onChange={e => onShowLogo(e.target.checked)}
-              className="w-3.5 h-3.5 accent-[#FD312E]"
-            />
-            {t('Logo')}
-          </span>
-          <div className={`flex items-start gap-2 ${showLogo ? '' : 'opacity-40 pointer-events-none'}`}>
-            {LOGO_VARIANTS.map(v => {
-              const on = logoId === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => onLogoId(on ? null : v.id)}
-                  title={v.label}
-                  disabled={!showLogo}
-                  className="flex-1 flex flex-col items-center gap-1.5 min-w-0"
-                >
-                  <span
-                    className={`w-14 h-14 rounded-full flex items-center justify-center border transition-shadow ${
-                      on ? 'border-transparent ring-[3px] ring-[#FD312E] ring-offset-2' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    style={{ background: v.thumbBg }}
-                  >
-                    {/* the off-site SVGs stretch (preserveAspectRatio none) — box them at the logo's own 2.27:1 */}
-                    <img src={v.src} alt={v.label} style={{ width: 36, height: 15.86 }} draggable={false} />
-                  </span>
-                  <span className={`text-[11px] whitespace-nowrap ${on ? 'text-[#FD312E] font-medium' : 'text-gray-600'}`}>
-                    {v.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[10px] text-gray-400">
-            {t(logoId ? 'Click again to go back to the design default.' : 'Not selected — each size uses the design default logo.')}
-          </p>
-        </div>
-      )}
-
       <div>
         <p className="font-lgei font-bold text-[15px] text-gray-900 mb-0.5">{t('Copy')}</p>
         <p className="text-xs text-gray-400">
@@ -386,6 +341,49 @@ export function SlotCopyEditor({
             {t('Indicator')}
           </label>
           <span className="text-[10px] text-gray-400">{t('1920×720 · 720×960')}</span>
+        </div>
+      )}
+
+      {showLogoSection && (
+        <div className="border-t border-gray-100 pt-4 flex flex-col gap-2.5">
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={showLogo}
+              onChange={e => onShowLogo(e.target.checked)}
+              className="w-3.5 h-3.5 accent-[#FD312E]"
+            />
+            {t('Logo')}
+          </label>
+          <div className={`flex items-start gap-2 ${showLogo ? '' : 'opacity-40 pointer-events-none'}`}>
+            {LOGO_VARIANTS.map(v => {
+              // nothing picked = the template's own logo, which is the white one
+              const on = (logoId ?? 'white') === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => onLogoId(on || v.id === 'white' ? null : v.id)}
+                  title={v.label}
+                  disabled={!showLogo}
+                  className="flex-1 flex flex-col items-center gap-1.5 min-w-0"
+                >
+                  <span
+                    className={`w-14 h-14 rounded-full flex items-center justify-center border transition-shadow ${
+                      on ? 'border-transparent ring-[3px] ring-[#FD312E] ring-offset-2' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    style={{ background: v.thumbBg }}
+                  >
+                    {/* the off-site SVGs stretch (preserveAspectRatio none) — box them at the logo's own 2.27:1 */}
+                    <img src={v.src} alt={v.label} style={{ width: 36, height: 15.86 }} draggable={false} />
+                  </span>
+                  <span className={`text-[11px] whitespace-nowrap ${on ? 'text-[#FD312E] font-medium' : 'text-gray-600'}`}>
+                    {v.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
