@@ -1355,9 +1355,13 @@ function ChannelSlots({
 
       {paid.length > 0 ? (
         <div className="flex flex-col gap-7 pb-10">
-          {paid.map(slot => (
+          {paid.map((slot, i) => (
+            <React.Fragment key={slot.key}>
+            {/* the D2C-only sizes follow the three Pmax ones under their own heading */}
+            {slot.key.startsWith('pmax-d2c-') && !paid[i - 1]?.key.startsWith('pmax-d2c-') && (
+              <p className="font-lgei font-bold text-[17px] text-gray-800 mt-6">Pmax (Only D2C)</p>
+            )}
             <PaidSlotPreview
-              key={slot.key}
               slot={slot}
               asset={asset!}
               scale={paidScale}
@@ -1372,6 +1376,7 @@ function ChannelSlots({
               showTagline={showTagline}
               showIndicator={showIndicator}
             />
+            </React.Fragment>
           ))}
         </div>
       ) : slots.length === 0 ? (
