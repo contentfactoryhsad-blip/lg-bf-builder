@@ -119,7 +119,7 @@ export function PaidSlotPreview({
   showCta?: boolean;
   /** The Benefit cube's six boxes — product cut-outs / picked assets. */
   benefitSlots?: BenefitSlots;
-  /** META ships a second file without the LG logo — the export's second pass. */
+  /** Edit panel's Logo checkbox, off — no LG logo on any media size. */
   hideLogo?: boolean;
   /** Edit panel's Logo pick (`LOGO_VARIANTS` id) — null keeps the ink-matched default. */
   logoId?: string | null;
