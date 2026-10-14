@@ -363,8 +363,8 @@ export const PAID_SLOTS: PaidSlot[] = [
     mask: { angle: 90, stops: [[0, 0], [0.253, 0], [0.515, 1], [1, 1]] },
     logo: { x: 96.38, y: 4, w: 19.62, h: 8.64 },
     text: [
-      { role: 'headline', x: 6, y: 6, w: 54, h: 32, size: 8, face: 'headline', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'subcopy', x: 6, y: 41, w: 54, h: 15, size: 4.5, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
+      { role: 'headline', x: 6, y: 6, w: 54, h: 32, size: 8, face: 'headline', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 4 },
+      { role: 'subcopy', x: 6, y: 41, w: 54, h: 15, size: 4.5, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left', maxLines: 3 },
     ],
   },
   {
