@@ -630,13 +630,13 @@ export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device} [${s.co
 export const MEDIA_DISCLAIMER_MAX = 24;
 
 /**
- * Sizes delivered as artwork and benefit icons only — no eyebrow, headline,
- * subcopy, CTA, disclaimer or indicator. LG.com sets the copy live on those two
- * placements, so baking it into the file would double it up. Same pair as
- * `hero`, but kept separate: one is about motion, this one about what ships.
+ * LG.com sizes ship without the live-set copy — no eyebrow, headline, subcopy,
+ * CTA or indicator; the artwork, plates, benefit icons, disclaimer and KV
+ * tagline stay. LG.com sets the copy live on its placements, so baking it into
+ * the file would double it up. Since 2026-10-19 that is every LG.com size (it
+ * used to be the two heroes and 960×600 only). The canvas still shows the copy.
  */
-export const bareOnExport = (slotId: string) =>
-  slotId === 'ST0001-pc-1920x720' || slotId === 'ST0001-mo-720x960' || slotId === 'PR0001-pc-960x600';
+export const bareOnExport = (slotId: string) => LGCOM_SLOTS.some(s => s.id === slotId);
 
 /**
  * Which LG.com sizes an asset runs at all. The Dynamic (motion) asset ships

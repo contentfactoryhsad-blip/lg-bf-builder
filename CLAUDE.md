@@ -546,10 +546,10 @@ import 여부와 무관하게 전부 훑어 클래스를 수집하므로, 번들
 컴포넌트를 사이즈당 하나씩 `scale=1`로 마운트해 촬영한다(`exportSlots.ts`, `[data-export-box]`가 촬영 대상,
 호스트 안에서만 `border-radius:0`). LG.com 6칸 ≈ 3초.
 
-- 🔴 **bare 규칙**: LG.com의 `ST0001-pc-1920x720`·`ST0001-mo-720x960` 두 히어로는 **아트 + 아이콘 로우 + 디스클레이머**를
-  담아 내보낸다(eyebrow/headline/subcopy/CTA/indicator 제외 — LG.com이 카피를 라이브로 얹지만, 디스클레이머는
-  2026-09-03부터 구워 나간다). mp4도 동일: 오버레이가 전체 프레임 캡처(아이콘 로우+디스클레이머)로 합성된다.
-  판정은 `lgcomSlots.ts`의 `bareOnExport(slotId)`. 나머지 4칸과 유료매체는 캔버스에 보이는 그대로.
+- 🔴 **bare 규칙**: LG.com은 **7칸 전부**(2026-10-19부터, 그전엔 두 히어로 + 960×600만) **아트 + 플레이트 + 아이콘 로우 +
+  디스클레이머 + KV Tagline**만 담아 내보낸다(eyebrow/headline/subcopy/CTA/indicator 제외 — LG.com이 카피를 라이브로 얹지만,
+  디스클레이머는 2026-09-03부터 구워 나간다). 캔버스에는 카피가 그대로 보인다. mp4(히어로)도 동일: 오버레이가 전체 프레임
+  캡처(아이콘 로우+디스클레이머)로 합성된다. 판정은 `lgcomSlots.ts`의 `bareOnExport(slotId)`. 유료매체는 캔버스에 보이는 그대로.
 
 **영상(mp4) = 다운로드 시점에 브라우저에서 실시간 컷.** `renderMotionCutLive`(`exportMotion.ts`)가
 **WebCodecs**(mediabunny)로 하드웨어 디코드 → 캔버스 합성(아트 배치 + 아이콘 로우) → 하드웨어 H.264 인코드.

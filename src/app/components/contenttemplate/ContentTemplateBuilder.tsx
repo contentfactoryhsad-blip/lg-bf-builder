@@ -1180,7 +1180,7 @@ function OutputPicker({
       {outputKind === 'channel' && (
         <>
           <p className="text-[11px] text-center leading-relaxed max-w-lg" style={{ color: '#8A8078' }}>
-            {t('For LG.com, files are downloaded to match the image upload guide — hero banner sizes are exported without copy, CTA, and indicators (icons and disclaimer included).')}
+            {t('For LG.com, files are downloaded to match the image upload guide — every size is exported without copy, CTA, and indicators (icons and disclaimer included).')}
           </p>
         </>
       )}
