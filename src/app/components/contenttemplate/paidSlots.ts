@@ -1,27 +1,29 @@
 /**
  * Paid-media banner slots for the Key Visual _Main artworks.
  *
- * Transcribed from the Figma board "External Banner Black Friday_Key Visual_Main"
- * (file miJcDQgz0yJMskLE5a5HHj, page "Banner Template 2", 6453:21707):
- * Criteo 25, DV360 25, Pmax 3 + PMax (only D2C) 11, META 4, Google SEM 2.
- * Copy, logo and CTA are read from the Dark variant of each size's layout
- * component in "Templates & Assets"; art and soft edge from the board frame.
+ * Transcribed from the Figma board "External Banner Black Friday_Key Visual_Main_1026"
+ * (file miJcDQgz0yJMskLE5a5HHj, page "Banner Template 3", `6767:71880`) — 19
+ * media, 176 sizes (2026-10-27). Each frame there is the artwork instance, an
+ * optional `gradation` mask and an instance of that size's layout component
+ * from "Templates & Assets › External Banner templates_Jun"; copy, logo and CTA
+ * are read off that instance (Dark mode), art and soft edge off the frame.
  *
  * Key prefixes follow the channel buttons: `pmax-d2c-*` sits under Pmax (after
- * the three original sizes), `sem-*` is the Google SEM button.
+ * its own sizes), `sem-*` is Google SEM, `meta-*` is META. ECRM runs two
+ * 1200×1200 frames — the second, art-only one is `ecrm-1200x1200-2`.
  *
- * 🔴 Placement is per SIZE, not per asset. That board carries two master
+ * 🔴 Placement is per SIZE, not per asset. The board carries two master
  * components — Main and Main (Character) — and every frame places the art once,
  * then chooses which master it follows. So both Key Visual _Main tiles share
  * this table and differ only in which artwork file they load.
  *
- * 15 of the 70 frames are hidden on that board (`visible = false`) — sizes that
- * are not being trafficked. They are flagged `hidden` here rather than deleted,
- * so turning one back on is a flag flip instead of re-placing its artwork. Their
- * layout components are empty, which is why they also carry no copy.
+ * Every frame on that board is visible now — the 15 sizes that used to be
+ * switched off came back with the 1026 boards. A few frames carry no copy at all
+ * (Google SEM, the second ECRM 1200×1200, ECRM 1200×520) and two Awin frames
+ * carry no artwork (`noArt`); that is the board, not a gap in the transcription.
  *
- * `paidSlotsFor` returns only the visible ones; read `PAID_SLOTS` directly if
- * you need the full set.
+ * Regenerate rather than hand-edit: the rows below came out of a read-only
+ * `use_figma` pass over the board, one `S(...)` per frame in board order.
  */
 
 /** Where the artwork square sits inside the frame. */
@@ -44,7 +46,7 @@ export interface PaidArt { x: number; y: number; size: number }
 export interface PaidMask { angle: number; stops: [number, number][] }
 
 export interface PaidText {
-  role: 'headline' | 'subcopy' | 'disclaimer' | 'cta';
+  role: 'eyebrow' | 'headline' | 'subcopy' | 'disclaimer' | 'cta';
   x: number; y: number; w: number; h: number;
   size: number;
   face: 'headline' | 'text';
@@ -55,9 +57,12 @@ export interface PaidText {
   /**
    * Line cap where the template stops the box from growing (a Max height or a
    * fixed-height box in Figma). Longer copy ends in an ellipsis, as it does on
-   * the board. Absent means the line grows with the copy.
+   * the board. Absent means the line grows with the copy — which, since the
+   * 1026 boards switched every text to auto height, is all of them.
    */
   maxLines?: number;
+  /** This frame's own placeholder, where it differs from `PAID_PLACEHOLDER`. */
+  placeholder?: string;
 }
 
 export interface PaidSlot {
@@ -67,759 +72,243 @@ export interface PaidSlot {
   hidden?: boolean;
   w: number; h: number;
   art: PaidArt;
+  /** The board hides the artwork on this size — logo and copy only. */
+  noArt?: boolean;
   mask?: PaidMask;
   logo?: { x: number; y: number; w: number; h: number };
   cta?: { x: number; y: number; w: number; h: number; radius: number };
   text: PaidText[];
 }
 
+type Box = [number, number, number, number];
+/** role, x, y, w, h, size, face (h/t), line height %, tracking %, align, placeholder */
+type Row = [PaidText['role'], number, number, number, number, number, 'h' | 't', number | null, number, 'l' | 'c' | 'r', string?];
+
+const ALIGN = { l: 'left', c: 'center', r: 'right' } as const;
+
+const M = (angle: number, stops: [number, number][]): PaidMask => ({ angle, stops });
+
+/** One frame as the read-only Figma pass prints it — shared with the Dynamic board. */
+export function S(
+  key: string, w: number, h: number,
+  art: [number, number, number] | null,
+  mask: PaidMask | 0,
+  logo: Box | 0,
+  cta: [number, number, number, number, number] | 0,
+  rows: Row[],
+): PaidSlot {
+  return {
+    key, w, h,
+    art: art ? { x: art[0], y: art[1], size: art[2] } : { x: 0, y: 0, size: 0 },
+    ...(art ? null : { noArt: true }),
+    ...(mask ? { mask } : null),
+    ...(logo ? { logo: { x: logo[0], y: logo[1], w: logo[2], h: logo[3] } } : null),
+    ...(cta ? { cta: { x: cta[0], y: cta[1], w: cta[2], h: cta[3], radius: cta[4] } } : null),
+    text: rows.map(([role, x, y, tw, th, size, face, lh, ls, align, ph]) => ({
+      role, x, y, w: tw, h: th, size,
+      face: face === 'h' ? 'headline' : 'text',
+      lineHeightPct: lh, trackingPct: ls, align: ALIGN[align],
+      ...(ph ? { placeholder: ph } : null),
+    })),
+  };
+}
+
 export const PAID_SLOTS: PaidSlot[] = [
-  {
-    key: 'criteo-970x90', hidden: true, w: 970, h: 90,
-    art: { x: 589, y: -76, size: 242 },
-    mask: { angle: 90, stops: [[0, 0], [0.61, 0], [0.683, 1], [0.782, 1], [0.853, 0], [1, 0]] },
-    text: [],
-  },
-  {
-    key: 'criteo-280x230', hidden: true, w: 280, h: 230,
-    art: { x: -42, y: -36, size: 364 },
-    text: [],
-  },
-  {
-    key: 'criteo-360x640', hidden: true, w: 360, h: 640,
-    art: { x: -246, y: 0, size: 853 },
-    text: [],
-  },
-  {
-    key: 'criteo-320x568', hidden: true, w: 320, h: 568,
-    art: { x: -223, y: 0, size: 766 },
-    text: [],
-  },
-  {
-    key: 'criteo-300x300', hidden: true, w: 300, h: 300,
-    art: { x: -96, y: -62, size: 491 },
-    text: [],
-  },
-  {
-    key: 'criteo-250x250', hidden: true, w: 250, h: 250,
-    art: { x: -83, y: -56, size: 417 },
-    text: [],
-  },
-  {
-    key: 'criteo-200x200', hidden: true, w: 200, h: 200,
-    art: { x: -66, y: -40, size: 331 },
-    text: [],
-  },
-  {
-    key: 'criteo-300x100', hidden: true, w: 300, h: 100,
-    art: { x: 73, y: -85, size: 271 },
-    mask: { angle: 90, stops: [[0, 0], [0.322, 0], [0.483, 1], [1, 1]] },
-    text: [],
-  },
-  {
-    key: 'criteo-800x1200', w: 800, h: 1200,
-    art: { x: -647, y: -221, size: 2094 },
-    logo: { x: 28, y: 34, w: 102.15, h: 45 },
-    cta: { x: 294.15, y: 369, w: 211.71, h: 84.18, radius: 17.27 },
-    text: [
-      { role: 'headline', x: 34, y: 105, w: 732, h: 138, size: 65, face: 'headline', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'subcopy', x: 34, y: 255, w: 732, h: 80, size: 38, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 333, y: 395.09, w: 134, h: 32, size: 32.38, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 1151, w: 740, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-1200x1200', w: 1200, h: 1200,
-    art: { x: -490, y: -264, size: 2180 },
-    logo: { x: 33, y: 33, w: 113.5, h: 50 },
-    cta: { x: 502, y: 359, w: 196, h: 78, radius: 16 },
-    text: [
-      { role: 'headline', x: 200, y: 87, w: 800, h: 144, size: 68, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 200, y: 243, w: 800, h: 80, size: 38, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 538, y: 383, w: 124, h: 30, size: 30, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 1135, w: 1140, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-1200x628', w: 1200, h: 628,
-    art: { x: -45, y: -542, size: 1712 },
-    logo: { x: 1056, y: 30, w: 113.5, h: 50 },
-    cta: { x: 40, y: 307, w: 135.9, h: 54.06, radius: 11.09 },
-    text: [
-      { role: 'headline', x: 40, y: 46, w: 486, h: 165, size: 52, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 40, y: 225, w: 486, h: 62, size: 29, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 64.95, y: 323.53, w: 86, h: 21, size: 20.79, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 40, y: 585, w: 486, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-1024x768', w: 1024, h: 768,
-    art: { x: -174, y: -508, size: 1784 },
-    logo: { x: 849, y: 40, w: 133.93, h: 59 },
-    cta: { x: 40, y: 492, w: 203.88, h: 81.12, radius: 16.64 },
-    text: [
-      { role: 'headline', x: 40, y: 60, w: 389, h: 236, size: 56, face: 'headline', lineHeightPct: 106, trackingPct: 1, align: 'left' },
-      { role: 'subcopy', x: 40, y: 306, w: 389, h: 152, size: 36, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 77.44, y: 517.06, w: 129, h: 31, size: 31.2, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 40, y: 712, w: 389, h: 26, size: 22, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-768x1024', w: 768, h: 1024,
-    art: { x: -437.99, y: -111.66, size: 1643.99 },
-    logo: { x: 28, y: 34, w: 102.15, h: 45 },
-    cta: { x: 282.82, y: 333, w: 202.36, h: 80.56, radius: 16.53 },
-    text: [
-      { role: 'headline', x: 32, y: 95, w: 704, h: 128, size: 60, face: 'headline', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'subcopy', x: 32, y: 235, w: 704, h: 68, size: 32, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 320, y: 357.78, w: 128, h: 31, size: 30.99, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 975, w: 708, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-480x320', w: 480, h: 320,
-    art: { x: -62, y: -231, size: 790 },
-    logo: { x: 396, y: 20, w: 63.56, h: 28 },
-    cta: { x: 18, y: 234, w: 96.29, h: 38.23, radius: 7.84 },
-    text: [
-      { role: 'headline', x: 18, y: 24, w: 192, h: 112, size: 26, face: 'headline', lineHeightPct: 106, trackingPct: 1, align: 'left' },
-      { role: 'subcopy', x: 18, y: 144, w: 192, h: 76, size: 18, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 35.65, y: 245.62, w: 61, h: 15, size: 14.71, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 18, y: 291.94, w: 196, h: 14, size: 12, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-468x60', w: 468, h: 60,
-    art: { x: 36, y: -59, size: 176 },
-    logo: { x: 10, y: 8, w: 29.67, h: 13.07 },
-    cta: { x: 386, y: 19, w: 55.32, h: 22.01, radius: 4.51 },
-    text: [
-      { role: 'headline', x: 208, y: 5, w: 170, h: 28, size: 13, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 208, y: 37, w: 170, h: 7, size: 7, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
-      { role: 'cta', x: 396.16, y: 26, w: 35, h: 8, size: 8.47, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 207.33, y: 48.67, w: 241.33, h: 6, size: 5, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-970x250', w: 970, h: 250,
-    art: { x: 386, y: -191.44, size: 632.89 },
-    mask: { angle: 90, stops: [[0, 0], [0.396, 0], [0.607, 1], [1, 1]] },
-    logo: { x: 880, y: 13, w: 68.61, h: 30.23 },
-    cta: { x: 30, y: 170, w: 104.15, h: 41.33, radius: 8.48 },
-    text: [
-      { role: 'headline', x: 30, y: 24, w: 443, h: 76, size: 36, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 30, y: 108, w: 443, h: 42, size: 20, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'cta', x: 49.07, y: 182.66, w: 66, h: 16, size: 15.89, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 224, w: 470, h: 16, size: 14, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-728x90', w: 728, h: 90,
-    art: { x: 58, y: -79, size: 247 },
-    logo: { x: 12, y: 8, w: 36.32, h: 16 },
-    cta: { x: 602, y: 28.01, w: 85.37, h: 33.98, radius: 6.97 },
-    text: [
-      { role: 'headline', x: 332, y: 8, w: 300, h: 42, size: 20, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 332, y: 56, w: 246, h: 12, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
-      { role: 'cta', x: 617.68, y: 38.5, w: 54, h: 13, size: 13.07, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 332, y: 74, w: 328, h: 8, size: 7, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-336x280', w: 336, h: 280,
-    art: { x: -53, y: -23, size: 441 },
-    logo: { x: 10, y: 10, w: 42.59, h: 18.76 },
-    text: [
-      { role: 'headline', x: 20, y: 37, w: 296, h: 50, size: 24, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 48, y: 91, w: 240, h: 29, size: 13.5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center', maxLines: 2 },
-      { role: 'disclaimer', x: 10, y: 262, w: 316, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-320x480', w: 320, h: 480,
-    art: { x: -205.44, y: -10, size: 730.44 },
-    logo: { x: 12, y: 12, w: 52.19, h: 22.99 },
-    cta: { x: 111.85, y: 191, w: 96.29, h: 38.23, radius: 7.84 },
-    text: [
-      { role: 'headline', x: 16, y: 55, w: 288, h: 84, size: 26, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 16, y: 143, w: 288, h: 34, size: 16, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 129.5, y: 202.62, w: 61, h: 15, size: 14.71, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 12, y: 456, w: 296, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-320x100', w: 320, h: 100,
-    art: { x: 104, y: -88, size: 277 },
-    mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
-    logo: { x: 281.19, y: 8, w: 31.18, h: 13.74 },
-    cta: { x: 8, y: 64, w: 50.54, h: 20.08, radius: 4.12 },
-    text: [
-      { role: 'headline', x: 8, y: 10, w: 171, h: 30, size: 14, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 8, y: 43, w: 171, h: 16, size: 8, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'cta', x: 17.27, y: 70.04, w: 32, h: 8, size: 7.72, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 8, y: 89, w: 140, h: 7, size: 6, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-320x50', w: 320, h: 50,
-    art: { x: 11, y: -45, size: 140 },
-    logo: { x: 6, y: 5, w: 27.04, h: 11.91 },
-    cta: { x: 264, y: 16.57, w: 42.57, h: 16.87, radius: 3.46 },
-    text: [
-      { role: 'headline', x: 132, y: 4.44, w: 122, h: 22, size: 10, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 132, y: 28.44, w: 122, h: 6, size: 5.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
-      { role: 'cta', x: 271.79, y: 22, w: 27, h: 6, size: 6.49, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 132, y: 41, w: 176, h: 5, size: 4.5, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-300x600', w: 300, h: 600,
-    art: { x: -267.99, y: 0, size: 835.99 },
-    logo: { x: 10, y: 17, w: 56.81, h: 25.03 },
-    cta: { x: 99.46, y: 200, w: 101.07, h: 40.16, radius: 8.24 },
-    text: [
-      { role: 'headline', x: 10, y: 56, w: 280, h: 90, size: 28, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 10, y: 150, w: 280, h: 34, size: 16, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 118, y: 212.58, w: 64, h: 15, size: 15.45, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 12, y: 574, w: 276, h: 14, size: 12, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-300x250', w: 300, h: 250,
-    art: { x: -39, y: -13, size: 379 },
-    logo: { x: 10, y: 10, w: 42.18, h: 18.58 },
-    text: [
-      { role: 'headline', x: 20, y: 34, w: 260, h: 46, size: 22, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 20, y: 84, w: 260, h: 25.5, size: 12, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 10, y: 230, w: 280, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-160x600', w: 160, h: 600,
-    art: { x: -148, y: 190, size: 455 },
-    logo: { x: 11, y: 12, w: 40.75, h: 17.95 },
-    cta: { x: 34.24, y: 219, w: 91.51, h: 36.31, radius: 7.45 },
-    text: [
-      { role: 'headline', x: 12, y: 53, w: 136, h: 84, size: 20, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 12, y: 145, w: 136, h: 56, size: 13, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 51, y: 230.15, w: 58, h: 14, size: 13.96, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 10, y: 578, w: 140, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'criteo-120x600', w: 120, h: 600,
-    art: { x: -114, y: 253, size: 348 },
-    logo: { x: 8, y: 10, w: 41.82, h: 18.42 },
-    cta: { x: 24.58, y: 234, w: 70.85, h: 28, radius: 5.74 },
-    text: [
-      { role: 'headline', x: 10, y: 52, w: 100, h: 114, size: 18, face: 'headline', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'subcopy', x: 10, y: 172, w: 100, h: 48, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 37.5, y: 242.5, w: 45, h: 11, size: 10.77, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 6, y: 578, w: 108, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-375x667', hidden: true, w: 375, h: 667,
-    art: { x: -257, y: 0, size: 888 },
-    text: [],
-  },
-  {
-    key: 'dv360-360x592', hidden: true, w: 360, h: 592,
-    art: { x: -236, y: -31, size: 831 },
-    text: [],
-  },
-  {
-    key: 'dv360-320x480', hidden: true, w: 320, h: 480,
-    art: { x: -175, y: 0, size: 670 },
-    text: [],
-  },
-  {
-    key: 'dv360-800x250', hidden: true, w: 800, h: 250,
-    art: { x: 210, y: -213, size: 677 },
-    mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
-    text: [],
-  },
-  {
-    key: 'dv360-468x60', hidden: true, w: 468, h: 60,
-    art: { x: 275, y: -54, size: 167 },
-    mask: { angle: 90, stops: [[0, 0], [0.61, 0], [0.687, 1], [0.846, 1], [0.912, 0], [1, 0]] },
-    text: [],
-  },
-  {
-    key: 'dv360-300x50', hidden: true, w: 300, h: 50,
-    art: { x: 172, y: -41, size: 133 },
-    mask: { angle: 90, stops: [[0, 0], [0.562, 0], [0.68, 1], [1, 1]] },
-    text: [],
-  },
-  {
-    key: 'dv360-300x100', hidden: true, w: 300, h: 100,
-    art: { x: 73, y: -85, size: 271 },
-    mask: { angle: 90, stops: [[0, 0], [0.322, 0], [0.483, 1], [1, 1]] },
-    text: [],
-  },
-  {
-    key: 'dv360-120x60', w: 120, h: 60,
-    art: { x: 18, y: -37, size: 140 },
-    mask: { angle: 90, stops: [[0, 0], [0.253, 0], [0.515, 1], [1, 1]] },
-    logo: { x: 96.38, y: 4, w: 19.62, h: 8.64 },
-    text: [
-      { role: 'headline', x: 6, y: 6, w: 54, h: 32, size: 8, face: 'headline', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 4 },
-      { role: 'subcopy', x: 6, y: 41, w: 54, h: 15, size: 4.5, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left', maxLines: 3 },
-    ],
-  },
-  {
-    key: 'dv360-125x125', w: 125, h: 125,
-    art: { x: -51, y: -27, size: 229 },
-    logo: { x: 5.5, y: 4.3, w: 19.62, h: 8.64 },
-    text: [
-      { role: 'headline', x: 8, y: 16.5, w: 109, h: 20, size: 9, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 8, y: 39, w: 109, h: 10.63, size: 5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-    ],
-  },
-  {
-    key: 'dv360-120x240', w: 120, h: 240,
-    art: { x: -108.5, y: 7.5, size: 340.5 },
-    logo: { x: 7, y: 8, w: 34.08, h: 15.01 },
-    text: [
-      { role: 'headline', x: 10, y: 32, w: 100, h: 52, size: 12, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 10, y: 90, w: 100, h: 24, size: 8, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'disclaimer', x: 10, y: 229, w: 100, h: 7, size: 6, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-970x90', w: 970, h: 90,
-    art: { x: 184, y: -78, size: 246 },
-    logo: { x: 15, y: 16, w: 65.26, h: 28.75 },
-    cta: { x: 840, y: 23, w: 91.23, h: 36, radius: 7.38 },
-    text: [
-      { role: 'headline', x: 548, y: 8, w: 272, h: 46, size: 22, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 548, y: 58, w: 272, h: 11, size: 10.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
-      { role: 'cta', x: 856.62, y: 34, w: 58, h: 14, size: 13.85, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 548, y: 74, w: 402, h: 8, size: 7, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-1200x270', w: 1200, h: 270,
-    art: { x: 473.6, y: -237.89, size: 745.4 },
-    mask: { angle: 90, stops: [[0, 0], [0.346, 0.5], [0.522, 1], [1, 1]] },
-    logo: { x: 1113.39, y: 13, w: 68.61, h: 30.23 },
-    cta: { x: 30, y: 163, w: 103.85, h: 41, radius: 8.41 },
-    text: [
-      { role: 'headline', x: 30, y: 23, w: 489, h: 76, size: 36, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 30, y: 105, w: 489, h: 42, size: 20, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'cta', x: 48.92, y: 175.5, w: 66, h: 16, size: 15.77, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 244, w: 533, h: 16, size: 14, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-300x1050', w: 300, h: 1050,
-    art: { x: -252.99, y: 296, size: 807.99 },
-    logo: { x: 10, y: 17, w: 56.81, h: 25.03 },
-    cta: { x: 94.69, y: 323.01, w: 110.62, h: 44, radius: 9.03 },
-    text: [
-      { role: 'headline', x: 20, y: 74.01, w: 260, h: 152, size: 36, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 20, y: 236.01, w: 260, h: 63, size: 20, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 115, y: 336.51, w: 70, h: 17, size: 16.92, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 12, y: 1024, w: 276, h: 14, size: 12, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-160x600', w: 160, h: 600,
-    art: { x: -146, y: 195, size: 456 },
-    logo: { x: 11, y: 12, w: 40.75, h: 17.95 },
-    cta: { x: 34.24, y: 219, w: 91.51, h: 36.31, radius: 7.45 },
-    text: [
-      { role: 'headline', x: 12, y: 53, w: 136, h: 84, size: 20, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 12, y: 145, w: 136, h: 56, size: 13, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 51, y: 230.15, w: 58, h: 14, size: 13.96, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 10, y: 578, w: 140, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-336x280', w: 336, h: 280,
-    art: { x: -63, y: -35, size: 462 },
-    logo: { x: 10, y: 10, w: 42.59, h: 18.76 },
-    text: [
-      { role: 'headline', x: 20, y: 37, w: 296, h: 50, size: 24, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 48, y: 91, w: 240, h: 29, size: 13.5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center', maxLines: 2 },
-      { role: 'disclaimer', x: 10, y: 262, w: 316, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-320x320', w: 320, h: 320,
-    art: { x: -122.99, y: -66, size: 565.99 },
-    logo: { x: 10.67, y: 10.67, w: 49.64, h: 21.87 },
-    text: [
-      { role: 'headline', x: 20, y: 40.53, w: 280, h: 48, size: 23, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 20, y: 92.53, w: 280, h: 28, size: 13, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 12, y: 298, w: 296, h: 12, size: 10.67, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-360x640', w: 360, h: 640,
-    art: { x: -264, y: 9, size: 888 },
-    logo: { x: 14, y: 18, w: 59.02, h: 26 },
-    cta: { x: 119.22, y: 232, w: 121.56, h: 48.28, radius: 9.9 },
-    text: [
-      { role: 'headline', x: 18, y: 66, w: 324, h: 102, size: 32, face: 'headline', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'subcopy', x: 18, y: 174, w: 324, h: 40, size: 19, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 141.5, y: 246.64, w: 77, h: 19, size: 18.57, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 20, y: 610, w: 320, h: 14, size: 12, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-320x100', w: 320, h: 100,
-    art: { x: 107, y: -88, size: 276.28 },
-    mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
-    logo: { x: 281.19, y: 8, w: 31.18, h: 13.74 },
-    cta: { x: 8, y: 64, w: 50.54, h: 20.08, radius: 4.12 },
-    text: [
-      { role: 'headline', x: 8, y: 10, w: 171, h: 30, size: 14, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 8, y: 43, w: 171, h: 16, size: 8, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'cta', x: 17.27, y: 70.04, w: 32, h: 8, size: 7.72, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 8, y: 89, w: 140, h: 7, size: 6, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-320x50', w: 320, h: 50,
-    art: { x: 14, y: -45, size: 140.38 },
-    logo: { x: 6, y: 5, w: 27.04, h: 11.91 },
-    cta: { x: 264, y: 16.57, w: 42.57, h: 16.87, radius: 3.46 },
-    text: [
-      { role: 'headline', x: 132, y: 4.44, w: 122, h: 22, size: 10, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 132, y: 28.44, w: 122, h: 6, size: 5.5, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
-      { role: 'cta', x: 271.79, y: 22, w: 27, h: 6, size: 6.49, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 132, y: 41, w: 176, h: 5, size: 4.5, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-970x250', w: 970, h: 250,
-    art: { x: 368, y: -218, size: 686 },
-    logo: { x: 880, y: 13, w: 68.61, h: 30.23 },
-    cta: { x: 30, y: 170, w: 104.15, h: 41.33, radius: 8.48 },
-    text: [
-      { role: 'headline', x: 30, y: 24, w: 443, h: 76, size: 36, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 30, y: 108, w: 443, h: 42, size: 20, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'cta', x: 49.07, y: 182.66, w: 66, h: 16, size: 15.89, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 224, w: 470, h: 16, size: 14, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-728x90', w: 728, h: 90,
-    art: { x: 66, y: -77.96, size: 245.92 },
-    logo: { x: 12, y: 8, w: 36.32, h: 16 },
-    cta: { x: 602, y: 28.01, w: 85.37, h: 33.98, radius: 6.97 },
-    text: [
-      { role: 'headline', x: 332, y: 8, w: 300, h: 42, size: 20, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 332, y: 56, w: 246, h: 12, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left', maxLines: 1 },
-      { role: 'cta', x: 617.68, y: 38.5, w: 54, h: 13, size: 13.07, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 332, y: 74, w: 328, h: 8, size: 7, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-300x600', w: 300, h: 600,
-    art: { x: -260, y: 9, size: 822 },
-    logo: { x: 10, y: 17, w: 56.81, h: 25.03 },
-    cta: { x: 99.46, y: 200, w: 101.07, h: 40.16, radius: 8.24 },
-    text: [
-      { role: 'headline', x: 10, y: 56, w: 280, h: 90, size: 28, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 10, y: 150, w: 280, h: 34, size: 16, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 118, y: 212.58, w: 64, h: 15, size: 15.45, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 12, y: 574, w: 276, h: 14, size: 12, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-120x600', w: 120, h: 600,
-    art: { x: -112.66, y: 254, size: 349.66 },
-    logo: { x: 8, y: 10, w: 41.82, h: 18.42 },
-    cta: { x: 24.58, y: 234, w: 70.85, h: 28, radius: 5.74 },
-    text: [
-      { role: 'headline', x: 10, y: 52, w: 100, h: 114, size: 18, face: 'headline', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'subcopy', x: 10, y: 172, w: 100, h: 48, size: 11, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 37.5, y: 242.5, w: 45, h: 11, size: 10.77, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 6, y: 578, w: 108, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-300x250', w: 300, h: 250,
-    art: { x: -57.01, y: -27, size: 414.01 },
-    logo: { x: 10, y: 10, w: 42.18, h: 18.58 },
-    text: [
-      { role: 'headline', x: 20, y: 34, w: 260, h: 46, size: 22, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 20, y: 84, w: 260, h: 25.5, size: 12, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 10, y: 230, w: 280, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'dv360-250x250', w: 250, h: 250,
-    art: { x: -82, y: -38, size: 420 },
-    logo: { x: 10, y: 10, w: 35.19, h: 15.5 },
-    text: [
-      { role: 'headline', x: 10, y: 33, w: 230, h: 38, size: 18, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 10, y: 75, w: 230, h: 21.25, size: 10, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 10, y: 230, w: 230, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-960x1200', w: 960, h: 1200,
-    art: { x: -513.5, y: -175.5, size: 1987.5 },
-    logo: { x: 34, y: 33, w: 122.58, h: 54 },
-    cta: { x: 379.61, y: 376, w: 200.78, h: 79.93, radius: 16.4 },
-    text: [
-      { role: 'headline', x: 80, y: 118, w: 800, h: 140, size: 66, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 80, y: 266, w: 800, h: 80, size: 38, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 416.5, y: 400.46, w: 127, h: 31, size: 30.74, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 35, y: 1151, w: 890, h: 26, size: 22, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-1200x1200', w: 1200, h: 1200,
-    art: { x: -434.5, y: -219.75, size: 2077.5 },
-    logo: { x: 33, y: 33, w: 113.5, h: 50 },
-    cta: { x: 502, y: 359, w: 196, h: 78, radius: 16 },
-    text: [
-      { role: 'headline', x: 200, y: 87, w: 800, h: 144, size: 68, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 200, y: 243, w: 800, h: 80, size: 38, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 538, y: 383, w: 124, h: 30, size: 30, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 1135, w: 1140, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-1200x628', w: 1200, h: 628,
-    art: { x: 40, y: -479, size: 1606.95 },
-    logo: { x: 1056, y: 30, w: 113.5, h: 50 },
-    cta: { x: 40, y: 307, w: 135.9, h: 54.06, radius: 11.09 },
-    text: [
-      { role: 'headline', x: 40, y: 46, w: 486, h: 165, size: 52, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 40, y: 225, w: 486, h: 62, size: 29, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 64.95, y: 323.53, w: 86, h: 21, size: 20.79, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 40, y: 585, w: 486, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1080x1350', w: 1080, h: 1350,
-    art: { x: -578, y: -197, size: 2235.38 },
-    logo: { x: 38.25, y: 37.13, w: 137.9, h: 60.75 },
-    cta: { x: 435, y: 421.3, w: 210, h: 89.92, radius: 18.45 },
-    text: [
-      { role: 'headline', x: 90, y: 132.75, w: 900, h: 154.96, size: 74.25, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 140, y: 296.71, w: 800, h: 90.84, size: 42.75, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'center' },
-      { role: 'cta', x: 476.5, y: 450.76, w: 127, h: 31, size: 34.58, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 39.38, y: 1294.88, w: 1001.25, h: 29.25, size: 24.75, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-800x600', w: 800, h: 600,
-    art: { x: 52, y: -165, size: 1020.14 },
-    logo: { x: 685.08, y: 23.94, w: 90.58, h: 39.9 },
-    cta: { x: 31.92, y: 245.53, w: 108.83, h: 47, radius: 8.85 },
-    text: [
-      { role: 'headline', x: 31.92, y: 36.71, w: 387.87, h: 131.68, size: 41.5, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 31.92, y: 179.57, w: 387.87, h: 50, size: 23.14, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 51.84, y: 260.53, w: 69, h: 17, size: 16.59, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 31.92, y: 565.68, w: 387.87, h: 18.36, size: 15.96, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-600x800', w: 600, h: 800,
-    art: { x: -321, y: -84, size: 1241.88 },
-    logo: { x: 21.25, y: 20.63, w: 76.61, h: 33.75 },
-    cta: { x: 236.94, y: 238.59, w: 126.11, h: 53, radius: 10.25 },
-    text: [
-      { role: 'headline', x: 50, y: 73.75, w: 500, h: 86.09, size: 41.25, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 50, y: 169.84, w: 500, h: 50, size: 23.75, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 260, y: 255.59, w: 80, h: 19, size: 19.21, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 21.88, y: 769.38, w: 556.25, h: 16.25, size: 13.75, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1080x1920', w: 1080, h: 1920,
-    art: { x: -902.37, y: -240.37, size: 2892.37 },
-    logo: { x: 38.25, y: 37.13, w: 137.9, h: 60.75 },
-    cta: { x: 435, y: 420.46, w: 210, h: 89.92, radius: 18.45 },
-    text: [
-      { role: 'headline', x: 90, y: 132.75, w: 900, h: 154.96, size: 74.25, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 90, y: 296.71, w: 900, h: 90, size: 42.75, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 476.5, y: 449.92, w: 127, h: 31, size: 34.58, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 39.38, y: 1864.88, w: 1001.25, h: 29.25, size: 24.75, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1200x700', w: 1200, h: 700,
-    art: { x: -29, y: -531, size: 1769.15 },
-    logo: { x: 1047.97, y: 31.67, w: 119.83, h: 52.79 },
-    cta: { x: 42.23, y: 324.12, w: 138.69, h: 57.08, radius: 11.71 },
-    text: [
-      { role: 'headline', x: 42.23, y: 48.57, w: 513.1, h: 174.2, size: 54.9, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 42.23, y: 237.55, w: 513.1, h: 65.46, size: 30.62, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 68.57, y: 342.16, w: 86, h: 21, size: 21.95, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 42.23, y: 654.6, w: 513.1, h: 24.28, size: 21.12, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1080x608', w: 1080, h: 608,
-    art: { x: 30, y: -438, size: 1518.3 },
-    logo: { x: 945.58, y: 28, w: 105.95, h: 46.67 },
-    cta: { x: 37.34, y: 286.57, w: 127.58, h: 53, radius: 10.35 },
-    text: [
-      { role: 'headline', x: 37.34, y: 42.94, w: 453.66, h: 154.02, size: 48.54, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 37.34, y: 210.03, w: 453.66, h: 57.87, size: 27.07, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 60.63, y: 303.57, w: 81, h: 19, size: 19.41, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 37.34, y: 567.86, w: 453.66, h: 21.47, size: 18.67, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-970x250', w: 970, h: 250,
-    art: { x: 386, y: -191.44, size: 632.89 },
-    mask: { angle: 90, stops: [[0, 0], [0.396, 0], [0.607, 1], [1, 1]] },
-    logo: { x: 880, y: 13, w: 68.61, h: 30.23 },
-    cta: { x: 30, y: 170, w: 104.15, h: 41.33, radius: 8.48 },
-    text: [
-      { role: 'headline', x: 30, y: 24, w: 443, h: 76, size: 36, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 30, y: 108, w: 443, h: 42, size: 20, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'cta', x: 49.07, y: 182.66, w: 66, h: 16, size: 15.89, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 224, w: 470, h: 16, size: 14, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1080x1800', w: 1080, h: 1800,
-    art: { x: -902.37, y: -296, size: 2884.37 },
-    logo: { x: 38.25, y: 37.13, w: 137.9, h: 60.75 },
-    cta: { x: 435, y: 422.46, w: 210, h: 89.92, radius: 18.45 },
-    text: [
-      { role: 'headline', x: 90, y: 132.75, w: 900, h: 154.96, size: 74.25, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 90, y: 298.71, w: 900, h: 90, size: 42.75, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 476.5, y: 451.92, w: 127, h: 31, size: 34.58, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 39.38, y: 1744.88, w: 1001.25, h: 29.25, size: 24.75, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1080x1080', w: 1080, h: 1080,
-    art: { x: -391, y: -198, size: 1869.3 },
-    logo: { x: 29.7, y: 29.7, w: 102.15, h: 45 },
-    cta: { x: 451.8, y: 321.46, w: 176.4, h: 70.2, radius: 14.4 },
-    text: [
-      { role: 'headline', x: 180, y: 78.3, w: 720, h: 127.96, size: 61.2, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 180, y: 217.06, w: 720, h: 72, size: 34.2, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 484.2, y: 343.06, w: 111.6, h: 27, size: 27, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 27, y: 1021.5, w: 1026, h: 20.7, size: 18, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1000x1000', w: 1000, h: 1000,
-    art: { x: -362, y: -183, size: 1730.83 },
-    logo: { x: 27.5, y: 27.5, w: 94.58, h: 41.67 },
-    cta: { x: 418.33, y: 297.65, w: 163.33, h: 65, radius: 13.33 },
-    text: [
-      { role: 'headline', x: 166.67, y: 72.5, w: 666.67, h: 118.48, size: 56.67, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 166.67, y: 200.98, w: 666.67, h: 66.67, size: 31.67, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 448.33, y: 317.65, w: 103.33, h: 25, size: 25, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 25, y: 945.83, w: 950, h: 19.17, size: 16.67, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'pmax-d2c-1500x1500', w: 1500, h: 1500,
-    art: { x: -542, y: -275, size: 2596.25 },
-    logo: { x: 41.25, y: 41.25, w: 141.88, h: 62.5 },
-    cta: { x: 627.5, y: 446.48, w: 245, h: 97.5, radius: 20 },
-    text: [
-      { role: 'headline', x: 250, y: 108.75, w: 1000, h: 177.73, size: 85, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 250, y: 301.48, w: 1000, h: 100, size: 47.5, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 672.5, y: 476.48, w: 155, h: 37.5, size: 37.5, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 37.5, y: 1418.75, w: 1425, h: 28.75, size: 25, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'meta-1080x1440', w: 1080, h: 1440,
-    art: { x: -744, y: -333, size: 2572 },
-    logo: { x: 33, y: 33, w: 113.5, h: 50 },
-    cta: { x: 447, y: 385, w: 196, h: 78, radius: 16 },
-    text: [
-      { role: 'headline', x: 145, y: 113, w: 800, h: 144, size: 68, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 145, y: 269, w: 800, h: 80, size: 38, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 483, y: 409, w: 124, h: 30, size: 30, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 1375, w: 1020, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'meta-1080x1080', w: 1080, h: 1080,
-    art: { x: -376, y: -168.5, size: 1836 },
-    logo: { x: 33, y: 33, w: 113.5, h: 50 },
-    cta: { x: 447, y: 347, w: 196, h: 78, radius: 16 },
-    text: [
-      { role: 'headline', x: 145, y: 95, w: 800, h: 144, size: 68, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 145, y: 251, w: 800, h: 60, size: 28, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 483, y: 371, w: 124, h: 30, size: 30, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 1015, w: 1020, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'meta-398x208', w: 398, h: 208,
-    art: { x: 77, y: -114, size: 469 },
-    mask: { angle: 90, stops: [[0, 0], [0.359, 0], [0.507, 1], [1, 1]] },
-    logo: { x: 341, y: 10, w: 46.54, h: 20.5 },
-    cta: { x: 20, y: 131, w: 100.92, h: 40, radius: 8.21 },
-    text: [
-      { role: 'headline', x: 20, y: 20, w: 207, h: 69, size: 22, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 20, y: 95, w: 207, h: 26, size: 12, face: 'text', lineHeightPct: 106, trackingPct: -1, align: 'left' },
-      { role: 'cta', x: 38.46, y: 143.5, w: 64, h: 15, size: 15.38, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 20, y: 186, w: 366, h: 12, size: 10, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'meta-1080x1920', w: 1080, h: 1920,
-    art: { x: -950, y: -347, size: 3000 },
-    logo: { x: 33, y: 33, w: 113.5, h: 50 },
-    cta: { x: 447, y: 389, w: 196, h: 78, radius: 16 },
-    text: [
-      { role: 'headline', x: 145, y: 137, w: 800, h: 144, size: 68, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 145, y: 293, w: 800, h: 60, size: 28, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 483, y: 413, w: 124, h: 30, size: 30, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 1855, w: 1020, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'sem-1200x1200', w: 1200, h: 1200,
-    art: { x: -434.5, y: -219.75, size: 2077.5 },
-    logo: { x: 33, y: 33, w: 113.5, h: 50 },
-    cta: { x: 502, y: 359, w: 196, h: 78, radius: 16 },
-    text: [
-      { role: 'headline', x: 200, y: 87, w: 800, h: 144, size: 68, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'subcopy', x: 200, y: 243, w: 800, h: 80, size: 38, face: 'text', lineHeightPct: 106, trackingPct: 0, align: 'center' },
-      { role: 'cta', x: 538, y: 383, w: 124, h: 30, size: 30, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 30, y: 1135, w: 1140, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
-  {
-    key: 'sem-1200x628', w: 1200, h: 628,
-    art: { x: 0, y: -489.48, size: 1606.95 },
-    logo: { x: 1056, y: 30, w: 113.5, h: 50 },
-    cta: { x: 40, y: 307, w: 135.9, h: 54.06, radius: 11.09 },
-    text: [
-      { role: 'headline', x: 40, y: 46, w: 486, h: 165, size: 52, face: 'headline', lineHeightPct: 106, trackingPct: 0, align: 'left' },
-      { role: 'subcopy', x: 40, y: 225, w: 486, h: 62, size: 29, face: 'text', lineHeightPct: 106, trackingPct: -2, align: 'left' },
-      { role: 'cta', x: 64.95, y: 323.53, w: 86, h: 21, size: 20.79, face: 'text', lineHeightPct: 100, trackingPct: 0, align: 'center' },
-      { role: 'disclaimer', x: 40, y: 585, w: 486, h: 23, size: 20, face: 'text', lineHeightPct: null, trackingPct: 0, align: 'left' },
-    ],
-  },
+  S('criteo-1200x1200', 1200, 1200, [-386,-138,1961.76], 0, [33,33,113.5,50], [502,407,196,78,16], [["disclaimer",30,1135,1140,23,20,"t",null,0,"l"],["eyebrow",200,87,800,36,34,"t",106,0,"c"],["headline",200,135,800,144,68,"h",106,0,"c"],["subcopy",200,291,800,80,38,"t",106,0,"c"],["cta",538,431,124,30,30,"t",100,0,"c"]]),
+  S('criteo-960x1200', 960, 1200, [-480,-109,1917.86], 0, [34,33,122.58,54], [379.61,420,200.78,79.93,16.4], [["disclaimer",35,1151,890,26,22,"t",null,0,"l"],["eyebrow",80,118,800,36,34,"t",106,0,"c"],["headline",80,162,800,140,66,"h",106,0,"c"],["subcopy",80,310,800,80,38,"t",106,0,"c"],["cta",416.5,444.46,127,31,30.74,"t",100,0,"c"]]),
+  S('criteo-800x1200', 800, 1200, [-465,29,1711.22], 0, [28,34,102.15,45], [294.15,486,211.71,84.18,17.27], [["disclaimer",30,1151,740,23,20,"t",null,0,"l"],["eyebrow",34,105,732,36,34,"t",106,0,"c"],["headline",34,153,732,207,65,"h",106,0,"c"],["subcopy",34,372,732,80,38,"t",106,0,"c"],["cta",333,512.09,134,32,32.38,"t",100,0,"c"]]),
+  S('criteo-768x1024', 768, 1024, [-302,94,1357.29], 0, [28,34,102.15,45], [282.82,441,202.36,80.56,16.53], [["disclaimer",30,975,708,23,20,"t",null,0,"l"],["eyebrow",35,95,698,32,30,"t",106,0,"c"],["headline",35,139,698,192,60,"h",106,0,"c"],["subcopy",35,343,698,68,32,"t",106,0,"c"],["cta",320,465.78,128,31,30.99,"t",100,0,"c"]]),
+  S('criteo-1024x768', 1024, 768, [59,-201,1356], 0, [849,40,133.93,59], [40,378,203.88,81.12,16.64], [["disclaimer",40,712,984,26,22,"t",null,0,"l"],["eyebrow",40,60,669,32,30,"t",106,0,"l"],["headline",40,102,669,118,56,"h",106,0,"l"],["subcopy",40,230,433,114,36,"t",106,0,"l"],["cta",77.44,403.05,129,31,31.2,"t",100,0,"c"]]),
+  S('criteo-360x640', 360, 640, [-212,84,784], 0, [14,18,59.02,26], [119.22,276,121.56,48.28,9.9], [["disclaimer",20,610,320,14,12,"t",null,0,"l"],["eyebrow",18,66,324,18,17,"t",106,0,"c"],["headline",18,90,324,102,32,"h",106,0,"c"],["subcopy",18,198,324,60,19,"t",106,0,"c"],["cta",141.5,290.64,77,19,18.57,"t",100,0,"c"]]),
+  S('criteo-1200x628', 1200, 628, [40,-491,1622], 0, [1056,30,113.5,50], [40,346,135.9,54.06,11.09], [["disclaimer",40,585,1160,23,20,"t",null,0,"l"],["eyebrow",40,46,569,29,27,"t",106,0,"l"],["headline",40,87,569,165,52,"h",106,0,"l"],["subcopy",40,264,569,62,29,"t",106,0,"l"],["cta",64.95,362.53,86,21,20.79,"t",100,0,"c"]]),
+  S('criteo-300x600', 300, 600, [-232,53,763], 0, [10,17,56.81,25.03], [99.46,241.69,101.07,40.16,8.24], [["disclaimer",12,574,276,14,12,"t",null,0,"l"],["eyebrow",10,56,280,38,18,"t",106,0,"c"],["headline",10,98,280,90,28,"h",106,0,"c"],["subcopy",10,192,280,33.68,16,"t",106,0,"c"],["cta",118,254.27,64,15,15.45,"t",100,0,"c"]]),
+  S('criteo-160x600', 160, 600, [-148,190,455], 0, [11,12,40.75,17.95], [34.24,256.71,91.51,36.31,7.45], [["disclaimer",10,576.8,140,13.2,11,"t",null,0,"l"],["eyebrow",12,53,136,30,14,"t",106,0,"c"],["headline",12,91,136,84,20,"h",106,0,"c"],["subcopy",12,183,136,55.71,13,"t",106,0,"c"],["cta",51,267.87,58,14,13.96,"t",100,0,"c"]]),
+  S('criteo-120x600', 120, 600, [-114,253,348], 0, [8,10,41.82,18.42], [23.8,281,72.4,28.6,5.87], [["disclaimer",6,576.8,108,13.2,11,"t",null,0,"l"],["eyebrow",10,52,100,24,11,"t",106,0,"c","Lorem ipsum dolor sit amet"],["headline",10,82,100,114,18,"h",106,0,"c"],["subcopy",10,202,100,65,12,"t",106,0,"c"],["cta",37,289.8,46,11,11,"t",100,0,"c"]]),
+  S('criteo-320x568', 320, 568, [-235,7,789.33], 0, [12,12,52.19,22.99], [109.46,206.48,101.07,40.16,8.24], [["disclaimer",12,542,296,14,12,"t",null,0,"l"],["eyebrow",20,56,280,13,12,"t",106,0,"c"],["headline",20,73,280,84,26,"h",106,0,"c"],["subcopy",20,161,280,29.47,14,"t",106,0,"c"],["cta",128,219.05,64,15,15.45,"t",100,0,"c"]]),
+  S('criteo-320x480', 320, 480, [-155,51,626.12], 0, [12,12,52.19,22.99], [111.85,209.69,96.29,38.23,7.84], [["disclaimer",12,454.8,296,13.2,11,"t",null,0,"l"],["eyebrow",16,55,288,15,14,"t",106,0,"c"],["headline",16,74,288,84,26,"h",106,0,"c"],["subcopy",16,162,288,33.68,16,"t",106,0,"c"],["cta",129.5,221.3,61,15,14.71,"t",100,0,"c"]]),
+  S('criteo-640x360', 640, 360, [97,-156,732], 0, [563.2,16,60.53,26.67], [21.34,160.97,104.15,41.33,8.48], [["disclaimer",21.34,336.34,259.2,13,11,"t",null,0,"l"],["eyebrow",21.34,25,328,15.04,14,"t",106,0,"l"],["headline",21.34,47.5,328,60,28,"h",106,0,"l"],["subcopy",21.34,114.97,328,34,16,"t",106,0,"l"],["cta",40.41,173.63,66,16,15.89,"t",100,0,"c"]]),
+  S('criteo-480x320', 480, 320, [76,-73,554], M(90, [[0,0],[0.3979,0],[0.5343,1],[1,1]]), [396,20,63.56,28], [18,159,96.29,38.23,7.84], [["disclaimer",18,291.94,462,14,12,"t",null,0,"l"],["eyebrow",18,24,312,15,14,"t",106,0,"l"],["headline",18,47,312,56,26,"h",106,0,"l"],["subcopy",18,111,312,34,16,"t",106,0,"l"],["cta",35.65,170.62,61,15,14.71,"t",100,0,"c"]]),
+  S('criteo-300x300', 300, 300, [-84,-18,465.74], 0, [10,10,46.54,20.5], 0, [["eyebrow",20,38,260,11.65,11,"t",106,0,"c"],["headline",20,53.65,260,46,22,"h",106,0,"c"],["subcopy",20,103.65,260,26,12,"t",106,0,"c"],["disclaimer",12,276.8,276,13.2,11,"t",null,0,"l"]]),
+  S('criteo-336x280', 336, 280, [-30,11,393.53], 0, [10,10,42.59,18.76], 0, [["eyebrow",20,37,296,12,11,"t",106,0,"c"],["headline",20,53,296,50,24,"h",106,0,"c"],["subcopy",20,107,296,28,13,"t",106,0,"c"],["disclaimer",10,260.8,316,13.2,11,"t",null,0,"l"]]),
+  S('criteo-970x250', 970, 250, [368,-191,632.89], M(90, [[0,0],[0.3979,0],[0.4958,1],[1,1]]), [880,13,68.61,30.23], [30,173,104.15,41.33,8.48], [["disclaimer",30,224,470,16,14,"t",null,0,"l"],["eyebrow",30,18,407,18,17,"t",106,0,"l"],["headline",30,44,407,70,33,"h",106,0,"l"],["subcopy",30,122,407,36,17,"t",106,0,"l"],["cta",49.07,185.66,66,16,15.89,"t",100,0,"c"]]),
+  S('criteo-300x250', 300, 250, [-21,16,341.18], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,12,11,"t",106,0,"c"],["headline",20,48,260,46,22,"h",106,0,"c"],["subcopy",20,98,260,26,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('criteo-250x250', 250, 250, [-57,-1,367.65], 0, [10,10,35.19,15.5], 0, [["eyebrow",10,33,230,12,11,"t",106,0,"c"],["headline",10,49,230,38,18,"h",106,0,"c"],["subcopy",10,91,230,24,11,"t",106,0,"c"],["disclaimer",10,228.8,230,13.2,11,"t",null,0,"l"]]),
+  S('criteo-240x240', 240, 240, [-43,16,326.69], 0, [9.6,9.6,33.78,14.88], 0, [["eyebrow",9.6,36,220.8,11.65,11,"t",106,0,"c"],["headline",9.6,51.48,220.8,38,18,"h",106,0,"c"],["subcopy",9.6,93.33,220.8,26,12,"t",106,0,"c"],["disclaimer",9.6,219.32,220.8,13,11,"t",null,0,"l"]]),
+  S('criteo-280x230', 280, 230, [-36,-12,353.73], 0, [10,10,34.49,15.19], 0, [["headline",12,30,256,42,20,"h",106,0,"c"],["subcopy",12,76,256,24,11,"t",106,0,"c"],["disclaimer",10,208.8,260,13.2,11,"t",null,0,"l"]]),
+  S('criteo-200x200', 200, 200, [-37,12,274.51], 0, [8,7.67,31.39,13.83], 0, [["headline",10,27,180,31.67,15,"h",106,0,"c"],["subcopy",10,62.66,180,36,11,"t",106,0,"c"]]),
+  S('criteo-170x128', 170, 128, [-22,-26,214.77], 0, [5.56,5.56,19.19,8.46], 0, [["headline",6.68,18,156.64,23.22,11,"h",106,0,"c"]]),
+  S('criteo-320x100', 320, 100, [93,-90,279.41], M(90, [[0,0],[0.5024,0],[0.57,1],[0.8407,1],[0.9084,0],[1,0]]), [281.19,8,31.18,13.74], [8,45,72.4,28.6,5.87], [["disclaimer",8,83.16,140,12.83,11,"t",null,0,"l"],["headline",8,10,171,30,14,"h",106,0,"l"],["cta",21.2,53.8,46,11,11,"t",100,0,"c"]]),
+  S('criteo-300x100', 300, 100, [103,-69,237.6], M(90, [[0,0],[0.5354,0],[0.5968,1],[0.8423,1],[0.9037,0],[1,0]]), [260.82,8,31.18,13.74], [8,46,72.4,28.6,5.87], [["disclaimer",8,83.63,130,12.38,11,"t",null,0,"l"],["headline",8,10,181,30,14,"h",106,0,"l"],["cta",21.2,54.8,46,11,11,"t",100,0,"c"]]),
+  S('criteo-970x90', 970, 90, [171,-81,251.47], 0, [15,16,65.26,28.75], [840,27,91.23,36,7.38], [["disclaimer",548,65,402,12.57,11,"t",null,0,"l"],["headline",548,10,272,46,22,"h",106,0,"l"],["cta",856.62,38,58,14,13.85,"t",100,0,"c"]]),
+  S('criteo-728x90', 728, 90, [47,-81,251.47], 0, [12,8,36.32,16], [602,28.01,85.37,33.98,6.97], [["disclaimer",332,69.43,328,12.57,11,"t",null,0,"l"],["headline",332,7,246,42,20,"h",106,0,"l"],["subcopy",332,53,246,12,11,"t",106,-1,"l","Lorem ipsum dolor sit amet, consectetur adipiscing"],["cta",617.68,38.5,54,13,13.07,"t",100,0,"c"]]),
+  S('criteo-468x60', 468, 60, [33,-54,167.65], 0, [10,8,29.67,13.07], [386,15.7,72.4,28.6,5.87], [["disclaimer",207.34,38.8,241.33,13.2,11,"t",null,0,"l"],["headline",208,9,170,28,13,"h",106,0,"l"],["cta",399.2,24.5,46,11,11,"t",100,0,"c"]]),
+  S('criteo-320x50', 320, 50, [-8,-45,140], 0, [6,5,22,10], [242.2,10.7,72.4,28.6,5.87], [["headline",98,12.9,134.2,24.2,11,"h",106,0,"l"],["cta",255.41,19.5,46,11,11,"t",100,0,"c"]]),
+  S('dv360-300x1050', 300, 1050, [-253,296,807.99], 0, [10,17,56.81,25.03], [94.7,375.02,110.62,44,9.03], [["disclaimer",12,1024,276,14,12,"t",null,0,"l"],["eyebrow",20,74.02,260,42,20,"t",106,0,"c"],["headline",20,126.02,260,152,36,"h",106,0,"c"],["subcopy",20,288.02,260,63,20,"t",106,0,"c"],["cta",115,388.52,70,17,16.92,"t",100,0,"c"]]),
+  S('dv360-375x667', 375, 667, [-275,9,925.46], 0, [14,19,61.48,27.08], [124.42,250,126.15,50,10.26], [["disclaimer",20,635.84,335,16,14,"t",null,0,"l"],["eyebrow",20.84,69,333.33,17,16,"t",106,0,"c"],["headline",20.84,90,333.33,102,32,"h",106,0,"c"],["subcopy",20.84,196,333.33,38,18,"t",106,0,"c"],["cta",147.5,265.5,80,19,19.23,"t",100,0,"c"]]),
+  S('dv360-360x640', 360, 640, [-248,55,853.31], 0, [14,18,59.02,26], [119.22,276,121.56,48.28,9.9], [["disclaimer",20,610,320,14,12,"t",null,0,"l"],["eyebrow",18,66,324,18,17,"t",106,0,"c"],["headline",18,90,324,102,32,"h",106,0,"c"],["subcopy",18,198,324,60,19,"t",106,0,"c"],["cta",141.5,290.64,77,19,18.57,"t",100,0,"c"]]),
+  S('dv360-300x600', 300, 600, [-268,18,835.99], 0, [10,17,56.81,25.03], [99.46,241.69,101.07,40.16,8.24], [["disclaimer",12,574,276,14,12,"t",null,0,"l"],["eyebrow",10,56,280,38,18,"t",106,0,"c"],["headline",10,98,280,90,28,"h",106,0,"c"],["subcopy",10,192,280,33.68,16,"t",106,0,"c"],["cta",118,254.27,64,15,15.45,"t",100,0,"c"]]),
+  S('dv360-160x600', 160, 600, [-148,190,455], 0, [11,12,40.75,17.95], [34.24,257,91.51,36.31,7.45], [["disclaimer",10,576.8,140,13.2,11,"t",null,0,"l"],["eyebrow",12,53,136,30,14,"t",106,0,"c"],["headline",12,91,136,84,20,"h",106,0,"c"],["subcopy",12,183,136,56,13,"t",106,0,"c"],["cta",51,268.16,58,14,13.96,"t",100,0,"c"]]),
+  S('dv360-120x600', 120, 600, [-114,253,348], 0, [8,10,41.82,18.42], [23.8,281,72.4,28.6,5.87], [["disclaimer",6,576.8,108,13.2,11,"t",null,0,"l"],["eyebrow",10,52,100,24,11,"t",106,0,"c","Lorem ipsum dolor sit amet"],["headline",10,82,100,114,18,"h",106,0,"c"],["subcopy",10,202,100,65,12,"t",106,0,"c"],["cta",37,289.8,46,11,11,"t",100,0,"c"]]),
+  S('dv360-360x592', 360, 592, [-242,20,836.24], 0, [13,18,59.02,26], [119.34,236,121.31,48,9.85], [["disclaimer",20,562,320,14,12,"t",null,0,"l"],["eyebrow",18,66,324,19,18,"t",106,0,"c"],["headline",18,89,324,93,29,"h",106,0,"c"],["subcopy",18,186,324,34,16,"t",106,0,"c"],["cta",141.5,251,77,18,18.46,"t",100,0,"c"]]),
+  S('dv360-320x480', 320, 480, [-155,51,626.12], 0, [12,12,52.19,22.99], [111.85,209.69,96.29,38.23,7.84], [["disclaimer",12,454.8,296,13.2,11,"t",null,0,"l"],["eyebrow",16,55,288,15,14,"t",106,0,"c"],["headline",16,74,288,84,26,"h",106,0,"c"],["subcopy",16,162,288,33.68,16,"t",106,0,"c"],["cta",129.5,221.3,61,15,14.71,"t",100,0,"c"]]),
+  S('dv360-320x320', 320, 320, [-91,-21,499.02], 0, [10.66,10.66,49.64,21.87], 0, [["eyebrow",20,40.53,280,13,12,"t",106,0,"c"],["headline",20,57.53,280,48,23,"h",106,0,"c"],["subcopy",20,109.53,280,28,13,"t",106,0,"c"],["disclaimer",12,297.63,296,12.38,11,"t",null,0,"l"]]),
+  S('dv360-336x280', 336, 280, [-32,9,396.43], 0, [10,10,42.59,18.76], 0, [["eyebrow",20,37,296,11.65,11,"t",106,0,"c"],["headline",20,52.65,296,50,24,"h",106,0,"c"],["subcopy",20,106.65,296,27.37,13,"t",106,0,"c"],["disclaimer",10,260.8,316,13.2,11,"t",null,0,"l"]]),
+  S('dv360-1200x270', 1200, 270, [474,-238,745.4], M(90, [[0,0],[0.395,0],[0.4882,1],[1,1]]), [1113.38,13,68.61,30.23], [30,190,103.85,41,8.41], [["disclaimer",30,244,533,16,14,"t",null,0,"l"],["eyebrow",30,23,489,21,20,"t",106,0,"l"],["headline",30,50,489,76,36,"h",106,0,"l"],["subcopy",30,132,489,42,20,"t",106,0,"l"],["cta",48.92,202.5,66,16,15.77,"t",100,0,"c"]]),
+  S('dv360-970x250', 970, 250, [386,-191,632.89], M(90, [[0,0],[0.3979,0],[0.4958,1],[1,1]]), [880,13,68.61,30.23], [30,172.35,104.15,41.33,8.48], [["disclaimer",30,224,470,16,14,"t",null,0,"l"],["eyebrow",30,18,407,18.26,17,"t",106,0,"l"],["headline",30,44.26,407,68.75,33,"h",106,0,"l"],["subcopy",30,121.01,407,36.34,17,"t",106,0,"l"],["cta",49.07,185.02,66,16,15.89,"t",100,0,"c"]]),
+  S('dv360-800x250', 800, 250, [260,-220,692.5], M(90, [[0,0],[0.325,0],[0.4548,1],[1,1]]), [711,13.77,68.61,30.23], [25,159,103.85,41,8.41], [["disclaimer",30,223,770,16,14,"t",null,0,"l"],["eyebrow",25,24,469,17,16,"t",106,0,"l"],["headline",25,47,469,72,34,"h",106,0,"l"],["subcopy",25,125,469,16,15,"t",106,0,"l"],["cta",43.92,171.5,66,16,15.77,"t",100,0,"c"]]),
+  S('dv360-300x250', 300, 250, [-22,16,342.21], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,26,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('dv360-250x250', 250, 250, [-58,-2,368.69], 0, [10,10,35.19,15.5], 0, [["eyebrow",10,33,230,11.65,11,"t",106,0,"c"],["headline",10,48.65,230,38,18,"h",106,0,"c"],["subcopy",10,90.65,230,24,11,"t",106,0,"c"],["disclaimer",10,228.8,230,13.2,11,"t",null,0,"l"]]),
+  S('dv360-120x240', 120, 240, [-75,53,271.76], 0, [7,8,34.08,15.01], 0, [["headline",10,32,100,52,12,"h",106,0,"c"],["subcopy",10,90,100,48,11,"t",106,0,"c"],["disclaimer",10,223.16,100,12.83,11,"t",null,0,"l"]]),
+  S('dv360-125x125', 125, 125, [-32,-6,189.71], 0, [5.5,4.3,19.62,8.64], 0, [["headline",8,16.5,109,36,11,"h",106,0,"c"]]),
+  S('dv360-320x100', 320, 100, [93,-90,279.41], M(90, [[0,0],[0.5024,0],[0.57,1],[0.8407,1],[0.9084,0],[1,0]]), [281.19,8,31.18,13.74], [8,45,72.4,28.6,5.87], [["disclaimer",8,83.16,140,12.83,11,"t",null,0,"l"],["headline",8,10,171,30,14,"h",106,0,"l"],["cta",21.2,53.8,46,11,11,"t",100,0,"c"]]),
+  S('dv360-300x100', 300, 100, [103,-69,237.6], M(90, [[0,0],[0.5354,0],[0.5968,1],[0.8423,1],[0.9037,0],[1,0]]), [260.82,8,31.18,13.74], [8,46,72.4,28.6,5.87], [["disclaimer",8,83.63,130,12.38,11,"t",null,0,"l"],["headline",8,10,181,30,14,"h",106,0,"l"],["cta",21.2,54.8,46,11,11,"t",100,0,"c"]]),
+  S('dv360-970x90', 970, 90, [171,-81,251.47], 0, [15,16,65.26,28.75], [840,27,91.23,36,7.38], [["disclaimer",548,65,402,12.57,11,"t",null,0,"l"],["headline",548,10,272,46,22,"h",106,0,"l"],["cta",856.62,38,58,14,13.85,"t",100,0,"c"]]),
+  S('dv360-728x90', 728, 90, [47,-81,251.47], 0, [12,8,36.32,16], [602,28.01,85.37,33.98,6.97], [["disclaimer",332,69.43,328,12.57,11,"t",null,0,"l"],["headline",332,7,246,42,20,"h",106,0,"l"],["subcopy",332,53,246,12,11,"t",106,-1,"l","Lorem ipsum dolor sit amet, consectetur adipiscing"],["cta",617.68,38.5,54,13,13.07,"t",100,0,"c"]]),
+  S('dv360-468x60', 468, 60, [22,-54,167.65], 0, [10,8,29.67,13.07], [386,15.7,72.4,28.6,5.87], [["disclaimer",207.34,38.8,241.33,13.2,11,"t",null,0,"l"],["headline",208,9,170,28,13,"h",106,0,"l"],["cta",399.2,24.5,46,11,11,"t",100,0,"c"]]),
+  S('dv360-120x60', 120, 60, [45,-14,102], M(90, [[0,0],[0.2526,0],[0.5145,1],[1,1]]), [96.38,4,19.62,8.64], 0, [["headline",6,8,73,48,11,"h",106,0,"l"]]),
+  S('dv360-320x50', 320, 50, [-3,-45,140], 0, [6,5,22,9.69], [242.2,10.7,72.4,28.6,5.87], [["headline",98,12.9,134.2,24.2,11,"h",106,0,"l"],["cta",255.41,19.5,46,11,11,"t",100,0,"c"]]),
+  S('dv360-300x50', 300, 50, [142,-45,140], 0, [267.96,5,27.04,11.91], 0, [["headline",10,12,142,26,12,"h",106,0,"l"]]),
+  S('pmax-2000x2000', 2000, 2000, [-634,-234,3274.88], 0, [55,55,189.17,83.33], [836.5,676.54,327,130,26.67], [["disclaimer",50,1892.05,1881,37.95,33,"t",null,0,"l"],["eyebrow",333.34,145,1333.33,60.35,57,"t",106,0,"c"],["headline",333.34,225.35,1333.33,238.56,113,"h",106,0,"c"],["subcopy",333.34,483.91,1333.33,132.63,63,"t",106,0,"c"],["cta",896.5,716.54,207,50,50,"t",100,0,"c"]]),
+  S('pmax-1350x1688', 1350, 1688, [-679,-156,2702.12], 0, [47.81,46.41,172.38,75.94], [534.4,589.36,281.2,112.4,22.93], [["disclaimer",49.22,1619.02,1254.09,36.64,31,"t",null,0,"l"],["eyebrow",112.5,165.94,1125,50.82,48,"t",106,0,"c"],["headline",112.5,228.01,1125,196.33,93,"h",106,0,"c"],["subcopy",112.5,435.59,1125,111.58,53,"t",106,0,"c"],["cta",586,624.06,178,43,43,"t",100,0,"c"]]),
+  S('pmax-1200x1500', 1200, 1500, [-598,-132,2390.54], 0, [42.5,41.25,153.23,67.5], [475.9,527.3,248.2,99.91,20.27], [["disclaimer",43.75,1438.16,1132.73,33.09,28,"t",null,0,"l"],["eyebrow",100,148,1000,45.53,43,"t",106,0,"c"],["headline",100,203.53,1000,175.22,83,"h",106,0,"c"],["subcopy",100,388.75,1000,101.05,48,"t",106,0,"c"],["cta",521.5,558.26,157,38,38,"t",100,0,"c"]]),
+  S('pmax-2400x1256', 2400, 1256, [21,-1084,3424], 0, [2112,60,227,100], [80,700,274.8,108,22.4], [["disclaimer",80,1170,1682,46,40,"t",null,0,"l"],["eyebrow",80,92,1097,58,54,"t",106,0,"l"],["headline",80,178,1097,330,104,"h",106,0,"l"],["subcopy",80,536,1097,124,58,"t",106,0,"l"],["cta",130.4,733,174,42,42,"t",100,0,"c"]]),
+  S('pmax-1200x1200', 1200, 1200, [-386,-138,1961.76], 0, [33,33,113.5,50], [502,407,196,78,16], [["disclaimer",30,1135,1140,23,20,"t",null,0,"l"],["eyebrow",200,87,800,36,34,"t",106,0,"c"],["headline",200,135,800,144,68,"h",106,0,"c"],["subcopy",200,291,800,80,38,"t",106,0,"c"],["cta",538,431,124,30,30,"t",100,0,"c"]]),
+  S('pmax-960x1200', 960, 1200, [-480,-109,1917.86], 0, [34,33,122.58,54], [379.61,420,200.78,79.93,16.4], [["disclaimer",35,1151,890,26,22,"t",null,0,"l"],["eyebrow",80,118,800,36,34,"t",106,0,"c"],["headline",80,162,800,140,66,"h",106,0,"c"],["subcopy",80,310,800,80,38,"t",106,0,"c"],["cta",416.5,444.46,127,31,30.74,"t",100,0,"c"]]),
+  S('pmax-1920x1080', 1920, 1080, [53,-779,2699.21], 0, [1689.6,48,181.6,80], [64,556.11,216.27,85.87,17.61], [["disclaimer",64,1011,1856,37,32,"t",null,0,"l"],["eyebrow",64,74,929,45.11,42,"t",106,0,"l"],["headline",64,139.11,929,267,84,"h",106,0,"l"],["subcopy",64,426.11,929,98,46,"t",106,0,"l"],["cta",103.63,582.55,137,33,33.03,"t",100,0,"c"]]),
+  S('pmax-1920x1005', 1920, 1005, [10,-867,2739.74], 0, [1689.6,48,181.6,80], [64,558.7,216.2,86.5,17.6], [["disclaimer",64,936.2,1554,36.8,32,"t",null,0,"l"],["eyebrow",64,74,954,46.19,43,"t",106,0,"l"],["headline",64,142.59,954,263.37,83,"h",106,0,"l"],["subcopy",64,428.35,954,98.34,46,"t",106,0,"l"],["cta",103.6,585.45,137,33,33,"t",100,0,"c"]]),
+  S('pmax-640x960', 640, 960, [-372,24,1368.13], 0, [22.4,27.2,81.72,36], [234.8,389.09,170.4,67.35,13.87], [["disclaimer",24,920.8,592,18.4,16,"t",null,0,"l"],["eyebrow",27.2,84,585.6,27.53,26,"t",106,0,"c"],["headline",27.2,121.13,585.6,168,52,"h",106,0,"c"],["subcopy",27.2,298.73,585.6,63.16,30,"t",106,0,"c"],["cta",266,409.76,108,26,26,"t",100,0,"c"]]),
+  S('pmax-1600x837', 1600, 837, [0,-723,2282.67], 0, [1408,40,151.33,66.67], [53.34,465.98,183.2,72.08,14.93], [["disclaimer",53.34,779.28,656.1,31.05,27,"t",null,0,"l"],["eyebrow",53.34,61,767,38.67,36,"t",106,0,"l"],["headline",53.34,118.34,767,218.94,69,"h",106,0,"l"],["subcopy",53.34,355.95,767,83.38,39,"t",106,0,"l"],["cta",86.94,488.02,116,28,28,"t",100,0,"c"]]),
+  S('pmax-1200x628', 1200, 628, [11,-542,1712], 0, [1056,30,113.5,50], [40,346,135.9,54.06,11.09], [["disclaimer",40,585,1160,23,20,"t",null,0,"l"],["eyebrow",40,46,569,29,27,"t",106,0,"l"],["headline",40,87,569,165,52,"h",106,0,"l"],["subcopy",40,264,569,62,29,"t",106,0,"l"],["cta",64.95,362.53,86,21,20.79,"t",100,0,"c"]]),
+  S('pmax-1200x300', 1200, 300, [478,-241,782.96], M(90, [[0,0],[0.3983,0],[0.4962,1],[1,1]]), [1113.38,13,68.61,30.23], [30,204.09,104.4,41,8.53], [["disclaimer",30,274,533,16,14,"t",null,0,"l"],["eyebrow",30,38,489,19.33,18,"t",106,0,"l"],["headline",30,63.34,489,76,36,"h",106,0,"l"],["subcopy",30,145.34,489,42.76,20,"t",106,0,"l"],["cta",49.2,216.59,66,16,16,"t",100,0,"c"]]),
+  S('pmax-300x300', 300, 300, [-85,-20,467.91], 0, [10,10,46.54,20.5], 0, [["eyebrow",20,38,260,11.65,11,"t",106,0,"c"],["headline",20,53.65,260,46,22,"h",106,0,"c"],["subcopy",20,103.65,260,25.26,12,"t",106,0,"c"],["disclaimer",12,276.8,276,13.2,11,"t",null,0,"l"]]),
+  S('pmax-300x250', 300, 250, [-22,15,343.69], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,25.5,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('pmax-d2c-1080x1920', 1080, 1920, [-902,-240,2892.37], 0, [38.25,37.13,137.9,60.75], [427,470.73,226,89.92,18.45], [["disclaimer",39.38,1866.13,1001.25,28,24,"t",null,0,"l"],["eyebrow",90,132.75,900,40.24,38,"t",106,0,"c"],["headline",90,181.98,900,156,74,"h",106,0,"c"],["subcopy",90,346.98,900,90,42,"t",106,0,"c"],["cta",468.5,498.2,143,35,34.58,"t",100,0,"c"]]),
+  S('pmax-d2c-1080x1800', 1080, 1800, [-902,-296,2884.37], 0, [38.25,37.13,137.9,60.75], [427,474.73,226,89.92,18.45], [["disclaimer",39.38,1744.88,1001.25,29.25,24.75,"t",null,0,"l"],["eyebrow",90,132.75,900,40.24,38,"t",106,0,"c"],["headline",90,183.98,900,156,74,"h",106,0,"c"],["subcopy",90,350.98,900,90,42,"t",106,0,"c"],["cta",468.5,502.2,143,35,34.58,"t",100,0,"c"]]),
+  S('pmax-d2c-1500x1500', 1500, 1500, [-475,-175,2454.56], 0, [41.25,41.25,141.88,62.5], [627.5,507.95,245,97.5,20], [["disclaimer",37.5,1418.75,1425,28.75,25,"t",null,0,"l"],["eyebrow",250,108.75,1000,44.47,42,"t",106,0,"c"],["headline",250,168.22,1000,177.73,85,"h",106,0,"c"],["subcopy",250,360.95,1000,102,48,"t",106,0,"c"],["cta",672.5,537.7,155,38,37.5,"t",100,0,"c"]]),
+  S('pmax-d2c-1080x1350', 1080, 1350, [-563,-154,2204.65], 0, [38.25,37.13,137.9,60.75], [427,456.5,226,89.92,18.45], [["disclaimer",39.38,1296.13,1001.25,28,24,"t",null,0,"l"],["eyebrow",90,132.75,900,36,34,"t",106,0,"c"],["headline",90,177.75,900,156,74,"h",106,0,"c"],["subcopy",140,342.75,800,80,38,"t",106,0,"c"],["cta",468.5,483.96,143,35,34.58,"t",100,0,"c"]]),
+  S('pmax-d2c-1080x1080', 1080, 1080, [-347,-132,1776.87], 0, [29.7,29.7,102.15,45], [451.6,362.46,176.8,70.2,14.4], [["disclaimer",27,1021.5,1026,20.7,18,"t",null,0,"l"],["eyebrow",180,78.3,720,31.76,30,"t",106,0,"c"],["headline",180,120.06,720,128,60,"h",106,0,"c"],["subcopy",180,258.06,720,72,34,"t",106,0,"c"],["cta",484,384.06,112,27,27,"t",100,0,"c"]]),
+  S('pmax-d2c-1000x1000', 1000, 1000, [-318,-117,1637.8], 0, [27.5,27.5,94.58,41.67], [418,338.15,164,65,13.33], [["disclaimer",25,946,950,19,16,"t",null,0,"l"],["eyebrow",166.66,72.5,666.67,29.65,28,"t",106,0,"c"],["headline",166.66,112.15,666.67,118,56,"h",106,0,"c"],["subcopy",166.66,240.15,666.67,68,32,"t",106,0,"c"],["cta",448,358.15,104,25,25,"t",100,0,"c"]]),
+  S('pmax-d2c-600x800', 600, 800, [-321,-67,1241.87], 0, [21.25,20.63,76.61,33.75], [236.95,273.68,126.11,53,10.25], [["disclaimer",21.88,769.63,556.25,16,14,"t",null,0,"l"],["eyebrow",50,73.75,500,21.18,20,"t",106,0,"c"],["headline",50,104.93,500,90,42,"h",106,0,"c"],["subcopy",50,204.93,500,50,24,"t",106,0,"c"],["cta",260,290.68,80,19,19.21,"t",100,0,"c"]]),
+  S('pmax-d2c-1200x700', 1200, 700, [114,-365,1509.5], 0, [1047.97,31.67,119.83,52.79], [42.23,307.75,143.69,57.08,11.71], [["disclaimer",42.23,655.88,1157.77,23,20,"t",null,0,"l"],["eyebrow",42.23,49,647,30.07,28,"t",106,0,"l"],["headline",42.23,93.85,647,114,54,"h",106,0,"l"],["subcopy",42.23,222.63,647,64,30,"t",106,0,"l"],["cta",68.58,325.29,91,22,21.95,"t",100,0,"c"]]),
+  S('pmax-d2c-1080x608', 1080, 608, [131,-360.85,1364], 0, [945.59,28,105.95,46.67], [37.34,271.59,127.58,53,10.35], [["disclaimer",37.34,568.33,453.66,21,18,"t",null,0,"l"],["eyebrow",37.34,43,573,25.78,24,"t",106,0,"l"],["headline",37.34,81.84,573,102,48,"h",106,0,"l"],["subcopy",37.34,196.91,573,56,26,"t",106,0,"l"],["cta",60.63,288.59,81,19,19.41,"t",100,0,"c"]]),
+  S('pmax-d2c-800x600', 800, 600, [0,-172,1095], 0, [685.08,23.95,90.58,39.9], [31.92,238.98,108.83,47,8.85], [["disclaimer",31.92,565.04,768.08,19,16,"t",null,0,"l"],["eyebrow",31.92,37,496,23.63,22,"t",106,0,"l"],["headline",31.92,71.8,496,90,42,"h",106,0,"l"],["subcopy",31.92,172.98,496,50,24,"t",106,0,"l"],["cta",51.84,253.98,69,17,16.59,"t",100,0,"c"]]),
+  S('pmax-d2c-970x250', 970, 250, [386,-191,632.89], M(90, [[0,0],[0.3979,0],[0.4958,1],[1,1]]), [880,13,68.61,30.23], [30,172.35,104.15,41.33,8.48], [["disclaimer",30,224,470,16,14,"t",null,0,"l"],["eyebrow",30,18,407,18.26,17,"t",106,0,"l"],["headline",30,44.26,407,68.75,33,"h",106,0,"l"],["subcopy",30,121.01,407,36.34,17,"t",106,0,"l"],["cta",49.07,185.02,66,16,15.89,"t",100,0,"c"]]),
+  S('meta-1440x2560', 1440, 2560, [-1203,-320,3856.5], 0, [44,44,151.33,66.67], [589.5,604.52,261,104,21.33], [["disclaimer",40,2472.95,1377,31.05,28,"t",null,0,"l"],["eyebrow",186.66,182.66,1066.67,46.59,44,"t",106,0,"c"],["headline",186.66,245.25,1066.67,190,90,"h",106,0,"c"],["subcopy",186.66,451.25,1066.67,105.26,50,"t",106,0,"c"],["cta",637.5,636.52,165,40,40,"t",100,0,"c"]]),
+  S('meta-1080x1920', 1080, 1920, [-902,-240,2892.37], 0, [38.25,37.13,137.9,60.75], [427,470.73,226,89.92,18.45], [["disclaimer",39.38,1866.13,1001.25,28,24,"t",null,0,"l"],["eyebrow",90,132.75,900,40.24,38,"t",106,0,"c"],["headline",90,181.98,900,156,74,"h",106,0,"c"],["subcopy",90,346.98,900,90,42,"t",106,0,"c"],["cta",468.5,498.2,143,35,34.58,"t",100,0,"c"]]),
+  S('meta-1440x1800', 1440, 1800, [-771,-263,2980.5], 0, [44,44,151.33,66.67], [589.34,572.52,261.33,104,21.33], [["disclaimer",40,1712.95,1377,31.05,28,"t",null,0,"l"],["eyebrow",186.66,150.66,1066.67,46.59,44,"t",106,0,"c"],["headline",186.66,213.25,1066.67,190,90,"h",106,0,"c"],["subcopy",186.66,419.25,1066.67,105.26,50,"t",106,0,"c"],["cta",637.34,604.52,165.33,40,40,"t",100,0,"c"]]),
+  S('meta-1080x1440', 1080, 1440, [-740,-306,2562.94], 0, [33,33,113.5,50], [442,433,196,78,16], [["disclaimer",30,1375,1020,23,20,"t",null,0,"l"],["eyebrow",140,113,800,36,34,"t",106,0,"c"],["headline",140,161,800,144,68,"h",106,0,"c"],["subcopy",140,317,800,80,38,"t",106,0,"c"],["cta",478,457,124,30,30,"t",100,0,"c"]]),
+  S('meta-1080x1350', 1080, 1350, [-563,-154,2204.65], 0, [38.25,37.13,137.9,60.75], [427,456.5,226,89.92,18.45], [["disclaimer",39.38,1296.13,1001.25,28,24,"t",null,0,"l"],["eyebrow",90,132.75,900,36,34,"t",106,0,"c"],["headline",90,177.75,900,156,74,"h",106,0,"c"],["subcopy",90,342.75,900,80,38,"t",106,0,"c"],["cta",468.5,483.96,143,35,34.58,"t",100,0,"c"]]),
+  S('meta-1200x1200', 1200, 1200, [-386,-138,1961.76], 0, [33,33,113.5,50], [502,407,196,78,16], [["disclaimer",30,1135,1140,23,20,"t",null,0,"l"],["eyebrow",200,87,800,36,34,"t",106,0,"c"],["headline",200,135,800,144,68,"h",106,0,"c"],["subcopy",200,291,800,80,38,"t",106,0,"c"],["cta",538,431,124,30,30,"t",100,0,"c"]]),
+  S('meta-1920x1080', 1920, 1080, [-649,-636.43,2414], 0, [48,48,181.6,80], [1078,561.26,196,78,16], [["disclaimer",64,1011,1856,37,32,"t",null,0,"l"],["eyebrow",1078,74,776,45.11,42,"t",106,0,"l"],["headline",1078,141.51,776,267,84,"h",106,0,"l"],["subcopy",1078,430.91,776,98.34,46,"t",106,0,"l"],["cta",1114,585.26,124,30,30,"t",100,0,"c"]]),
+  S('meta-1080x1080', 1080, 1080, [-347,-132,1776.87], 0, [29.7,29.7,102.15,45], [451.6,362.46,176.8,70.2,14.4], [["disclaimer",27,1021.5,1026,20.7,18,"t",null,0,"l"],["eyebrow",180,78.3,720,31.76,30,"t",106,0,"c"],["headline",180,120.06,720,128,60,"h",106,0,"c"],["subcopy",180,258.06,720,72,34,"t",106,0,"c"],["cta",484,384.06,112,27,27,"t",100,0,"c"]]),
+  S('meta-398x208', 398, 208, [77,-114,469], M(90, [[0,0],[0.1935,0],[0.3702,1],[1,1]]), [341,10,46.54,20.5], [20,131,100.92,40,8.21], [["headline",20,20,227,69,22,"h",106,0,"l"],["subcopy",20,95,227,26,12,"t",106,0,"l"],["cta",38.46,143.5,64,15,15.38,"t",100,0,"c"],["disclaimer",20,184.8,366,13.2,11,"t",null,0,"l"]]),
+  S('sem-1200x1200', 1200, 1200, [-490,-490,2180], 0, 0, 0, []),
+  S('sem-1200x628', 1200, 628, [-256,-542,1712], 0, 0, 0, []),
+  S('twitch-1080x1920', 1080, 1920, [-902,-240,2892.37], 0, [38.25,37.13,137.9,60.75], [427,470.73,226,89.92,18.45], [["disclaimer",39.38,1866.13,1001.25,28,24,"t",null,0,"l"],["eyebrow",90,132.75,900,40.24,38,"t",106,0,"c"],["headline",90,181.98,900,156,74,"h",106,0,"c"],["subcopy",90,346.98,900,90,42,"t",106,0,"c"],["cta",468.5,498.2,143,35,34.58,"t",100,0,"c"]]),
+  S('twitch-160x600', 160, 600, [-148,190,455], 0, [11,12,40.75,17.95], [34.24,256.55,91.51,36.31,7.45], [["disclaimer",10,576.8,140,13.2,11,"t",null,0,"l"],["eyebrow",12,53,136,29.56,14,"t",106,0,"c"],["headline",12,90.55,136,84,20,"h",106,0,"c"],["subcopy",12,182.55,136,56,13,"t",106,0,"c"],["cta",51,267.71,58,14,13.96,"t",100,0,"c"]]),
+  S('twitch-450x350', 450, 350, [-21,18,485.29], 0, [14,14,59.06,26.02], 0, [["eyebrow",28,47.6,394,15,14,"t",106,0,"c","Lorem ipsum dolor sit amet"],["headline",28,65.4,394,66,31,"h",106,0,"c"],["subcopy",28,137,394,34,16,"t",106,0,"c"],["disclaimer",14,322,422,16.8,14,"t",null,0,"l"]]),
+  S('twitch-970x250', 970, 250, [386,-191,632.89], M(90, [[0,0],[0.3979,0],[0.4958,1],[1,1]]), [880,13,68.61,30.23], [30,172.35,104.15,41.33,8.48], [["disclaimer",30,224,470,16,14,"t",null,0,"l"],["eyebrow",30,18,407,18.26,17,"t",106,0,"l"],["headline",30,44.26,407,68.75,33,"h",106,0,"l"],["subcopy",30,121.01,407,36.34,17,"t",106,0,"l"],["cta",49.07,185.02,66,16,15.89,"t",100,0,"c"]]),
+  S('twitch-300x250', 300, 250, [-22,16,342.21], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,26,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('twitch-640x100', 640, 100, [-3,-90,279.41], 0, [12,8,36,16], [514.16,33.1,85.2,33.8,6.93], [["disclaimer",244.16,79,375.83,13,11,"t",null,0,"l"],["headline",245.16,6,246,52,25,"h",106,0,"l","Lorem ipsum dolor sit amet, consectetur"],["subcopy",245.16,61,246,14,13,"t",106,0,"l","Limited-time offers, only on LG.com"],["cta",529.77,43.5,54,13,13,"t",100,0,"c"]]),
+  S('twitch-728x90', 728, 90, [47,-81,251.47], 0, [12,8,36.32,16], [602,28.01,85.37,33.98,6.97], [["disclaimer",332,69.43,328,12.57,11,"t",null,0,"l"],["headline",332,7,246,42,20,"h",106,0,"l"],["subcopy",332,53,246,12,11,"t",106,-1,"l","Lorem ipsum dolor sit amet, consectetur adipiscing"],["cta",617.68,38.5,54,13,13.07,"t",100,0,"c"]]),
+  S('twitch-320x50', 320, 50, [-3,-45,140], 0, [6,5,22,9.69], [242.2,10.7,72.4,28.6,5.87], [["headline",98,12.9,134.2,24.2,11,"h",106,0,"l"],["cta",255.41,19.5,46,11,11,"t",100,0,"c"]]),
+  S('quantcast-300x600', 300, 600, [-268,18,835.99], 0, [10,17,56.81,25.03], [99.46,242,101.07,40.16,8.24], [["disclaimer",12,574,276,14,12,"t",null,0,"l"],["eyebrow",10,56,280,38,18,"t",106,0,"c"],["headline",10,98,280,90,28,"h",106,0,"c"],["subcopy",10,192,280,34,16,"t",106,0,"c"],["cta",118,254.58,64,15,15.45,"t",100,0,"c"]]),
+  S('quantcast-160x600', 160, 600, [-148,190,455], 0, [11,12,40.75,17.95], [34.24,257,91.51,36.31,7.45], [["disclaimer",10,576.8,140,13.2,11,"t",null,0,"l"],["eyebrow",12,53,136,30,14,"t",106,0,"c"],["headline",12,91,136,84,20,"h",106,0,"c"],["subcopy",12,183,136,56,13,"t",106,0,"c"],["cta",51,268.16,58,14,13.96,"t",100,0,"c"]]),
+  S('quantcast-120x600', 120, 600, [-114,253,348], 0, [8,10,41.82,18.42], [23.8,281,72.4,28.6,5.87], [["disclaimer",6,576.8,108,13.2,11,"t",null,0,"l"],["eyebrow",10,52,100,24,11,"t",106,0,"c","Lorem ipsum dolor sit amet"],["headline",10,82,100,114,18,"h",106,0,"c"],["subcopy",10,202,100,65,12,"t",106,0,"c"],["cta",37,289.8,46,11,11,"t",100,0,"c"]]),
+  S('quantcast-336x280', 336, 280, [-31,10,394.57], 0, [10,10,42.59,18.76], 0, [["eyebrow",20,37,296,11.65,11,"t",106,0,"c"],["headline",20,52.65,296,50,24,"h",106,0,"c"],["subcopy",20,106.65,296,28,13,"t",106,0,"c"],["disclaimer",10,260.8,316,13.2,11,"t",null,0,"l"]]),
+  S('quantcast-970x250', 970, 250, [386,-191,632.89], M(90, [[0,0],[0.3979,0],[0.4958,1],[1,1]]), [880,13,68.61,30.23], [30,173.26,104.15,41.33,8.48], [["disclaimer",30,224,470,16,14,"t",null,0,"l"],["eyebrow",30,18,407,18.26,17,"t",106,0,"l"],["headline",30,44.26,407,70,33,"h",106,0,"l"],["subcopy",30,122.26,407,36,17,"t",106,0,"l"],["cta",49.07,185.92,66,16,15.89,"t",100,0,"c"]]),
+  S('quantcast-300x250', 300, 250, [-22,16,342.21], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,26,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('quantcast-970x90', 970, 90, [171,-81,251.47], 0, [15,16,65.26,28.75], [840,27,91.23,36,7.38], [["disclaimer",548,65,402,12.57,11,"t",null,0,"l"],["headline",548,10,272,46,22,"h",106,0,"l"],["cta",856.62,38,58,14,13.85,"t",100,0,"c"]]),
+  S('quantcast-728x90', 728, 90, [47,-81,251.47], 0, [12,8,36.32,16], [602,28.01,85.37,33.98,6.97], [["disclaimer",332,69.43,328,12.57,11,"t",null,0,"l"],["headline",332,7,246,42,20,"h",106,0,"l"],["subcopy",332,53,246,12,11,"t",106,-1,"l","Lorem ipsum dolor sit amet, consectetur adipiscing"],["cta",617.68,38.5,54,13,13.07,"t",100,0,"c"]]),
+  S('quantcast-468x60', 468, 60, [22,-54,167.65], 0, [10,8,29.67,13.07], [386,15.7,72.4,28.6,5.87], [["disclaimer",207.34,38.8,241.33,13.2,11,"t",null,0,"l"],["headline",208,9,170,28,13,"h",106,0,"l"],["cta",399.2,24.5,46,11,11,"t",100,0,"c"]]),
+  S('quantcast-320x50', 320, 50, [-3,-45,140], 0, [6,5,22,9.69], [242.2,10.7,72.4,28.6,5.87], [["headline",98,12.45,134.2,24.2,11,"h",106,0,"l"],["cta",255.41,19.5,46,11,11,"t",100,0,"c"]]),
+  S('quantcast-300x50', 300, 50, [142,-45,140], 0, [267.96,5,27.04,11.91], 0, [["headline",10,12,142,26,12,"h",106,0,"l"]]),
+  S('ecrm-1200x1200', 1200, 1200, [-386,-138,1961.76], 0, [33,33,113.5,50], [502,407,196,78,16], [["disclaimer",30,1135,1140,23,20,"t",null,0,"l"],["eyebrow",200,87,800,36,34,"t",106,0,"c"],["headline",200,135,800,144,68,"h",106,0,"c"],["subcopy",200,291,800,80,38,"t",106,0,"c"],["cta",538,431,124,30,30,"t",100,0,"c"]]),
+  S('ecrm-1200x1200-2', 1200, 1200, [-635,-635,2470.59], 0, 0, 0, []),
+  S('ecrm-1200x520', 1200, 520, [-104,-444,1407.79], M(90, [[0,0],[0.1083,0],[0.2843,1],[1,1]]), 0, 0, []),
+  S('rakuten-300x250', 300, 250, [-22,16,342.21], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,26,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('rakuten-250x250', 250, 250, [-58,-2,368.69], 0, [10,10,35.19,15.5], 0, [["eyebrow",10,33,230,11.65,11,"t",106,0,"c"],["headline",10,48.65,230,38,18,"h",106,0,"c"],["subcopy",10,90.65,230,24,11,"t",106,0,"c"],["disclaimer",10,228.8,230,13.2,11,"t",null,0,"l"]]),
+  S('rakuten-400x200', 400, 200, [84,-123,466.67], M(90, [[0,0],[0.21,0],[0.385,1],[1,1]]), [349.46,10,46.54,20.5], [20,131,98,39,8], [["headline",20,20,215,69,22,"h",106,0,"l"],["subcopy",20,95,215,26,12,"t",106,0,"l"],["cta",38,143,62,15,15,"t",100,0,"c"],["disclaimer",20,176.8,402.6,13.2,11,"t",null,0,"l"]]),
+  S('rakuten-125x125', 125, 125, [-33,-7,191.06], 0, [5.5,4.3,19.62,8.64], 0, [["headline",8,16.5,109,35.54,11,"h",106,0,"c"]]),
+  S('rakuten-120x90', 120, 90, [37,-13,116], 0, [6,4,19.62,8.64], 0, [["headline",6,20,67,48,11,"h",106,0,"l"]]),
+  S('rakuten-468x60', 468, 60, [22,-54,167.65], 0, [10,8,29.67,13.07], [386,15.7,72.4,28.6,5.87], [["disclaimer",207.34,38.8,241.33,13.2,11,"t",null,0,"l"],["headline",208,9,170,28,13,"h",106,0,"l"],["cta",399.2,24.5,46,11,11,"t",100,0,"c"]]),
+  S('rakuten-234x60', 234, 60, [120,-49,157], M(90, [[0,0],[0.6866,0],[0.7421,1],[0.9642,1],[1,0]]), [6,5,20.43,9], 0, [["disclaimer",7,44,427.78,13,11,"t",null,0,"l"],["headline",7,15,160,28,13,"h",106,0,"l"]]),
+  S('venngo-1080x1920', 1080, 1920, [-902,-240,2892.37], 0, [38.25,37.13,137.9,60.75], [427,470.73,226,89.92,18.45], [["disclaimer",39.38,1866.13,1001.25,28,24,"t",null,0,"l"],["eyebrow",90,132.75,900,40.24,38,"t",106,0,"c"],["headline",90,181.98,900,156,74,"h",106,0,"c"],["subcopy",90,346.98,900,90,42,"t",106,0,"c"],["cta",468.5,498.2,143,35,34.58,"t",100,0,"c"]]),
+  S('venngo-1600x1600', 1600, 1600, [-507,-187,2618.89], 0, [44,44,151.33,66.67], [669.5,541.58,261,104,21.33], [["disclaimer",40,1513.34,1520,30.67,26.67,"t",null,0,"l"],["eyebrow",266.66,116,1066.67,48,45.33,"t",106,0,"c"],["headline",266.66,180,1066.67,189.58,90.67,"h",106,0,"c"],["subcopy",266.66,385.58,1066.67,108,50.67,"t",106,0,"c"],["cta",717.5,573.58,165,40,40,"t",100,0,"c"]]),
+  S('venngo-1200x1600', 1200, 1600, [-819,-335,2840.42], 0, [36.66,36.66,126.11,55.56], [491.9,484.45,216.2,85.8,17.6], [["disclaimer",33.34,1528.03,1122,25.3,22,"t",null,0,"l"],["eyebrow",155.55,125.55,888.89,40.24,38,"t",106,0,"c"],["headline",155.55,179.13,888.89,162,76,"h",106,0,"c"],["subcopy",155.55,354.45,888.89,90,42,"t",106,0,"c"],["cta",531.5,510.85,137,33,33,"t",100,0,"c"]]),
+  S('venngo-1920x1080', 1920, 1080, [241,-587.4,2316], 0, [1689.6,48,181.6,80], [64,467.11,216.27,85.87,17.61], [["disclaimer",64,1011,1856,37,32,"t",null,0,"l"],["eyebrow",64,74,991,45.11,42,"t",106,0,"l"],["headline",64,139.11,991,178,84,"h",106,0,"l"],["subcopy",64,337.11,991,98,46,"t",106,0,"l"],["cta",103.63,493.55,137,33,33.03,"t",100,0,"c"]]),
+  S('venngo-3840x1000', 3840, 1000, [1515,-766,2531.56], M(90, [[0,0],[0.3945,0],[0.4934,1],[1,1]]), [3610.7,47.77,180.73,79.62], [63.7,548.59,275,110,17.66], [["disclaimer",63.7,931.53,773.89,36.62,31.85,"t",null,0,"l"],["eyebrow",63.7,73,1563,53,50,"t",106,0,"l"],["headline",63.7,148.3,1563,254,120,"h",106,0,"l"],["subcopy",63.7,424.59,1563,53,50,"t",106,0,"l"],["cta",103.43,575.07,136.85,33.11,38,"t",100,0,"c"]]),
+  S('venngo-2800x1000', 2800, 1000, [737,-880,2770], M(90, [[0,0],[0.2632,0],[0.4116,1],[1,1]]), [2570.7,47.77,180.73,79.62], [63.7,469.61,216.46,86,17.66], [["disclaimer",63.7,931.53,773.89,36.62,31.85,"t",null,0,"l"],["eyebrow",63.7,73,1018,46.18,42.99,"t",106,0,"l"],["headline",63.7,141.47,1018,176,82.8,"h",106,0,"l"],["subcopy",63.7,339.77,1018,98,46.18,"t",106,0,"l"],["cta",103.43,496.11,137,33,33.11,"t",100,0,"c"]]),
+  S('venngo-3840x1600', 3840, 1600, [656,-1204,4032], M(90, [[0,0],[0.15,0],[0.325,1],[1,1]]), [3610.66,47.8,180.73,79.62], [63.7,731.59,299,120,17.66], [["disclaimer",63.7,1531.16,773.89,37,31.85,"t",null,0,"l"],["eyebrow",63.7,105,1639,73,69,"t",106,0,"l"],["headline",63.7,200.3,1639,282,133,"h",106,0,"l"],["subcopy",63.7,504.59,1639,148,70,"t",106,0,"l"],["cta",103.43,758.07,136.85,33.11,40,"t",100,0,"c"]]),
+  S('perkopolis-600x500', 600, 500, [-53,22,698.47], 0, [17.86,17.86,76.06,33.5], 0, [["eyebrow",35.71,66,528.57,22.24,21,"t",106,0,"c"],["headline",35.71,95.38,528.57,90,42.86,"h",106,0,"c"],["subcopy",35.71,192.52,528.57,50,24,"t",106,0,"c"],["disclaimer",17.86,467.86,564.29,21.43,17.86,"t",null,0,"l"]]),
+  S('perkopolis-1230x250', 1230, 250, [485,-257,764.04], M(90, [[0,0],[0.3943,0],[0.4875,1],[1,1]]), [1140,13,68.61,30.23], [30,166,104.15,41.33,8.48], [["disclaimer",30,224,470,16,14,"t",null,0,"l"],["headline",30,24,437,76,36,"h",106,0,"l"],["subcopy",30,108,437,42,20,"t",106,0,"l"],["cta",49.07,178.66,66,16,15.89,"t",100,0,"c"]]),
+  S('perkopolis-300x250', 300, 250, [-22,16,342.21], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,26,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('awin-640x1136', 640, 1136, [-469,15,1578.67], 0, [19.55,19.55,67.26,29.63], [260.9,268.18,118.2,46.8,9.6], [["disclaimer",17.78,1097.31,612,13.8,14,"t",null,0,"l"],["eyebrow",85,81,470,21.18,20,"t",106,0,"c"],["headline",85,109.29,470,84.44,40,"h",106,0,"c"],["subcopy",85,200.84,470,46,22,"t",106,0,"c","Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit sed do eiusmod"],["cta",282.5,282.58,75,18,18,"t",100,0,"c"]]),
+  S('awin-300x1050', 300, 1050, [-253,296,807.99], 0, [10,17,56.81,25.03], [94.7,375.02,110.62,44,9.03], [["disclaimer",12,1024,276,14,12,"t",null,0,"l"],["eyebrow",20,74.02,260,42,20,"t",106,0,"c"],["headline",20,126.02,260,152,36,"h",106,0,"c"],["subcopy",20,288.02,260,63,20,"t",106,0,"c"],["cta",115,388.52,70,17,16.92,"t",100,0,"c"]]),
+  S('awin-160x600', 160, 600, [-148,190,455], 0, [11,12,40.75,17.95], [34.24,256.71,91.51,36.31,7.45], [["disclaimer",10,576.8,140,13.2,11,"t",null,0,"l"],["eyebrow",12,53,136,30,14,"t",106,0,"c"],["headline",12,91,136,84,20,"h",106,0,"c"],["subcopy",12,183,136,55.71,13,"t",106,0,"c"],["cta",51,267.87,58,14,13.96,"t",100,0,"c"]]),
+  S('awin-970x250', 970, 250, [386,-191,632.89], M(90, [[0,0],[0.3979,0],[0.4958,1],[1,1]]), [880,13,68.61,30.23], [30,172.01,104.15,41.33,8.48], [["disclaimer",30,224,470,16,14,"t",null,0,"l"],["eyebrow",30,18,407,18.26,17,"t",106,0,"l"],["headline",30,44.26,407,68.75,33,"h",106,0,"l"],["subcopy",30,121.01,407,36,17,"t",106,0,"l"],["cta",49.07,184.67,66,16,15.89,"t",100,0,"c"]]),
+  S('awin-300x250', 300, 250, [-22,16,342.21], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,26,12,"t",106,0,"c"],["disclaimer",10,229,280,13,11,"t",null,0,"l"]]),
+  S('awin-970x90', 970, 90, [171,-81,251.47], 0, [15,16,65.26,28.75], [840,27,91.23,36,7.38], [["disclaimer",548,65,402,12.57,11,"t",null,0,"l"],["headline",548,10,272,46,22,"h",106,0,"l"],["cta",856.62,38,58,14,13.85,"t",100,0,"c"]]),
+  S('awin-728x90', 728, 90, [47,-81,251.47], 0, [12,8,36.32,16], [602,28.01,85.37,33.98,6.97], [["disclaimer",332,69.43,328,12.57,11,"t",null,0,"l"],["headline",332,7,246,42,20,"h",106,0,"l"],["subcopy",332,53,246,12,11,"t",106,-1,"l","Lorem ipsum dolor sit amet, consectetur adipiscing"],["cta",617.68,38.5,54,13,13.07,"t",100,0,"c"]]),
+  S('awin-300x50', 300, 50, [12,-45,140], 0, [4,4,27.04,11.91], 0, [["disclaimer",149,33.63,250.25,12.38,11,"t",null,0,"l"],["headline",150,4,142,26,12,"h",106,0,"l"]]),
+  S('awin-216x36', 216, 36, [5,-32,100.8], 0, [3,3,20,9], 0, [["headline",82,6,155.83,24,11,"h",106,0,"l"]]),
+  S('awin-120x20', 120, 20, [87,-5,29.86], 0, [112,1,6.81,3], 0, [["headline",4,4,87,12,11,"h",106,0,"l","Lorem ipsum dolor"]]),
+  S('awin-168x28', 168, 28, null, 0, [2,2,9.53,4.2], 0, [["headline",34,2,133.6,24,11,"h",106,0,"l"]]),
+  S('awin-120x60', 120, 60, null, 0, [3,4,16,7.05], 0, [["headline",50,6,67,48,11,"h",106,0,"l"]]),
+  S('dataaudience-300x600', 300, 600, [-268,18,835.99], 0, [10,17,56.81,25.03], [99.46,241.69,101.07,40.16,8.24], [["disclaimer",12,574,276,14,12,"t",null,0,"l"],["eyebrow",10,56,280,38,18,"t",106,0,"c"],["headline",10,98,280,90,28,"h",106,0,"c"],["subcopy",10,192,280,33.68,16,"t",106,0,"c"],["cta",118,254.27,64,15,15.45,"t",100,0,"c"]]),
+  S('dataaudience-160x600', 160, 600, [-148,190,455], 0, [11,12,40.75,17.95], [34.24,257,91.51,36.31,7.45], [["disclaimer",10,576.8,140,13.2,11,"t",null,0,"l"],["eyebrow",12,53,136,30,14,"t",106,0,"c"],["headline",12,91,136,84,20,"h",106,0,"c"],["subcopy",12,183,136,56,13,"t",106,0,"c"],["cta",51,268.16,58,14,13.96,"t",100,0,"c"]]),
+  S('dataaudience-120x600', 120, 600, [-114,253,348], 0, [8,10,41.82,18.42], [23.8,281,72.4,28.6,5.87], [["disclaimer",6,576.8,108,13.2,11,"t",null,0,"l"],["eyebrow",10,52,100,24,11,"t",106,0,"c","Lorem ipsum dolor sit amet"],["headline",10,82,100,114,18,"h",106,0,"c"],["subcopy",10,202,100,65,12,"t",106,0,"c"],["cta",37,289.8,46,11,11,"t",100,0,"c"]]),
+  S('dataaudience-300x250', 300, 250, [-22,16,342.21], 0, [10,10,42.18,18.58], 0, [["eyebrow",20,34,260,11.65,11,"t",106,0,"c"],["headline",20,47.65,260,46,22,"h",106,0,"c"],["subcopy",20,97.65,260,26,12,"t",106,0,"c"],["disclaimer",10,228.8,280,13.2,11,"t",null,0,"l"]]),
+  S('dataaudience-320x100', 320, 100, [93,-90,279.41], M(90, [[0,0],[0.5024,0],[0.57,1],[0.8407,1],[0.9084,0],[1,0]]), [281.19,8,31.18,13.74], [8,45,72.4,28.6,5.87], [["disclaimer",8,82.8,140,13.2,11,"t",null,0,"l"],["headline",8,10,171,30,14,"h",106,0,"l"],["cta",21.2,53.8,46,11,11,"t",100,0,"c"]]),
+  S('dataaudience-728x90', 728, 90, [47,-81,251.47], 0, [12,8,36.32,16], [602,28.01,85.37,33.98,6.97], [["disclaimer",332,69.43,328,12.57,11,"t",null,0,"l"],["headline",332,7,246,42,20,"h",106,0,"l"],["subcopy",332,53,246,12,11,"t",106,-1,"l","Lorem ipsum dolor sit amet, consectetur adipiscing"],["cta",617.68,38.5,54,13,13.07,"t",100,0,"c"]]),
+  S('dataaudience-320x50', 320, 50, [-3,-45,140], 0, [6,5,22,9.69], [242.2,10.7,72.4,28.6,5.87], [["headline",98,12.45,134.2,24.2,11,"h",106,0,"l"],["cta",255.41,19.5,46,11,11,"t",100,0,"c"]]),
+  S('vasekupony-580x320', 580, 320, [91,-168,702], 0, [496,20,63.56,28], [18,163.35,98,39,8], [["disclaimer",18,291.94,196,14,12,"t",null,0,"l"],["eyebrow",18,24,323,17.19,16,"t",106,0,"l"],["headline",18,49.19,323,54.17,26,"h",106,0,"l"],["subcopy",18,111.35,323,38,18,"t",106,0,"l"],["cta",36,175.35,62,15,15,"t",100,0,"c"]]),
+  S('vasekupony-280x150', 280, 150, [82,-53,278], 0, [244.63,7,32.57,14.35], [14,93,72.4,28.6,5.87], [["headline",14,14,189,32,15,"h",106,0,"l"],["subcopy",14,50,189,36,11,"t",106,0,"l"],["cta",27.2,101.8,46,11,11,"t",100,0,"c"],["disclaimer",14,130,266,13,11,"t",null,0,"l"]]),
+  S('pinapenezenka-1080x1350', 1080, 1350, [-563,-154,2204.65], 0, [38.25,37.13,137.9,60.75], [427,456.5,226,89.92,18.45], [["disclaimer",39.38,1296.13,1001.25,28,24,"t",null,0,"l"],["eyebrow",90,132.75,900,36,34,"t",106,0,"c"],["headline",90,177.75,900,156,74,"h",106,0,"c"],["subcopy",140,342.75,800,80,38,"t",106,0,"c"],["cta",468.5,483.96,143,35,34.58,"t",100,0,"c"]]),
+  S('pinapenezenka-1080x1080', 1080, 1080, [-347,-132,1776.87], 0, [29.7,29.7,102.15,45], [451.6,362.46,176.8,70.2,14.4], [["disclaimer",27,1021.5,1026,20.7,18,"t",null,0,"l"],["eyebrow",180,78.3,720,31.76,30,"t",106,0,"c"],["headline",180,120.06,720,128,60,"h",106,0,"c"],["subcopy",180,258.06,720,72,34,"t",106,0,"c"],["cta",484,384.06,112,27,27,"t",100,0,"c"]]),
+  S('pinapenezenka-640x360', 640, 360, [63,-219,817], 0, [563.2,16,60.53,26.67], [21.34,160.97,104.15,41.33,8.48], [["disclaimer",21.34,336.34,259.2,13,11,"t",null,0,"l"],["eyebrow",21.34,25,328,15.04,14,"t",106,0,"l"],["headline",21.34,47.5,328,60,28,"h",106,0,"l"],["subcopy",21.34,114.97,328,34,16,"t",106,0,"l"],["cta",40.41,173.63,66,16,15.89,"t",100,0,"c"]]),
+  S('pinapenezenka-330x135', 330, 135, [55,-103,340], M(90, [[0,0],[0.1485,0],[0.3235,1],[1,1]]), [295.89,6.75,31.41,13.84], [13.5,67.84,72.4,28.6,5.87], [["headline",13.5,13.5,139.73,47.6,15,"h",106,0,"l"],["cta",26.7,76.64,46,11,11,"t",100,0,"c"],["disclaimer",13.5,115.05,402.6,13.2,11,"t",null,0,"l"]]),
+  S('tipli-1080x1080', 1080, 1080, [-347,-132,1776.87], 0, [29.7,29.7,102.15,45], [451.6,362.46,176.8,70.2,14.4], [["disclaimer",27,1021.5,1026,20.7,18,"t",null,0,"l"],["eyebrow",180,78.3,720,31.76,30,"t",106,0,"c"],["headline",180,120.06,720,128,60,"h",106,0,"c"],["subcopy",180,258.06,720,72,34,"t",106,0,"c"],["cta",484,384.06,112,27,27,"t",100,0,"c"]]),
+  S('tipli-742x706', 742, 706, [-154,-2,1036.22], 0, [22.67,22.67,77.98,34.35], [302.3,270.84,137.4,54.6,11.2], [["disclaimer",20.61,661.05,714,16.1,14,"t",null,0,"l"],["eyebrow",96.19,65.27,549.63,24.35,23,"t",106,0,"c"],["headline",96.19,97.86,549.63,100,47,"h",106,0,"c"],["subcopy",96.19,206.11,549.63,40,19,"t",106,0,"c"],["cta",327.5,287.64,87,21,21,"t",100,0,"c"]]),
+  S('tipli-1200x600', 1200, 600, [180,-370,1400], M(90, [[0,0],[0.15,0],[0.325,1],[1,1]]), [1056,30,113.5,50], [40,381,137.4,54.6,11.2], [["disclaimer",40,557,486,23,20,"t",null,0,"l"],["eyebrow",40,46,486,29,27,"t",106,0,"l"],["headline",40,89,486,165,52,"h",106,0,"l"],["subcopy",40,268,486,93,29,"t",106,0,"l"],["cta",65.2,397.8,87,21,21,"t",100,0,"c"]]),
+  S('tipli-690x388', 690, 388, [19,-280,970.03], 0, [607.2,17.25,65.26,28.75], [23,220.3,78.8,31.45,6.4], [["disclaimer",8.5,362.74,696,13.88,12,"t",null,0,"l"],["eyebrow",23,26.59,279.45,16.11,15,"t",106,0,"l"],["headline",23,50.76,279.45,96,30,"h",106,0,"l"],["subcopy",23,154.8,279.45,54,17,"t",106,0,"l"],["cta",37.4,230.03,50,12,12,"t",100,0,"c"]]),
+  S('tipli-375x375', 375, 375, [-141,-73,657.35], 0, [15,15,63.28,27.87], 0, [["eyebrow",15,51,345,16.94,16,"t",106,0,"c"],["headline",15,70.94,345,58,27,"h",106,0,"c"],["subcopy",15,131.94,345,36,17,"t",106,0,"c"],["disclaimer",15,342.59,476,20.4,17,"t",null,0,"l"]]),
+  S('tipli-600x290', 600, 290, [90,-190,700], M(90, [[0,0],[0.15,0],[0.325,1],[1,1]]), [528,15,56.75,25], [20,194.04,72.4,28.6,5.87], [["disclaimer",20,267.35,267.3,12.65,11,"t",null,0,"l"],["eyebrow",20,23,243,15.04,14,"t",106,0,"l"],["headline",20,45.04,243,84,26,"h",106,0,"l"],["subcopy",20,136.04,243,48,15,"t",106,0,"l"],["cta",33.2,202.84,46,11,11,"t",100,0,"c"]]),
+  S('taiwanaffiliate-900x1320', 900, 1320, [-491,49,1857.68], 0, [31.5,38.25,114.92,50.63], [332.3,541.99,235.4,93.6,19.2], [["disclaimer",33.75,1264.3,851,26.45,22,"t",null,0,"l"],["eyebrow",38.25,118.13,823.5,36,34,"t",106,0,"c"],["headline",38.25,167.63,823.5,232.62,72,"h",106,0,"c"],["subcopy",38.25,413.74,823.5,90,42,"t",106,0,"c"],["cta",375.5,570.79,149,36,36,"t",100,0,"c"]]),
+  S('taiwanaffiliate-1040x1040', 1040, 1040, [-264,-29,1564.64], 0, [31.78,31.78,109.3,48.15], [425.2,391.02,189.6,75.4,15.47], [["disclaimer",28.89,977.7,969,21.85,18,"t",null,0,"l"],["eyebrow",134.81,91.48,770.37,31.76,30,"t",106,0,"c"],["headline",134.81,134.8,770.37,138,65,"h",106,0,"c"],["subcopy",134.81,284.36,770.37,72,34,"t",106,0,"c"],["cta",460,414.23,120,29,29,"t",100,0,"c"]]),
+  S('taiwanaffiliate-1500x1000', 1500, 1000, [274,-230,1732], M(90, [[0,0],[0.3773,0],[0.5185,1],[1,1]]), [1237.5,62.5,198.63,87.5], [56,457.3,300.4,119.6,24.53], [["disclaimer",56,912.05,1444,44,38,"t",null,0,"l"],["eyebrow",56,50,975,51.56,48,"t",106,0,"l"],["headline",56,117.55,975,170,80,"h",106,0,"l"],["subcopy",56,303.55,975,110,52,"t",106,0,"l"],["cta",111.2,494.1,190,46,46,"t",100,0,"c"]]),
+  S('taiwanaffiliate-674x674', 674, 674, [-186,-35,1037.91], 0, [20.59,20.59,70.83,31.2], [274.7,244.75,124.6,49.4,10.13], [["disclaimer",18.72,633.99,612,13.8,14,"t",null,0,"l"],["eyebrow",87.37,59.28,499.26,19,18,"t",106,0,"c"],["headline",87.37,84.28,499.26,90,42,"h",106,0,"c"],["subcopy",87.37,180.28,499.26,42,20,"t",106,0,"c"],["cta",297.5,259.95,79,19,19,"t",100,0,"c"]]),
+  S('taiwanaffiliate-1029x600', 1029, 600, [-25,-455,1517.05], 0, [905.52,25.73,97.33,42.88], [34.3,285.21,118.2,41.85,9.6], [["disclaimer",38.65,563.19,986,19.66,16,"t",null,0,"l"],["eyebrow",34.3,39.66,416.74,21.48,20,"t",106,0,"l"],["headline",34.3,69.14,416.74,139.62,44,"h",106,0,"l"],["subcopy",34.3,216.75,416.74,51.31,24,"t",106,0,"l"],["cta",55.9,297.14,75,18,18,"t",100,0,"c"]]),
+  S('taiwanaffiliate-600x600', 600, 600, [-155,-16,902.2], 0, [18.34,18.34,63.06,27.78], [244.1,225.05,111.8,44.2,9.07], [["disclaimer",16.66,564.02,561,12.65,12,"t",null,0,"l"],["eyebrow",77.78,52.78,444.44,16.94,16,"t",106,0,"c"],["headline",77.78,76.39,444.44,80,38,"h",106,0,"c"],["subcopy",77.78,163.05,444.44,42,20,"t",106,0,"c"],["cta",264.5,238.66,71,17,17,"t",100,0,"c"]]),
+  S('taiwanaffiliate-600x400', 600, 400, [141,-62,640], M(90, [[0,0],[0.4017,0],[0.537,1],[1,1]]), [495,25,79.45,35], [22.5,190.84,118.2,46.8,9.6], [["disclaimer",22.5,364.92,577.5,17.5,15,"t",null,0,"l"],["eyebrow",22.5,20,390,19.33,18,"t",106,0,"l"],["headline",22.5,49.34,390,68,32,"h",106,0,"l"],["subcopy",22.5,127.34,390,46,22,"t",106,0,"l"],["cta",44.1,205.23,75,18,18,"t",100,0,"c"]]),
+  S('taiwanaffiliate-1080x360', 1080, 360, [347,-317,997.2], M(90, [[0,0],[0.3213,0],[0.4598,1],[1,1]]), [950.4,18.72,98.8,43.53], [43.2,242.34,150.2,59.8,12.27], [["disclaimer",43.2,322.6,1037,23,20,"t",null,0,"l"],["eyebrow",43.2,17.28,637.92,25.78,24,"t",106,0,"l"],["headline",43.2,49.06,637.92,110,52,"h",106,0,"l"],["subcopy",43.2,165.06,637.92,60,28,"t",106,0,"l"],["cta",70.8,260.73,95,23,23,"t",100,0,"c"]]),
+  S('taiwanaffiliate-900x360', 900, 360, [184,-327,1050], M(90, [[0,0],[0.2044,0],[0.3794,1],[1,1]]), [792,22.5,85.13,37.5], [30,211.65,104.4,41.6,8.53], [["disclaimer",30,327.75,870,17.25,16,"t",null,0,"l"],["eyebrow",30,34,479,21.48,20,"t",106,0,"l"],["headline",30,63.48,479,79.17,38,"h",106,0,"l"],["subcopy",30,150.65,479,46,22,"t",106,0,"l"],["cta",49.2,224.45,66,16,16,"t",100,0,"c"]]),
+  S('taiwanaffiliate-1029x357', 1029, 357, [350,-314,988.89], M(90, [[0,0],[0.3401,0],[0.4843,1],[1,1]]), [900.48,18.56,97.98,43.16], [42.84,233.9,150.2,59.8,12.27], [["disclaimer",42.84,319.86,671.43,22.86,20,"t",null,0,"l"],["eyebrow",42.84,17.13,632.6,23.63,22,"t",106,0,"l"],["headline",42.84,46.77,632.6,108,51,"h",106,0,"l"],["subcopy",42.84,160.77,632.6,56,26,"t",106,0,"l"],["cta",70.45,252.3,95,23,23,"t",100,0,"c"]]),
+  S('taiwanaffiliate-750x348', 750, 348, [113,-246,875], M(90, [[0,0],[0.1507,0],[0.3257,1],[1,1]]), [660,18.75,70.94,31.25], [25,234.94,85.2,33.8,6.93], [["disclaimer",25,321.5,725,14,14,"t",null,0,"l"],["eyebrow",25,28.75,303.75,17.19,16,"t",106,0,"l"],["headline",25,54.69,303.75,102,32,"h",106,0,"l"],["subcopy",25,165.44,303.75,57,18,"t",106,0,"l"],["cta",40.6,245.34,54,13,13,"t",100,0,"c"]]),
+  S('taiwanaffiliate-1080x300', 1080, 300, [402,-230,759.47], M(90, [[0,0],[0.3722,0],[0.4777,1],[1,1]]), [972,15.6,82.34,36.27], [36,206.83,124.6,49.4,10.13], [["disclaimer",36,269,1044,19,16,"t",null,0,"l"],["eyebrow",36,14.4,531.6,23.63,22,"t",106,0,"l"],["headline",36,45.23,531.6,90,42,"h",106,0,"l"],["subcopy",36,142.43,531.6,50,24,"t",106,0,"l"],["cta",58.8,222.03,79,19,19,"t",100,0,"c"]]),
+  S('taiwanaffiliate-1080x240', 1080, 240, [426,-216,670.86], M(90, [[0,0],[0.3944,0],[0.4876,1],[1,1]]), [1002.05,11.7,61.75,27.2], [27,169.09,91.6,36.4,7.47], [["disclaimer",27,216,1053,15,14,"t",null,0,"l"],["eyebrow",27,20.7,440.1,17.19,16,"t",106,0,"l"],["headline",27,43.29,440.1,68,32,"h",106,0,"l"],["subcopy",27,116.69,440.1,38,18,"t",106,0,"l"],["cta",43.8,180.29,58,14,14,"t",100,0,"c"]]),
+  S('taiwanaffiliate-300x120', 300, 120, [150,-39,198], 0, [269.68,6,27.92,12.3], 0, [["eyebrow",12,12,193,12,11,"t",106,0,"l"],["headline",12,27.6,193,34,16,"h",106,0,"l"],["subcopy",12,65.2,193,24,11,"t",106,0,"l"],["disclaimer",12,101,288,13,11,"t",null,0,"l"]]),
+  S('telushealth-1000x1000', 1000, 1000, [-318,-117,1637.8], 0, [27.5,27.5,94.58,41.67], [418,338.15,164,65,13.33], [["disclaimer",25,946,950,19,16,"t",null,0,"l"],["eyebrow",166.66,72.5,666.67,29.65,28,"t",106,0,"c"],["headline",166.66,112.15,666.67,118,56,"h",106,0,"c"],["subcopy",166.66,240.15,666.67,68,32,"t",106,0,"c"],["cta",448,358.15,104,25,25,"t",100,0,"c"]]),
+  S('telushealth-1080x720', 1080, 720, [166,-188,1278], M(90, [[0,0],[0.3861,0],[0.5251,1],[1,1]]), [891,45,143.01,63], [40.5,322.7,208.8,83.2,17.07], [["disclaimer",40.5,656.86,1039.5,31.5,26,"t",null,0,"l"],["eyebrow",40.5,36,702,34.37,32,"t",106,0,"l"],["headline",40.5,80.37,702,120.83,58,"h",106,0,"l"],["subcopy",40.5,211.2,702,80,38,"t",106,0,"l"],["cta",78.9,348.3,132,32,32,"t",100,0,"c"]]),
 ];
 
 /**
  * The paid boards carry their own placeholder copy — longer than the LG.com
  * board's, and that changes where every line breaks. Using the LG.com strings
  * here made the copy wrap differently from Figma at every size, which is exactly
- * the thing these previews exist to check. Read verbatim from the board; every
- * visible size uses the same four strings.
+ * the thing these previews exist to check. Read verbatim from the board; a frame
+ * that sets something else carries it as `PaidText.placeholder`.
  */
 export const PAID_PLACEHOLDER = {
+  eyebrow: 'Lorem ipsum dolor sit amet, consectetur',
   headline: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit',
   subcopy: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod',
-  disclaimer: '*T&C\u2019s apply',
+  disclaimer: '*T&C’s apply',
   cta: 'Shop now',
 } as const;
 
 export const paidSlotsFor = (channelKey: string): PaidSlot[] =>
   PAID_SLOTS.filter(s => !s.hidden && s.key.startsWith(channelKey + '-'));
 
-/** Label under each preview, e.g. `300×250`. */
-export const paidSlotLabel = (s: PaidSlot) => `${s.w}×${s.h}`;
+/** Label under each preview, e.g. `300×250` — the art-only ECRM twin says so. */
+export const paidSlotLabel = (s: PaidSlot) => `${s.w}×${s.h}${/-\d+$/.test(s.key) ? ' (Image)' : ''}`;

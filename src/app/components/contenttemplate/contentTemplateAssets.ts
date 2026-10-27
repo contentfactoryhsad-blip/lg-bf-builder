@@ -319,6 +319,11 @@ export interface Channel {
   label: string;
   /** LG.com is owned inventory; the rest are bought. Rendered as separate rows. */
   kind: 'owned' | 'paid';
+  /**
+   * Which line of the picker the button sits on — owned + the main buys on the
+   * first, the affiliate networks on the second (the Christmas builder's split).
+   */
+  row: 1 | 2;
   sizes: ChannelSize[];
 }
 
@@ -332,6 +337,7 @@ export const CHANNELS: Channel[] = [
     key: 'lgcom',
     label: 'LG.com',
     kind: 'owned',
+    row: 1,
     sizes: [
       { code: 'ST0001', width: 1920, height: 720, device: 'PC' },
       { code: 'ST0001', width: 720, height: 960, device: 'MO' },
@@ -339,11 +345,24 @@ export const CHANNELS: Channel[] = [
       { code: 'ST0001', width: 720, height: 830, device: 'MO' },
     ],
   },
-  { key: 'criteo', label: 'Criteo', kind: 'paid', sizes: [] },
-  { key: 'dv360', label: 'DV360', kind: 'paid', sizes: [] },
-  { key: 'pmax', label: 'Pmax', kind: 'paid', sizes: [] },
-  { key: 'meta', label: 'Meta', kind: 'paid', sizes: [] },
-  { key: 'sem', label: 'Google SEM', kind: 'paid', sizes: [] },
+  { key: 'criteo', label: 'Criteo', kind: 'paid', row: 1, sizes: [] },
+  { key: 'dv360', label: 'DV360', kind: 'paid', row: 1, sizes: [] },
+  { key: 'pmax', label: 'Pmax', kind: 'paid', row: 1, sizes: [] },
+  { key: 'meta', label: 'META', kind: 'paid', row: 1, sizes: [] },
+  { key: 'sem', label: 'Google SEM', kind: 'paid', row: 1, sizes: [] },
+  { key: 'twitch', label: 'Twitch', kind: 'paid', row: 1, sizes: [] },
+  { key: 'quantcast', label: 'Quantcast', kind: 'paid', row: 1, sizes: [] },
+  { key: 'ecrm', label: 'ECRM', kind: 'paid', row: 1, sizes: [] },
+  { key: 'rakuten', label: 'Rakuten', kind: 'paid', row: 2, sizes: [] },
+  { key: 'venngo', label: 'Venngo', kind: 'paid', row: 2, sizes: [] },
+  { key: 'perkopolis', label: 'Perkopolis', kind: 'paid', row: 2, sizes: [] },
+  { key: 'awin', label: 'Awin', kind: 'paid', row: 2, sizes: [] },
+  { key: 'dataaudience', label: 'Data Audience', kind: 'paid', row: 2, sizes: [] },
+  { key: 'vasekupony', label: 'Vase kupony', kind: 'paid', row: 2, sizes: [] },
+  { key: 'pinapenezenka', label: 'Plna penezenka', kind: 'paid', row: 2, sizes: [] },
+  { key: 'tipli', label: 'Tipli', kind: 'paid', row: 2, sizes: [] },
+  { key: 'taiwanaffiliate', label: 'Taiwan Affiliate', kind: 'paid', row: 2, sizes: [] },
+  { key: 'telushealth', label: 'Telus Health', kind: 'paid', row: 2, sizes: [] },
 ];
 
 /**

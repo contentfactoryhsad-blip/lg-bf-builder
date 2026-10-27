@@ -82,9 +82,9 @@ import { AppHeader } from '../AppHeader';
 import type { DraftRecord } from '../../utils/draftStore';
 import { LgcomSlotPreview } from './LgcomSlotPreview';
 import { PaidSlotPreview } from './PaidSlotPreview';
-import { paidSlotsFor, type PaidSlot } from './paidSlots';
+import { type PaidSlot } from './paidSlots';
 import { artFor, bareOnExport, hasTagline, lgcomSlotsFor, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
-import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset, paidHasTagline } from './paidBoards';
+import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset, paidHasTagline, paidSlotsForAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
 import { useDraftSave } from '../../hooks/useDraftSave';
@@ -145,7 +145,9 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
    * Line, a colour, how many groups, and which benefit each group shows —
    * solid and line keep separate picks, matching the source app.
    */
-  const [iconKind, setIconKind] = useState<'none' | 'solid' | 'line'>(seed?.iconKind ?? 'none');
+  // LG.com opens with the benefit icons on (2026-10-27) — a saved draft keeps
+  // whatever it was saved with, including off
+  const [iconKind, setIconKind] = useState<'none' | 'solid' | 'line'>(seed?.iconKind ?? 'solid');
   /** Panel checkbox — off drops the disclaimer from every size. */
   const [showDisclaimer, setShowDisclaimer] = useState(seed?.showDisclaimer ?? true);
   /** Panel checkboxes for the optional copy lines — off drops them from every size. */
@@ -267,7 +269,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     if (chKey === 'all') return CHANNELS.flatMap(c => slotsForChannel(c.key));
     if (chKey === 'lgcom') return lgcomSlotsFor(asset.id);
     if (asset.id === 'ad-teasing') return DYNAMIC_PAID_SLOTS[chKey] ?? [];
-    return PAID_ASSETS.has(asset.id) ? paidSlotsFor(chKey) : [];
+    return PAID_ASSETS.has(asset.id) ? paidSlotsForAsset(asset.id, chKey) : [];
   }
 
   /**
@@ -939,7 +941,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
           aria-hidden
         >
           <style>{'.ctb-export-host [data-export-box]{border-radius:0 !important;background:transparent !important}'}</style>
-          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showSubcopy={showSubcopy} showCta={showCta} showTagline={showTagline} hideLogo={!showLogo} logoId={logoId} />
+          <PaidSlotPreview slot={renderPaidOverlaySlot} asset={asset} scale={1} copy={copy} hideArt showDisclaimer={showDisclaimer} showEyebrow={showEyebrow} showSubcopy={showSubcopy} showCta={showCta} showTagline={showTagline} hideLogo={!showLogo} logoId={logoId} />
         </div>
       )}
       {!renderPaidOverlaySlot && renderIconRowSlot && (
@@ -1010,6 +1012,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               benefitSlots={asset.id === 'ad-benefit' ? benefitSlots : undefined}
               plateColor={plateColor}
               showDisclaimer={showDisclaimer}
+              showEyebrow={showEyebrow}
               showSubcopy={showSubcopy}
               showCta={showCta}
               showTagline={showTagline}
@@ -1160,27 +1163,35 @@ function OutputPicker({
         : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
     }`;
   return (
-    <div className="mx-auto w-full mt-4 flex flex-col items-center gap-2" style={{ maxWidth: PREVIEW_W }}>
+    <div className="mx-auto w-full mt-4 flex flex-col items-center gap-2">
       <p className="text-[12px] font-medium uppercase tracking-wide" style={{ color: '#8A8078' }}>
         {t(outputKind === 'size' ? 'Size' : 'Channel')}
       </p>
-      <div className="flex flex-wrap justify-center gap-2">
-        {outputKind === 'size'
-          ? SHORTS_SIZES.map(sz => (
-              <button key={sz.key} type="button" onClick={() => onSize(sizeKey === sz.key ? null : sz.key)} className={pill(sizeKey === sz.key)}>
-                {sz.label}
-              </button>
-            ))
-          : [{ key: 'all', label: 'ALL' }, ...CHANNELS].map(c => (
+      {outputKind === 'size' ? (
+        <div className="flex flex-wrap justify-center gap-2">
+          {SHORTS_SIZES.map(sz => (
+            <button key={sz.key} type="button" onClick={() => onSize(sizeKey === sz.key ? null : sz.key)} className={pill(sizeKey === sz.key)}>
+              {sz.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        // two lines, as the Christmas builder lays them out: ALL, LG.com and the
+        // main buys on top, the affiliate networks underneath
+        ([1, 2] as const).map(row => (
+          <div key={row} className="flex flex-wrap justify-center gap-2">
+            {[...(row === 1 ? [{ key: 'all', label: 'ALL' }] : []), ...CHANNELS.filter(c => c.row === row)].map(c => (
               <button key={c.key} type="button" onClick={() => onChannel(channelKey === c.key ? null : c.key)} className={pill(channelKey === c.key)}>
                 {c.key === 'all' ? t('ALL') : c.label}
               </button>
             ))}
-      </div>
+          </div>
+        ))
+      )}
       {outputKind === 'channel' && (
         <>
           <p className="text-[11px] text-center leading-relaxed max-w-lg" style={{ color: '#8A8078' }}>
-            {t('For LG.com, files are downloaded to match the image upload guide — every size is exported without copy, CTA, and indicators (icons and disclaimer included).')}
+            {t('For LG.com, files are downloaded to match the image upload guide — every size is exported without copy, CTA and indicators. Only the two hero sizes keep the icons and disclaimer.')}
           </p>
         </>
       )}
@@ -1189,6 +1200,8 @@ function OutputPicker({
 }
 
 const PREVIEW_W = 980;
+/** Long edge of each size in the channel gallery — the Christmas builder's 360. */
+const GALLERY_EDGE = 360;
 const PREVIEW_H = 464;
 const PREVIEW_ZOOM = 2.5;
 
@@ -1332,41 +1345,44 @@ function ChannelSlots({
     ? DYNAMIC_PAID_SLOTS[channelKey] ?? []
     : channelKey === 'lgcom' || !asset || !PAID_ASSETS.has(asset.id)
       ? []
-      : paidSlotsFor(channelKey);
+      : paidSlotsForAsset(asset.id, channelKey);
   const paidMotion = dynamicPaid && asset ? motionUrl(asset, paidHasTagline(asset.id)) : null;
   // The banners scale to the width the canvas really has — fixed 980 made them
   // needlessly small on wide windows and cramped on narrow ones.
   const { ref: measureRef, w: availW } = useMeasuredWidth<HTMLDivElement>();
   const fitW = availW || PREVIEW_W;
-  const paidWidest = paid.reduce((m, s) => Math.max(m, s.w), 0);
-  const paidScale = paidWidest ? Math.min(1, fitW / paidWidest) : 1;
-  // one scale for the whole set, keyed off the widest slot, so the sizes stay
-  // in proportion to one another rather than each filling the column
-  const widest = slots.reduce((m, s) => Math.max(m, s.w), 0);
-  const slotScale = widest ? Math.min(1, fitW / widest) : 1;
+  // Every size shrinks on its own so its long edge fits GALLERY_EDGE, and the
+  // set wraps into a gallery — the Christmas builder's view. With 176 media
+  // sizes one shared scale meant scrolling past a screen per banner; this keeps
+  // a whole channel in view. (The file still renders at true pixel size.)
+  const fitScale = (w: number, h: number, edge = GALLERY_EDGE) => Math.min(1, edge / Math.max(w, h), fitW / w);
+  // the LG.com PC hero is the main placement — shown at twice the gallery edge,
+  // next to its mobile twin
+  const lgcomScale = (s: LgcomSlot) => fitScale(s.w, s.h, s.hero && s.device === 'PC' ? GALLERY_EDGE * 2 : GALLERY_EDGE);
 
   return (
     <div ref={measureRef} className="mx-auto w-full mt-8" style={{ maxWidth: 1920 }}>
       <p className="font-lgei font-bold text-[17px] text-gray-800 mb-4">{channelLabel}</p>
 
       {paid.length > 0 ? (
-        <div className="flex flex-col gap-7 pb-10">
+        <div className="flex flex-wrap justify-center items-start gap-x-4 gap-y-5 pb-10">
           {paid.map((slot, i) => (
             <React.Fragment key={slot.key}>
-            {/* the D2C-only sizes follow the three Pmax ones under their own heading */}
+            {/* the D2C-only sizes follow the Pmax ones under their own heading */}
             {slot.key.startsWith('pmax-d2c-') && !paid[i - 1]?.key.startsWith('pmax-d2c-') && (
-              <p className="font-lgei font-bold text-[17px] text-gray-800 mt-6">Pmax (Only D2C)</p>
+              <p className="basis-full font-lgei font-bold text-[17px] text-gray-800 mt-6">Pmax (Only D2C)</p>
             )}
             <PaidSlotPreview
               slot={slot}
               asset={asset!}
-              scale={paidScale}
+              scale={fitScale(slot.w, slot.h)}
               copy={copy}
               products={products}
               benefitSlots={benefitSlots}
               plateColor={plateColor}
               motionSrc={paidMotion}
               showDisclaimer={showDisclaimer}
+              showEyebrow={showEyebrow}
               showSubcopy={showSubcopy}
               showCta={showCta}
               showTagline={showTagline}
@@ -1386,13 +1402,13 @@ function ChannelSlots({
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-7 pb-10">
+        <div className="flex flex-wrap justify-center items-start gap-x-4 gap-y-5 pb-10">
           {slots.map(slot => (
             <LgcomSlotPreview
               key={slot.id}
               slot={slot}
               asset={asset}
-              scale={slotScale}
+              scale={lgcomScale(slot)}
               copy={copy}
               products={products}
               benefitSlots={benefitSlots}

@@ -87,6 +87,7 @@ export function PaidSlotPreview({
   showTagline = true,
   motionSrc = null,
   showDisclaimer = true,
+  showEyebrow = true,
   showSubcopy = true,
   showCta = true,
   benefitSlots,
@@ -113,7 +114,8 @@ export function PaidSlotPreview({
   motionSrc?: string | null;
   /** Panel toggle — off drops the disclaimer from every size. */
   showDisclaimer?: boolean;
-  /** Panel toggle — off drops the subcopy and closes its gap, as the Figma stack does. */
+  /** Panel toggles — off drops the line and closes its gap, as the Figma stack does. */
+  showEyebrow?: boolean;
   showSubcopy?: boolean;
   /** Panel toggle — off drops the CTA button from every size. */
   showCta?: boolean;
@@ -131,6 +133,8 @@ export function PaidSlotPreview({
    */
   const pd = paidPlacementFor(asset.id, slot.key);
   const art = pd ? pd.art : slot.art;
+  // the board's own call — some boards hide the art on a size Main shows it at
+  const noArt = pd ? !!pd.noArt : !!slot.noArt;
   // those boards switch the soft edge off at most sizes, so the mask travels
   // with the placement rather than with the size. The custom upload drops the
   // mask entirely — fading into a mirror-filled ground would punch flat holes
@@ -147,7 +151,7 @@ export function PaidSlotPreview({
   // 🔴 drawn even when `hideArt` is on. That pass rasterises the overlay that
   // gets composited onto the exported mp4, and the video underneath is the
   // CLEAN cut — so the line has to come from here or it is lost on download.
-  const tagline = showTagline && taglineRatios ? taglineSpec(art, taglineRatios) : null;
+  const tagline = showTagline && taglineRatios && !noArt ? taglineSpec(art, taglineRatios) : null;
   const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '') || COPY_PLACEHOLDER.taglineLead;
   const taglineBrand = (copy.taglineBrand ?? '').trim() || COPY_PLACEHOLDER.taglineBrand;
   // the custom upload brings its own ground tone; every real asset stays black
@@ -185,14 +189,19 @@ export function PaidSlotPreview({
     for (const el of Object.values(flowRef.current)) if (el) ro.observe(el);
     return () => ro.disconnect();
   });
-  const flowSpecs = slot.text.filter(s => s.role === 'headline' || s.role === 'subcopy');
+  const flowSpecs = slot.text.filter(s => s.role === 'eyebrow' || s.role === 'headline' || s.role === 'subcopy');
+  const off = (role: PaidText['role']) =>
+    (role === 'eyebrow' && !showEyebrow) || (role === 'subcopy' && !showSubcopy);
   const pullUp = (y: number) =>
     flowSpecs.reduce((acc, s) => {
-      // a switched-off subcopy leaves the stack entirely: the layers under it
-      // rise by its box plus the gap above it
-      if (s.role === 'subcopy' && !showSubcopy) {
-        const above = flowSpecs.reduce((m, p) => (p !== s && p.y + p.h <= s.y + 1 ? Math.max(m, p.y + p.h) : m), s.y);
-        return y >= s.y + s.h - 1 ? acc + s.h + (s.y - above) : acc;
+      // a switched-off line leaves the stack entirely: the layers under it rise
+      // by its box plus the gap above it — or, for the eyebrow at the top of
+      // the stack, the gap below it
+      if (off(s.role)) {
+        const above = flowSpecs.reduce((m, p) => (p !== s && p.y + p.h <= s.y + 1 ? Math.max(m, p.y + p.h) : m), -Infinity);
+        const below = slot.text.reduce((m, p) => (p !== s && p.role !== 'disclaimer' && p.y >= s.y + s.h - 1 ? Math.min(m, p.y) : m), Infinity);
+        const gap = above !== -Infinity ? s.y - above : below !== Infinity ? below - (s.y + s.h) : 0;
+        return y >= s.y + s.h - 1 ? acc + s.h + gap : acc;
       }
       const h = flowH[s.role];
       return h != null && y >= s.y + s.h - 1 ? acc + (s.h - h) : acc;
@@ -220,7 +229,7 @@ export function PaidSlotPreview({
           }}
         >
           {/* custom upload: mirror-stretch the art's edges into uncovered frame */}
-          {!hideArt && customBg && (
+          {!hideArt && !noArt && customBg && (
             <MirrorFill src={artUrl(artSrc)} art={art} w={slot.w} h={slot.h} />
           )}
           {/* The mask covers the frame, not the art, so it is applied to a
@@ -234,7 +243,7 @@ export function PaidSlotPreview({
                 : null),
             }}
           >
-            {!hideArt && motionSrc && (
+            {!hideArt && !noArt && motionSrc && (
               <video
                 key={motionSrc}
                 src={motionSrc}
@@ -254,7 +263,7 @@ export function PaidSlotPreview({
                 }}
               />
             )}
-            {!hideArt && !motionSrc && (
+            {!hideArt && !noArt && !motionSrc && (
             <img
               src={artUrl(artSrc)}
               alt={asset.label}
@@ -277,7 +286,7 @@ export function PaidSlotPreview({
               <KvTagline spec={tagline} ink={ink} lead={taglineLead} brand={taglineBrand} />
             )}
             {/* Benefit boxes ride the art's transform (component 2000-space) */}
-            {benefitSlots && benefitSlots.map((bs, i) => {
+            {!noArt && benefitSlots && benefitSlots.map((bs, i) => {
               const isAsset = !bs.image && !!bs.assetId;
               const src = bs.image ?? BENEFIT_ASSETS.find(a2 => a2.id === bs.assetId)?.src ?? null;
               if (!src) return null;
@@ -330,19 +339,19 @@ export function PaidSlotPreview({
             .filter(s => s.role !== 'cta')
             .map(spec => {
               if (spec.role === 'disclaimer' && !showDisclaimer) return null;
-              if (spec.role === 'subcopy' && !showSubcopy) return null;
+              if (off(spec.role)) return null;
               // the media disclaimer is its own field — LG.com's runs uncapped
               // and would not fit these frames
               let typed = (spec.role === 'disclaimer'
                 ? (copy.disclaimerMedia ?? '')
                 : copy[spec.role]).trim();
               if (spec.role === 'disclaimer') typed = typed.slice(0, MEDIA_DISCLAIMER_MAX);
-              const flows = spec.role === 'headline' || spec.role === 'subcopy';
+              const flows = flowSpecs.includes(spec);
               return (
                 <Line
                   key={spec.role}
                   spec={spec}
-                  text={typed || PAID_PLACEHOLDER[spec.role]}
+                  text={typed || spec.placeholder || PAID_PLACEHOLDER[spec.role]}
                   slotH={slot.h}
                   ink={ink}
                   dy={pullUp(spec.y)}

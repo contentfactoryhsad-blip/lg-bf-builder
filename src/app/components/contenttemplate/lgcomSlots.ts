@@ -25,17 +25,21 @@
  */
 
 import { taglineSpec, type TaglineRatios, type TaglineSpec } from './kvTagline';
+import { LG_FRAMES, type FrameLayer } from './lgcomFrames';
 
 export type Device = 'PC' | 'MO';
 
-export type SlotId =
-  | 'ST0001-pc-1920x720'
-  | 'ST0001-pc-1600x400'
-  | 'ST0001-mo-720x960'
-  | 'ST0001-mo-720x830'
-  | 'ST0044-mo-656x436'
-  | 'ST0044-pc-342x228'
-  | 'PR0001-pc-960x600';
+/** `ST0004-pc-952x409` — code, placement, size; the Figma frame name minus `lgcom-`. */
+export type SlotId = string;
+
+/**
+ * The seven sizes LG.com ran before the 1026 boards. Product Slot (on hold) and
+ * Dynamic still lay out against these, so they keep their per-size tables below.
+ */
+export const LEGACY_SLOT_IDS: SlotId[] = [
+  'ST0001-pc-1920x720', 'ST0001-pc-1600x400', 'ST0001-mo-720x960', 'ST0001-mo-720x830',
+  'ST0044-mo-656x436', 'ST0044-pc-342x228', 'PR0001-pc-960x600',
+];
 
 
 export interface SlotText {
@@ -71,8 +75,9 @@ export interface SlotText {
 export interface LgcomSlot {
   id: SlotId;
   /** Slot code as it appears in the trafficking sheet. */
-  code: 'ST0001' | 'ST0007' | 'PR0001';
-  device: Device;
+  code: string;
+  /** Placement as the frame name spells it — `PC`, `MO`, `GNB`, `LNB/PC/MO`… */
+  device?: string;
   w: number;
   h: number;
   /**
@@ -91,7 +96,9 @@ export interface LgcomSlot {
   iconRow?: { x: number; y: number; w: number; h: number };
   text: SlotText[];
   /** Absent on art-only sizes (PR0001 ships without copy or a button). */
-  cta?: { x: number; y: number; w: number; h: number; radius: number; size: number; label: string };
+  cta?: { x: number; y: number; w: number; h: number; radius: number; size: number; label: string;
+    /** The PD0001 round arrow button instead of a labelled pill. */
+    arrow?: boolean };
 }
 
 const CTA_RED = '#FD312E';
@@ -99,95 +106,273 @@ export const SLOT_BG = '#000000';
 export const CTA_COLOR = CTA_RED;
 
 
-export const LGCOM_SLOTS: LgcomSlot[] = [  {
-    id: 'ST0001-pc-1920x720',
-    indicator: 'indicator-pc',
-    iconRow: { x: 240, y: 486, w: 424, h: 60 },
-    code: 'ST0001',
-    device: 'PC',
-    w: 1920,
-    h: 720,
-    hero: true,
+/**
+ * All 32 LG.com sizes, read off `LG.com — Main_1026` (`6797:108569`, page
+ * "Banner Template 3", 2026-10-27) in the order of `LG.com Banner templates_Jun`, except that every ST0001
+ * size comes first — the two heroes side by side, then the other main banners —
+ * followed by the art-only sizes (no copy in their layouts), then the rest.
+ * Copy boxes are the layout instance's own; the two ST0001 heroes keep their
+ * carousel indicator and icon row.
+ */
+export const LGCOM_SLOTS: LgcomSlot[] = [
+  {
+    id: 'ST0001-pc-1920x720', code: 'ST0001', device: 'PC', w: 1920, h: 720,
+    indicator: 'indicator-pc', iconRow: { x: 240, y: 486, w: 424, h: 60 }, hero: true,
     text: [
-      { role: 'eyebrow',    x: 240, y: 72,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 240, y: 94,  w: 680, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
-      { role: 'subcopy',    x: 240, y: 228, w: 542, h: 18,  size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
+      { role: 'disclaimer', x: 240, y: 658, w: 1147, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "*T&C’s apply" },
+      { role: 'eyebrow', x: 240, y: 72, w: 542, h: 22, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text', align: 'left', text: "Lorem ipsumdolor sit amet" },
+      { role: 'headline', x: 240, y: 94, w: 542, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit\nametap consectetur" },
+      { role: 'subcopy', x: 240, y: 228, w: 542, h: 18, size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit." },
     ],
-    cta: { x: 240, y: 275, w: 110.6, h: 44, radius: 9.03, size: 16.93, label: 'Shop now' },
-  },  {
-    id: 'ST0001-mo-720x960',
-    indicator: 'indicator-mo',
-    iconRow: { x: 34, y: 762, w: 510, h: 72 },
-    code: 'ST0001',
-    device: 'MO',
-    w: 720,
-    h: 960,
-    hero: true,
-    text: [
-      { role: 'eyebrow',    x: 32, y: 50,  w: 656, size: 32,   lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 32, y: 101, w: 656, h: 124, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
-      { role: 'subcopy',    x: 32, y: 241, w: 656, h: 70,  size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 32, y: 884, w: 656, h: 44, vAlign: 'bottom', size: 18, lineHeightPct: 156, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
-    ],
-    cta: { x: 32, y: 339, w: 181.7, h: 72.2, radius: 14.81, size: 27.77, label: 'Shop now' },
-  },  {
-    id: 'ST0001-pc-1600x400',
-    code: 'ST0001',
-    device: 'PC',
-    w: 1600,
-    h: 400,
-    text: [
-      { role: 'eyebrow',    x: 80, y: 48,  w: 542, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 80, y: 70,  w: 680, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit\nametap consectetur' },
-      { role: 'subcopy',    x: 80, y: 196, w: 542, h: 18,  size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 80, y: 322, w: 820, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
-    ],
-    cta: { x: 80, y: 238, w: 110.6, h: 44, radius: 9.03, size: 16.93, label: 'Shop now' },
-  },  {
-    id: 'ST0001-mo-720x830',
-    code: 'ST0001',
-    device: 'MO',
-    w: 720,
-    h: 830,
-    text: [
-      { role: 'eyebrow',    x: 32, y: 50,  w: 656, size: 32,    lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsumdolor sit amet' },
-      { role: 'headline',   x: 32, y: 101, w: 656, h: 124, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: 'Lorem ipsum dolor sit ametap consectetur' },
-      { role: 'subcopy',    x: 32, y: 241, w: 656, h: 70,  size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-      { role: 'disclaimer', x: 32, y: 754, w: 656, h: 44, vAlign: 'bottom', size: 24.02, lineHeightPct: 117, trackingPct: 0, weight: 400, face: 'text',     align: 'left', text: '*T&C’s apply' },
-    ],
-    cta: { x: 32, y: 339, w: 181.7, h: 72.2, radius: 14.81, size: 27.77, label: 'Shop now' },
-  },  {
-    id: 'ST0044-mo-656x436',
-    code: 'ST0007',
-    device: 'MO',
-    w: 656,
-    h: 436,
-    text: [
-      { role: 'headline', x: 32, y: 236, w: 592, h: 80, vAlign: 'bottom', size: 36, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: 'Lorem ipsum dolor sit ametap consectetur' },
-    ],
-    cta: { x: 238, y: 337, w: 180, h: 72, radius: 14.81, size: 27.77, label: 'Shop now' },
-  },  {
-    id: 'ST0044-pc-342x228',
-    code: 'ST0007',
-    device: 'PC',
-    w: 342,
-    h: 228,
-    text: [
-      { role: 'headline', x: 32, y: 104, w: 278, h: 52, vAlign: 'bottom', size: 24, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: 'Lorem ipsum dolor sit ametap consectetur' },
-    ],
-    cta: { x: 126, y: 172, w: 90.6, h: 36, radius: 7.38, size: 13.85, label: 'Shop now' },
+    cta: { x: 240, y: 275, w: 110.63, h: 44.02, radius: 9.03, size: 16.93, label: 'Shop now' },
   },
   {
-    // Art only — the boards hide the layout master's copy and CTA on this
-    // size, so nothing but the artwork ships (no disclaimer/logo/indicator
-    // either).
-    id: 'PR0001-pc-960x600',
-    code: 'PR0001',
-    device: 'PC',
-    w: 960,
-    h: 600,
+    id: 'ST0001-mo-720x960', code: 'ST0001', device: 'MO', w: 720, h: 960,
+    indicator: 'indicator-mo', iconRow: { x: 34, y: 762, w: 510, h: 72 }, hero: true,
+    text: [
+      { role: 'disclaimer', x: 32, y: 884, w: 656, h: 44, vAlign: 'bottom', size: 18, lineHeightPct: 155.67, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "*T&C’s apply" },
+      { role: 'eyebrow', x: 32, y: 50, w: 656, h: 35, size: 32, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsumdolor sit amet" },
+      { role: 'headline', x: 32, y: 100.98, w: 656, h: 124, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit ametap consectetur" },
+      { role: 'subcopy', x: 32, y: 240.88, w: 656, h: 70, size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit." },
+    ],
+    cta: { x: 32, y: 338.83, w: 181.66, h: 72.21, radius: 14.81, size: 27.77, label: 'Shop now' },
+  },
+  {
+    id: 'ST0001-pc-1600x400', code: 'ST0001', device: 'PC', w: 1600, h: 400,
+    text: [
+      { role: 'disclaimer', x: 80, y: 322, w: 820, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "*T&C’s apply" },
+      { role: 'eyebrow', x: 80, y: 48, w: 542, h: 22, size: 20, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text', align: 'left', text: "Lorem ipsumdolor sit amet" },
+      { role: 'headline', x: 80, y: 70, w: 542, h: 124, size: 56, lineHeightPct: 110, trackingPct: 2, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit\nametap consectetur" },
+      { role: 'subcopy', x: 80, y: 196, w: 542, h: 18, size: 16, lineHeightPct: 110, trackingPct: 2, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit." },
+    ],
+    cta: { x: 80, y: 238, w: 110.63, h: 44.02, radius: 9.03, size: 16.93, label: 'Shop now' },
+  },
+  {
+    id: 'ST0001-mo-720x830', code: 'ST0001', device: 'MO', w: 720, h: 830,
+    text: [
+      { role: 'disclaimer', x: 32, y: 754, w: 656, h: 44, vAlign: 'bottom', size: 24.02, lineHeightPct: 116.67, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "*T&C’s apply" },
+      { role: 'eyebrow', x: 32, y: 50, w: 656, h: 35, size: 32, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsumdolor sit amet" },
+      { role: 'headline', x: 32, y: 100.98, w: 656, h: 124, size: 56.04, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit ametap consectetur" },
+      { role: 'subcopy', x: 32, y: 240.88, w: 656, h: 70, size: 32.02, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit." },
+    ],
+    cta: { x: 32, y: 338.83, w: 181.66, h: 72.21, radius: 14.81, size: 27.77, label: 'Shop now' },
+  },
+  {
+    id: 'ST0001-pc-1600x320', code: 'ST0001', device: 'PC', w: 1600, h: 320,
+    text: [
+      { role: 'disclaimer', x: 80, y: 278, w: 541.98, h: 30, vAlign: 'bottom', size: 14, lineHeightPct: 110, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "*T&C’s apply" },
+      { role: 'eyebrow', x: 80, y: 24, w: 681, h: 22, size: 21, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 80, y: 46, w: 681, h: 118, size: 56, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 80, y: 166, w: 681, h: 23, size: 22, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 80, y: 213, w: 111.8, h: 44.2, radius: 9.07, size: 17, label: 'Shop now' },
+  },
+  {
+    id: 'ST0001-mo-720x750', code: 'ST0001', device: 'MO', w: 720, h: 750,
+    text: [
+      { role: 'disclaimer', x: 32, y: 673.97, w: 655.51, h: 44, vAlign: 'bottom', size: 24, lineHeightPct: 116.67, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "*T&C’s apply" },
+      { role: 'eyebrow', x: 32, y: 50, w: 656, h: 34.37, size: 32, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 32, y: 100.37, w: 656, h: 118, size: 56, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 32, y: 234.37, w: 656, h: 68.41, size: 32, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 32, y: 330.78, w: 183.2, h: 72.8, radius: 14.93, size: 28, label: 'Shop now' },
+  },
+  {
+    id: 'PR0001-pc-960x600', code: 'PR0001', device: 'PC', w: 960, h: 600,
     text: [],
+  },
+  {
+    id: 'PR0001-pc-mo-630x420', code: 'PR0001', device: 'PC/MO', w: 630, h: 420,
+    text: [],
+  },
+  {
+    id: 'PD0046-pc-464x300', code: 'PD0046', device: 'PC', w: 464, h: 300,
+    text: [],
+  },
+  {
+    id: 'ST0041-640x340', code: 'ST0041', w: 640, h: 340,
+    text: [],
+  },
+  {
+    id: 'PR0001-928x600', code: 'PR0001', w: 928, h: 600,
+    text: [],
+  },
+  {
+    id: 'ST0044-mo-656x436', code: 'ST0044', device: 'MO', w: 656, h: 436,
+    text: [
+      { role: 'headline', x: 32, y: 236.06, w: 592, h: 80, vAlign: 'bottom', size: 36, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: "Lorem ipsum dolor sit ametap consectetur" },
+    ],
+    cta: { x: 238, y: 337, w: 180, h: 72, radius: 14.81, size: 27.77, label: 'Shop now' },
+  },
+  {
+    id: 'ST0044-pc-342x228', code: 'ST0044', device: 'PC', w: 342, h: 228,
+    text: [
+      { role: 'headline', x: 32, y: 104.04, w: 278, h: 52, vAlign: 'bottom', size: 24, lineHeightPct: 110, trackingPct: 0, weight: 600, face: 'text', align: 'center', text: "Lorem ipsum dolor sit ametap consectetur" },
+    ],
+    cta: { x: 125.72, y: 172, w: 90.56, h: 36, radius: 7.38, size: 13.85, label: 'Shop now' },
+  },
+  {
+    id: 'CM0001-gnb-373x190', code: 'CM0001', device: 'GNB', w: 373, h: 190,
+    text: [
+      { role: 'headline', x: 17, y: 48.95, w: 215, h: 63.46, size: 20, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 17, y: 115.41, w: 215, h: 25.66, size: 12, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+  },
+  {
+    id: 'CM0001-gnb-620x316', code: 'CM0001', device: 'GNB', w: 620, h: 316,
+    text: [
+      { role: 'headline', x: 44, y: 83.64, w: 316, h: 105, size: 33, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 44, y: 193.64, w: 316, h: 38, size: 18, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+  },
+  {
+    id: 'CM0001-gnb-322x164', code: 'CM0001', device: 'GNB', w: 322, h: 164,
+    text: [
+      { role: 'headline', x: 23, y: 41.17, w: 164, h: 53.94, size: 17, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 23, y: 98.12, w: 164, h: 25.66, size: 12, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+  },
+  {
+    id: 'CM0001-lnb-pc-mo-580x180', code: 'CM0001', device: 'LNB/PC/MO', w: 580, h: 180,
+    text: [
+      { role: 'headline', x: 40, y: 14.62, w: 292, h: 102, size: 32, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 40, y: 121.62, w: 292, h: 42.76, size: 20, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+  },
+  {
+    id: 'PD0041-pc-mo-464x550', code: 'PD0041', device: 'PC/MO', w: 464, h: 550,
+    text: [
+      { role: 'eyebrow', x: 34, y: 275, w: 396, h: 19.33, size: 18, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 34, y: 299.34, w: 396, h: 114, size: 36, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 34, y: 423.34, w: 396, h: 34.21, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 34, y: 479.54, w: 111.8, h: 44.2, radius: 9.07, size: 17, label: 'Shop now' },
+  },
+  {
+    id: 'ST0004-pc-586x842', code: 'ST0004', device: 'PC', w: 586, h: 842,
+    text: [
+      { role: 'eyebrow', x: 32, y: 32, w: 416, h: 17.19, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 32, y: 57.19, w: 416, h: 147, size: 46, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 32, y: 212.19, w: 416, h: 34, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 32, y: 270.19, w: 98, h: 39, radius: 8, size: 15, label: 'Shop now' },
+  },
+  {
+    id: 'ST0004-pc-952x409', code: 'ST0004', device: 'PC', w: 952, h: 409,
+    text: [
+      { role: 'eyebrow', x: 32, y: 32, w: 376, h: 17.19, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 32, y: 57.19, w: 376, h: 114, size: 36, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 32, y: 179.19, w: 376, h: 34.21, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 32, y: 237.39, w: 98, h: 39, radius: 8, size: 15, label: 'Shop now' },
+  },
+  {
+    id: 'ST0004-pc-830x409', code: 'ST0004', device: 'PC', w: 830, h: 409,
+    text: [
+      { role: 'eyebrow', x: 32, y: 32, w: 376, h: 17.19, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 32, y: 57.19, w: 376, h: 114, size: 36, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 32, y: 179.19, w: 376, h: 34.21, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 32, y: 237.39, w: 98, h: 39, radius: 8, size: 15, label: 'Shop now' },
+  },
+  {
+    id: 'ST0004-pc-464x409', code: 'ST0004', device: 'PC', w: 464, h: 409,
+    text: [
+      { role: 'eyebrow', x: 32, y: 32, w: 256, h: 13.96, size: 13, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 32, y: 53.96, w: 256, h: 87, size: 27, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 32, y: 148.96, w: 256, h: 29.93, size: 14, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 32, y: 202.89, w: 98, h: 39, radius: 8, size: 15, label: 'Shop now' },
+  },
+  {
+    id: 'ST0004-pc-342x409', code: 'ST0004', device: 'PC', w: 342, h: 409,
+    text: [
+      { role: 'eyebrow', x: 32, y: 32, w: 236, h: 12.89, size: 12, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 32, y: 52.89, w: 236, h: 78, size: 25, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 32, y: 138.89, w: 236, h: 28, size: 13, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 32, y: 190.89, w: 98, h: 39, radius: 8, size: 15, label: 'Shop now' },
+  },
+  {
+    id: 'ST0004-mo-720x480', code: 'ST0004', device: 'MO', w: 720, h: 480,
+    text: [
+      { role: 'eyebrow', x: 48, y: 48, w: 459, h: 26.85, size: 25, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 48, y: 90.85, w: 459, h: 153, size: 48, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 48, y: 259.85, w: 335, h: 81, size: 25, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 48, y: 365.85, w: 164, h: 65, radius: 13.33, size: 25, label: 'Shop now' },
+  },
+  {
+    id: 'ST0004-mo-720x720', code: 'ST0004', device: 'MO', w: 720, h: 720,
+    text: [
+      { role: 'eyebrow', x: 48, y: 48, w: 584, h: 31.15, size: 29, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 48, y: 95.15, w: 584, h: 102, size: 48, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 48, y: 213.15, w: 584, h: 68, size: 32, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 48, y: 316.15, w: 164, h: 65, radius: 13.33, size: 25, label: 'Shop now' },
+  },
+  {
+    id: 'ST0047-pc-1920x300', code: 'ST0047', device: 'PC', w: 1920, h: 300,
+    text: [
+      { role: 'eyebrow', x: 48, y: 21.9, w: 753, h: 30, size: 28, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 48, y: 59.9, w: 753, h: 118, size: 56, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 48, y: 183.9, w: 753, h: 25, size: 24, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 48, y: 232.9, w: 111.8, h: 44.2, radius: 9.07, size: 17, label: 'Shop now' },
+  },
+  {
+    id: 'ST0047-mo-720x420', code: 'ST0047', device: 'MO', w: 720, h: 420,
+    text: [
+      { role: 'eyebrow', x: 32, y: 19.32, w: 462, h: 26.85, size: 25, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 32, y: 54.17, w: 462, h: 156, size: 49, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 32, y: 228.17, w: 325, h: 84, size: 26, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 32, y: 335.17, w: 164, h: 65, radius: 13.33, size: 25, label: 'Shop now' },
+  },
+  {
+    id: 'PD0001-pc-mo-768x1200', code: 'PD0001', device: 'PC/MO', w: 768, h: 1200,
+    text: [
+      { role: 'eyebrow', x: 46, y: 759, w: 676, h: 27.93, size: 26, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 46, y: 799.93, w: 676, h: 165, size: 52, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 46, y: 980.93, w: 449, h: 84, size: 26, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 46, y: 1089.93, w: 72, h: 72, radius: 36, size: 0, label: '', arrow: true },
+  },
+  {
+    id: 'PD0001-pc-800x800', code: 'PD0001', device: 'PC', w: 800, h: 800,
+    text: [
+      { role: 'eyebrow', x: 26, y: 495, w: 748, h: 21.48, size: 20, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 26, y: 526.48, w: 566.67, h: 83.33, size: 40, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 26, y: 621.82, w: 365, h: 42, size: 20, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur\nadipiscing elit sed" },
+    ],
+    cta: { x: 26, y: 691.81, w: 55.38, h: 55.38, radius: 27.69, size: 0, label: '', arrow: true },
+  },
+  {
+    id: 'PD0041-pc-mo-464x600', code: 'PD0041', device: 'PC/MO', w: 464, h: 600,
+    text: [
+      { role: 'eyebrow', x: 34, y: 30, w: 396, h: 19.33, size: 18, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 34, y: 57.34, w: 396, h: 114, size: 36, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 34, y: 185.34, w: 396, h: 34.21, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 34, y: 245.54, w: 111.8, h: 44.2, radius: 9.07, size: 17, label: 'Shop now' },
+  },
+  {
+    id: 'PR0015-pc-403x500', code: 'PR0015', device: 'PC', w: 403, h: 500,
+    text: [
+      { role: 'eyebrow', x: 26, y: 24, w: 351, h: 19.33, size: 18, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 26, y: 51.34, w: 351, h: 114, size: 36, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 26, y: 173.34, w: 351, h: 34, size: 16, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 26, y: 219.34, w: 98, h: 39, radius: 8, size: 15, label: 'Shop now' },
+  },
+  {
+    id: 'PR0015-mo-572x800', code: 'PR0015', device: 'MO', w: 572, h: 800,
+    text: [
+      { role: 'eyebrow', x: 36, y: 30, w: 500, h: 26.85, size: 25, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur" },
+      { role: 'headline', x: 36, y: 68.85, w: 500, h: 153, size: 48, lineHeightPct: 106, trackingPct: 0, weight: 600, face: 'headline', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit" },
+      { role: 'subcopy', x: 36, y: 233.85, w: 500, h: 60, size: 28, lineHeightPct: 106, trackingPct: 0, weight: 400, face: 'text', align: 'left', text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed" },
+    ],
+    cta: { x: 36, y: 313.85, w: 150.2, h: 59.8, radius: 12.27, size: 23, label: 'Shop now' },
   },
 ];
 
@@ -238,6 +423,8 @@ const ART: Record<string, Partial<Record<SlotId, Placement>>> = {
 
 /** Where this asset's art sits in this slot. Falls back to the Main framing. */
 export function artFor(assetId: string, slot: SlotId): Placement {
+  const a = framesFor(assetId, slot)?.find(l => l.k === 'a');
+  if (a && a.k === 'a') return { x: a.x, y: a.y, size: a.w };
   const own = ART[assetId]?.[slot];
   if (own) return own;
   // 🔴 Fall back to Main's FRAMING only — never to its artwork. `src` names a
@@ -621,7 +808,7 @@ export const productSlotCount = (assetId: string) =>
   Object.values(SLOT_BOXES[assetId] ?? {})[0]?.length ?? 0;
 export const hasProductSlots = (assetId: string) => productSlotCount(assetId) > 0;
 
-export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h} | ${s.device} [${s.code}]`;
+export const slotLabel = (s: LgcomSlot) => `${s.w}×${s.h}${s.device ? ` | ${s.device}` : ''} [${s.code}]`;
 
 /**
  * Media frames give the disclaimer a single short line. LG.com has room for a
@@ -647,7 +834,20 @@ export const bareOnExport = (slotId: string) => LGCOM_SLOTS.some(s => s.id === s
 export const lgcomSlotsFor = (assetId: string): LgcomSlot[] =>
   assetId === 'ad-teasing'
     ? LGCOM_SLOTS.filter(s => s.hero || s.id === 'PR0001-pc-960x600')
-    : LGCOM_SLOTS;
+    : assetId in SLOT_BOXES
+      // Product Slot is on hold — it stays on the seven sizes its boards placed
+      ? LGCOM_SLOTS.filter(s => LEGACY_SLOT_IDS.includes(s.id))
+      : LGCOM_SLOTS;
+
+/**
+ * The 1026 board's layer stack for this asset at this size — or undefined for
+ * the assets still on the older tables (Dynamic, Product Slot). The custom
+ * upload rides Main's framing, as it does everywhere else.
+ */
+export function framesFor(assetId: string, slot: SlotId): FrameLayer[] | undefined {
+  if (assetId === 'ad-teasing' || assetId in SLOT_BOXES) return undefined;
+  return LG_FRAMES[assetId]?.[slot] ?? LG_FRAMES['kv-main'][slot];
+}
 
 /* ------------------------------------------------------------------ */
 /* Icon row                                                            */
@@ -657,15 +857,15 @@ export const lgcomSlotsFor = (assetId: string): LgcomSlot[] =>
  * The icon row is the only element the edit panel can switch off. Everything
  * else a slot carries — eyebrow, headline, subcopy, CTA, disclaimer and the
  * carousel indicator — is part of the layout and is always drawn, at every
- * size. Figma ships the icon row hidden, so it starts off and the operator
- * turns it on per campaign.
+ * size. It starts ON (Solid) since 2026-10-27 — the builder opens LG.com with
+ * the icons showing and the operator switches them off per campaign.
  *
  * The PD Slot key visuals never get one: their product plates take the room the
  * icons would need, so the Figma boards for them drop the icon row and move the
  * artwork down 40px at 720×960 to close the gap. `ContentTemplateBuilder` keys
  * that off `productSlotCount`, which is non-zero for exactly those assets.
  */
-export const DEFAULT_ICON_ROW = false;
+export const DEFAULT_ICON_ROW = true;
 
 /**
  * Icon row styles, matching the four variants of Figma's `Icon Row` set.

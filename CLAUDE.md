@@ -125,6 +125,14 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   🔴 마스터 이미지는 라이브러리 변형이 아니라 **보드 컴포넌트의 Image 인스턴스 오버라이드**에 실려 있다 —
   라이브러리 변형(4375:*)을 받으면 옛 아트가 나온다.
 
+- 🔴 **2026-10-27 Banner Template 3(1026 보드) 반영.** 매체 19곳(채널 버튼 2줄, 크리스마스 빌더 배치 — `Channel.row`)·
+  유료 176사이즈(`paidSlots.ts`, `S(...)` 한 줄 = Figma 프레임 하나, 숨김 없음, 아이브로우 추가, `noArt` = 보드가 아트를 숨긴 사이즈,
+  ECRM 1200×1200 두 번째 아트 전용판은 `ecrm-1200x1200-2`). Hero Product / Deal & AD / AD Benefit 배치는 `paidBoards.ts`의 `B(...)` 표,
+  Dynamic 유료 12사이즈도 새 레이아웃(`D_16_9` 등). LG.com은 32사이즈(`LGCOM_SLOTS`) + 키비주얼×사이즈 **레이어 스택**
+  `lgcomFrames.ts`(`A`아트·`G`페이드·`MK`마스크·`L`레이아웃·`T`태그라인, Figma z-order 그대로 — 아트가 카피 위인 사이즈도 있음).
+  **Product Slot은 보류**(보드 배치 오류) → 유료 41칸·LG.com 7칸 구 표 유지(`paidSlotsForAsset`, `LEGACY_SLOT_IDS`). Dynamic LG.com도 구 표.
+  LG.com 다운로드: 전 사이즈 카피·CTA 제외, **디스클레이머·아이콘은 히어로 2사이즈만**. 추출은 읽기 전용 `use_figma`로 다시 뽑을 것.
+
 - **Save 기능** (2026-09-09): 헤더 BF Working Files 와 Download 사이의 Save 버튼(`SaveForLaterButton compact`).
   드래프트 종류 `content-banner`(`contentBannerPayload.ts` v1) — 선택 에셋/채널/사이즈, 카피, 아이콘 설정, 토글,
   Slot Color(+투명도), 제품·베네핏 이미지(dataURL), 업로드 이미지(dataURL — 이를 위해 업로드가 blob URL 대신

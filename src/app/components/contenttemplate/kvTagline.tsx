@@ -76,6 +76,25 @@ export function taglineSpec(art: ArtBox, r: TaglineRatios): TaglineSpec {
 }
 
 /**
+ * The same geometry from a text box Figma placed on the frame itself — the 1026
+ * LG.com boards set the line per frame rather than as a share of the artwork.
+ * `h` is Figma's single-line box height; the line is centred on the box and
+ * the first line keeps Figma's baseline, exactly as `taglineSpec` does.
+ */
+export function taglineSpecFromBox(x: number, y: number, w: number, h: number, size: number): TaglineSpec {
+  const lineHeight = size * (LINE_HEIGHT_PCT / 100);
+  return {
+    x,
+    cx: x + w / 2,
+    y: y - (lineHeight - h) / 2,
+    size,
+    lineHeight,
+    shadow: `${(SHADOW.x * size).toFixed(3)}px ${(SHADOW.y * size).toFixed(3)}px `
+      + `${(SHADOW.blur * size).toFixed(3)}px rgba(0,0,0,${SHADOW.alpha})`,
+  };
+}
+
+/**
  * Artwork stems ship in two cuts: the delivered one with the line burnt in, and
  * a clean one without. Live text needs the clean cut or the two double-print.
  *

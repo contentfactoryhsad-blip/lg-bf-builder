@@ -20,7 +20,8 @@ import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
 import { IconRowInline } from './icons/IconRowInline';
 import { MirrorFill } from './MirrorFill';
-import { KvTagline, cleanArtId } from './kvTagline';
+import { KvTagline, cleanArtId, taglineSpecFromBox } from './kvTagline';
+import type { FrameLayer } from './lgcomFrames';
 import { AD_BENEFIT_BOXES } from './paidBoards';
 import { BENEFIT_ASSETS, type BenefitSlots } from './BenefitSlotsEditor';
 import {
@@ -29,6 +30,7 @@ import {
   type IconRowStyle,
   SLOT_BG,
   artFor,
+  framesFor,
   gradCss,
   gradFor,
   hasTagline,
@@ -38,6 +40,33 @@ import {
   type LgcomSlot,
   type SlotText,
 } from './lgcomSlots';
+
+/** The PD0001 round button's arrow — Figma's 18.5×15.4 stroke in a 55.4 circle. */
+function ArrowGlyph({ size, ink }: { size: number; ink: string }) {
+  const s = size * 0.333;
+  return (
+    <svg width={s} height={s * 0.833} viewBox="0 0 24 20" fill="none" stroke={ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 10h20M13 1.5l9 8.5-9 8.5" />
+    </svg>
+  );
+}
+
+/** A board fade: the ground colour, opaque to clear along the Figma stops. */
+const fadeCss = (angle: number, stops: [number, number][], ground: string) => {
+  const r = parseInt(ground.slice(1, 3), 16), g = parseInt(ground.slice(3, 5), 16), b = parseInt(ground.slice(5, 7), 16);
+  return `linear-gradient(${angle}deg, ${stops.map(([p, a]) => `rgba(${r},${g},${b},${a}) ${(p * 100).toFixed(2)}%`).join(', ')})`;
+};
+
+/** A white gradient Figma uses as a mask, sized to its own rect; outside it the art is gone. */
+const maskStyle = (m: Extract<FrameLayer, { k: 'mask' }>): React.CSSProperties => {
+  const img = `linear-gradient(${m.angle}deg, ${m.stops.map(([p, a]) => `rgba(255,255,255,${a}) ${(p * 100).toFixed(2)}%`).join(', ')})`;
+  return {
+    maskImage: img, WebkitMaskImage: img,
+    maskSize: `${m.w}px ${m.h}px`, WebkitMaskSize: `${m.w}px ${m.h}px`,
+    maskPosition: `${m.x}px ${m.y}px`, WebkitMaskPosition: `${m.x}px ${m.y}px`,
+    maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
+  } as React.CSSProperties;
+};
 
 /** Figma reports tracking as a % of font size; CSS wants an em value. */
 const tracking = (pct: number) => `${pct / 100}em`;
@@ -180,6 +209,15 @@ export function LgcomSlotPreview({
   const t = useT();
   // placement is per asset per size — the 15 key visuals are framed differently
   const art = asset ? artFor(asset.id, slot.id) : null;
+  const ctaCentred = slot.text.find(s => s.role === 'headline')?.align === 'center';
+  // the 1026 boards stack each frame their own way; Dynamic and Product Slot
+  // (undefined here) keep the older art → scrim → copy order
+  const frames = asset ? framesFor(asset.id, slot.id) : undefined;
+  const artLayer = frames?.find(l => l.k === 'a');
+  // two Main frames stretch the KV out of square — drawn as Figma has them
+  const artH = artLayer && artLayer.k === 'a' ? artLayer.h : art?.size ?? 0;
+  const maskLayer = frames?.find(l => l.k === 'mask');
+  const artMask = maskLayer && maskLayer.k === 'mask' ? maskLayer : undefined;
   // the motion cut is the same square frame as the still, so it takes the same box
   // a live tagline means the clean cut, exactly as for the still
   const motion = asset && (slot.hero || slot.id === 'PR0001-pc-960x600')
@@ -266,30 +304,8 @@ export function LgcomSlotPreview({
       return h != null && y >= s.y + (s.h ?? 0) - 1 ? acc + ((s.h ?? 0) - h) : acc;
     }, eyebrowSpec && y > eyebrowSpec.y ? eyebrowGap : 0);
 
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-xs text-gray-700">
-        {slotLabel(slot)}
-        {motion && <span className="text-gray-500"> · Motion</span>}
-      </p>
-
-      {/* Outer box reserves the scaled footprint; the inner box is full size. */}
-      <div
-        data-export-box
-        className="relative overflow-hidden rounded-lg"
-        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : ground }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: slot.w,
-            height: slot.h,
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-          }}
-        >
+  const artNode = (
+    <>
           {/* custom upload: mirror-stretch the art's edges into uncovered frame */}
           {!hideArt && customBg && art && stillUrl && (
             <MirrorFill src={stillUrl} art={art} w={slot.w} h={slot.h} />
@@ -309,7 +325,7 @@ export function LgcomSlotPreview({
                   left: art.x,
                   top: art.y,
                   width: art.size,
-                  height: art.size,
+                  height: artH,
                   maxWidth: 'none',
                 }}
               />
@@ -323,7 +339,7 @@ export function LgcomSlotPreview({
                   left: art.x,
                   top: art.y,
                   width: art.size,
-                  height: art.size,
+                  height: artH,
                   // the art is routinely wider than its frame (720x960 places it at
                   // 1731px); without this the base stylesheet's `img{max-width:100%}`
                   // clamps it to the frame and squashes it
@@ -392,6 +408,10 @@ export function LgcomSlotPreview({
             );
           })}
 
+    </>
+  );
+  const gradNode = (
+    <>
           {/* the flat ground-colored scrim reads as a hole on a custom upload —
               the mirror fill already extends the image, so skip it there */}
           {!hideArt && grad && !customBg && (
@@ -407,6 +427,10 @@ export function LgcomSlotPreview({
             />
           )}
 
+    </>
+  );
+  const layoutNode = (
+    <>
           {showIconRow && slot.iconRow && (
             <IconRowInline box={slot.iconRow} style={iconStyle} iconIds={iconIds} labels={iconLabels} />
           )}
@@ -414,7 +438,9 @@ export function LgcomSlotPreview({
           {slot.text.map(spec => {
             // bare drops the live-set copy but keeps the disclaimer — it ships
             // burned into the hero images/video (2026-09-03)
-            if (bare && spec.role !== 'disclaimer') return null;
+            // (2026-10-27: only the two heroes keep it — every other LG.com
+            // size ships with no disclaimer at all)
+            if (bare && (spec.role !== 'disclaimer' || !slot.hero)) return null;
             if (spec.role === 'disclaimer' && !showDisclaimer) return null;
             if (spec.role === 'eyebrow' && !showEyebrow) return null;
             if (spec.role === 'subcopy' && !showSubcopy) return null;
@@ -425,7 +451,7 @@ export function LgcomSlotPreview({
               <SlotLine
                 key={spec.role}
                 spec={spec}
-                text={typed || COPY_PLACEHOLDER[spec.role]}
+                text={typed || spec.text || COPY_PLACEHOLDER[spec.role]}
                 slotH={slot.h}
                 ink={ink}
                 dy={pullUp(spec.y)}
@@ -438,19 +464,21 @@ export function LgcomSlotPreview({
             <div
               style={{
                 position: 'absolute',
-                /* The two ST0044 placements centre their copy, so a growing
-                   pill grows from its middle; the four left-anchored layouts
-                   keep their left edge and grow rightward. */
-                left: slot.code !== 'ST0001' ? slot.cta.x + slot.cta.w / 2 : slot.cta.x,
+                /* Centred copy (the ST0044 placements) grows the pill from its
+                   middle; left-anchored layouts keep their left edge and grow
+                   rightward. */
+                left: ctaCentred ? slot.cta.x + slot.cta.w / 2 : slot.cta.x,
                 top: slot.cta.y - pullUp(slot.cta.y),
-                transform: slot.code !== 'ST0001' ? 'translateX(-50%)' : undefined,
+                transform: ctaCentred ? 'translateX(-50%)' : undefined,
                 minWidth: slot.cta.w,
-                width: 'fit-content',
-                padding: `0 ${Math.round(slot.cta.h * 0.46)}px`,
+                width: slot.cta.arrow ? slot.cta.w : 'fit-content',
+                padding: slot.cta.arrow ? 0 : `0 ${Math.round(slot.cta.h * 0.46)}px`,
                 boxSizing: 'border-box',
                 height: slot.cta.h,
                 borderRadius: slot.cta.radius,
-                background: CTA_COLOR,
+                // the PD0001 round button is an outline, not a red pill
+                background: slot.cta.arrow ? 'transparent' : CTA_COLOR,
+                border: slot.cta.arrow ? `${(slot.cta.h / 36).toFixed(2)}px solid ${ink === '#111111' ? 'rgba(17,17,17,0.8)' : 'rgba(255,255,255,0.8)'}` : undefined,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -460,7 +488,7 @@ export function LgcomSlotPreview({
                 whiteSpace: 'nowrap',
               }}
             >
-              {copy.cta.trim() || t(slot.cta.label)}
+              {slot.cta.arrow ? <ArrowGlyph size={slot.cta.h} ink={ink} /> : copy.cta.trim() || t(slot.cta.label)}
             </div>
           )}
 
@@ -474,10 +502,76 @@ export function LgcomSlotPreview({
             />
           )}
 
+    </>
+  );
+  const tagNode = (
+    <>
           {/* part of the KV lockup, not live copy — so it survives `bare`, and
               it sits above the indicator exactly as it does on the board */}
           {onlyAt && (
             <KvTagline spec={onlyAt} ink={ink} lead={taglineLead} brand={taglineBrand} />
+          )}
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs text-gray-700">
+        {slotLabel(slot)}
+        {motion && <span className="text-gray-500"> · Motion</span>}
+      </p>
+
+      {/* Outer box reserves the scaled footprint; the inner box is full size. */}
+      <div
+        data-export-box
+        className="relative overflow-hidden rounded-lg"
+        style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : ground }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: slot.w,
+            height: slot.h,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        >
+          {frames ? frames.map((layer, i) => {
+            // the 1026 board's own stack, bottom first — see lgcomFrames.ts
+            if (layer.k === 'a') {
+              if (hideArt) return null;
+              return artMask ? (
+                <div key={i} style={{ position: 'absolute', inset: 0, ...maskStyle(artMask) }}>{artNode}</div>
+              ) : <React.Fragment key={i}>{artNode}</React.Fragment>;
+            }
+            if (layer.k === 'g') {
+              if (hideArt || customBg) return null;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    position: 'absolute', left: layer.x, top: layer.y, width: layer.w, height: layer.h,
+                    background: fadeCss(layer.angle, layer.stops, ground),
+                  }}
+                />
+              );
+            }
+            if (layer.k === 'l') return <React.Fragment key={i}>{layoutNode}</React.Fragment>;
+            if (layer.k === 't') {
+              if (!asset || !showTagline || !hasTagline(asset.id)) return null;
+              const spec = taglineSpecFromBox(layer.x, layer.y, layer.w, layer.h, layer.size);
+              return <KvTagline key={i} spec={spec} ink={ink} lead={taglineLead} brand={taglineBrand} />;
+            }
+            return null;
+          }) : (
+            <>
+              {artNode}
+              {gradNode}
+              {layoutNode}
+              {tagNode}
+            </>
           )}
         </div>
       </div>
