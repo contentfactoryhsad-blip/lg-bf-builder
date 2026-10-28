@@ -1,3 +1,5 @@
+import { getHubCountry } from './hubCountry';
+
 /**
  * 사용 기록을 서버에 남긴다 (`/api/log-usage` → logs/usage.csv, `#stats` 가
  * 읽는다). 다운로드가 끝난 **뒤에** 부르고, 실패해도 조용히 넘어간다 —
@@ -12,10 +14,12 @@ export async function logUsage(rec: {
   output?: string;
 }): Promise<void> {
   try {
+    // Builder Hub 에서 고른 국가 — 있으면 서버가 IP 추정 대신 이 값을 찍는다
+    const hub = getHubCountry();
     await fetch('/api/log-usage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(rec),
+      body: JSON.stringify(hub ? { ...rec, country: hub.country } : rec),
       keepalive: true, // 다운로드 직후 창을 닫아도 전송이 살아남는다
     });
   } catch {

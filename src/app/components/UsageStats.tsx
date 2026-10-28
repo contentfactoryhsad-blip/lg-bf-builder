@@ -478,7 +478,7 @@ export function UsageStats() {
             <div className="overflow-x-auto">
               <table className="w-full text-[12px]">
                 <thead className="text-gray-400">
-                  <tr>{['시각', '국가', ...(tab === 'promotion-page' ? [] : ['에셋']), '채널/구성', '파일 수', '결과'].map((h) => (
+                  <tr>{['시각', '지역', '국가', ...(tab === 'promotion-page' ? [] : ['에셋']), '채널/구성', '파일 수', '결과'].map((h) => (
                     <th key={h} className="text-left font-normal pb-2 pr-4 whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
@@ -486,6 +486,7 @@ export function UsageStats() {
                   {[...shown].reverse().slice(0, 50).map((r, i) => (
                     <tr key={i} className="border-t border-gray-100">
                       <td className="py-1.5 pr-4 whitespace-nowrap tabular-nums">{stampText(r)}</td>
+                      <td className="py-1.5 pr-4">{r.region}</td>
                       <td className="py-1.5 pr-4">{r.country}</td>
                       {/* 페이지 빌더 행의 item 은 모듈별 목록이라 표에서는 뺀다 —
                           모듈별 카드가 그 몫을 한다. */}
