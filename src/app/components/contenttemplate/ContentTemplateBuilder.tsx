@@ -240,10 +240,10 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   // than implying a default pick the operator never made.
   const showBanners = !!asset && outputKind === 'channel' && !!channelKey;
   const plateCount = asset ? productSlotCount(asset.id) : 0;
-  /** PD Slot key visuals are the only ones with product plates, and the plates
-   *  take the room the benefit icons would need — so those assets ship without
-   *  an icon row and the control never appears for them. */
-  const iconRowAvailable = plateCount === 0;
+  /** Every key visual takes the icon row, PD Slot included since 2026-10-28 —
+   *  it only ever draws on the two hero sizes (`slot.iconRow`), exactly as on
+   *  Main and Hero Product. */
+  const iconRowAvailable = true;
   const assetProducts = asset ? products[asset.id] ?? emptyProductSlots(plateCount) : undefined;
   const hasSlots = showBanners && channelKey === 'lgcom';
   /** Only the paid boards draw their plates, so only they take a colour. */

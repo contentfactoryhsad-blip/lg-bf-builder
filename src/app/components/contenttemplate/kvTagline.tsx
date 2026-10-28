@@ -135,26 +135,41 @@ export const cleanMotionId = (stem: string) => CLEAN_MOTION[stem] ?? stem;
  * The line itself: two runs on one line, Regular then Bold, centred on the
  * lockup so a longer localisation grows both ways instead of drifting off it.
  */
+/** Smallest size the line is laid out at — see `KvTagline`. */
+const MIN_DRAW = 12;
+
+/** `1px 2px 3px rgba(...)` with every px length multiplied by k. */
+const scaleShadow = (shadow: string, k: number) =>
+  shadow.replace(/(-?[\d.]+)px/g, (_, v) => `${(parseFloat(v) * k).toFixed(3)}px`);
+
 export function KvTagline({ spec, ink, lead, brand }: {
   spec: TaglineSpec;
   ink: string;
   lead: string;
   brand: string;
 }) {
+  // On the small media sizes the line drops to 1–3px, and browsers floor text
+  // at their minimum font size (often ~6px) while the line box stays 1–3px —
+  // the enlarged glyphs then spill out of the top of it and sit well above the
+  // lockup. So below MIN_DRAW the line is drawn at MIN_DRAW and scaled down,
+  // which lands every pixel where Figma has it whatever the browser floor is.
+  const k = spec.size < MIN_DRAW ? MIN_DRAW / spec.size : 1;
   return (
     <p
       style={{
         position: 'absolute',
         left: spec.cx,
-        transform: 'translateX(-50%)',
+        // scale about the top centre, then centre on cx — top edge stays at y
+        transform: k === 1 ? 'translateX(-50%)' : `translateX(-50%) scale(${1 / k})`,
+        transformOrigin: 'top center',
         top: spec.y,
         margin: 0,
         fontFamily: 'var(--obs-font)',
-        fontSize: spec.size,
-        lineHeight: `${spec.lineHeight}px`,
+        fontSize: spec.size * k,
+        lineHeight: `${spec.lineHeight * k}px`,
         letterSpacing: 0,
         color: ink,
-        textShadow: spec.shadow,
+        textShadow: k === 1 ? spec.shadow : scaleShadow(spec.shadow, k),
         textAlign: 'center',
         // `pre`, not `pre-line` — honour the operator's own break and never
         // re-wrap on the small sizes, where the box is shrink-wrapped

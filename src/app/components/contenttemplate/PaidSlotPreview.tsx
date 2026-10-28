@@ -8,7 +8,7 @@
  * where the `slot` frame sits on the PD Slot boards.
  */
 import React from 'react';
-import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
+import { CUSTOM_ASSET_ID, assetGround, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import { CTA_COLOR, MEDIA_DISCLAIMER_MAX, SLOT_BG } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
@@ -75,6 +75,10 @@ function Line({ spec, text, slotH, dy = 0, pRef, ink = '#FFFFFF' }: {
     </p>
   );
 }
+
+/** A ground colour at alpha `a`, for the board fades. */
+const hexA = (hex: string, a: number) =>
+  `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${a})`;
 
 export function PaidSlotPreview({
   slot,
@@ -156,7 +160,7 @@ export function PaidSlotPreview({
   const taglineBrand = (copy.taglineBrand ?? '').trim() || COPY_PLACEHOLDER.taglineBrand;
   // the custom upload brings its own ground tone; every real asset stays black
   const customBg = asset?.id === CUSTOM_ASSET_ID ? getCustomArtBg() : null;
-  const ground = customBg ?? SLOT_BG;
+  const ground = customBg ?? assetGround(asset?.id) ?? SLOT_BG;
   const ink = customBg && isLightHex(customBg) ? '#111111' : '#FFFFFF';
   const ctaLabel = copy.cta.trim() || PAID_PLACEHOLDER.cta;
   const ctaSpec = slot.text.find(s => s.role === 'cta');
@@ -315,6 +319,17 @@ export function PaidSlotPreview({
               );
             })}
           </div>
+
+          {/* the board's own `fade L` overlays — over the art, under the copy */}
+          {!hideArt && !noArt && !customBg && pd?.fades?.map((fd, i) => (
+            <div
+              key={`fade-${i}`}
+              style={{
+                position: 'absolute', left: fd.x, top: fd.y, width: fd.w, height: fd.h,
+                background: `linear-gradient(${fd.angle}deg, ${fd.stops.map(([p, a]) => `${hexA(ground, a)} ${(p * 100).toFixed(2)}%`).join(', ')})`,
+              }}
+            />
+          ))}
 
           {slot.logo && !hideLogo && (
             <div

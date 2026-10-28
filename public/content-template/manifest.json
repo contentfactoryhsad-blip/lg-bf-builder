@@ -1,6 +1,6 @@
 {
   "generatedFrom": "content template builder source",
-  "stamp": 1789636852929,
+  "stamp": 1793158557544,
   "assets": {
     "ad-creative-a-1": {
       "width": 3000,
@@ -36,6 +36,22 @@
       "motion": "/content-template/motion/kv-main-motion.mp4"
     },
     "kv-main-character": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-pd-slot1": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-pd-slot1-character": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-pd-slot2": {
+      "width": 3000,
+      "height": 3000
+    },
+    "kv-pd-slot2-character": {
       "width": 3000,
       "height": 3000
     },

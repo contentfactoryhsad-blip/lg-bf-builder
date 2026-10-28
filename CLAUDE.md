@@ -82,7 +82,7 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
 - **LG.com 히어로 2사이즈(1920×720·720×960)만 추가 레이어를 갖는다** — `indicator`(캐러셀 표시)와
   `iconRow`(혜택 아이콘, variant 4종). 🔴 **끌 수 있는 건 아이콘 로우 하나뿐이다**(`showIconRow`, 기본 off) —
   카피·CTA·디스클레이머·indicator는 레이아웃의 일부라 전 사이즈에서 항상 그린다.
-  🔴 **PD Slot 자산 4종은 아이콘 로우 자체가 없다** — 제품 플레이트가 그 자리를 쓴다. 판정은 `productSlotCount > 0`
+  ~~PD Slot 자산 4종은 아이콘 로우 자체가 없다~~ (2026-10-28부터 PD Slot도 히어로 2사이즈에 아이콘 로우를 켠다 — `iconRowAvailable = true`. 아래 설명은 구판 기록) — 제품 플레이트가 그 자리를 쓴다. 판정은 `productSlotCount > 0`
   (`SLOT_BOXES`를 가진 자산이 정확히 PD Slot 4종)이고, 체크박스가 숨는 것뿐 아니라 미리보기도 안 그린다.
   이에 맞춰 Figma의 `LG.com — PD Slot` / `PD Slot (Character)` 보드는 **720×960에서만** KV와 슬롯을 40px 내렸다
   (KV y −107 → −67). `SLOT_BOXES`는 아트 기준 비율이라 둘이 같이 내려가 값이 그대로고, `ART`의 y만 바뀐다. 오른쪽 바는 카피를 쓰는 곳이지
@@ -130,8 +130,10 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   ECRM 1200×1200 두 번째 아트 전용판은 `ecrm-1200x1200-2`). Hero Product / Deal & AD / AD Benefit 배치는 `paidBoards.ts`의 `B(...)` 표,
   Dynamic 유료 12사이즈도 새 레이아웃(`D_16_9` 등). LG.com은 32사이즈(`LGCOM_SLOTS`) + 키비주얼×사이즈 **레이어 스택**
   `lgcomFrames.ts`(`A`아트·`G`페이드·`MK`마스크·`L`레이아웃·`T`태그라인, Figma z-order 그대로 — 아트가 카피 위인 사이즈도 있음).
-  **Product Slot은 보류**(보드 배치 오류) → 유료 41칸·LG.com 7칸 구 표 유지(`paidSlotsForAsset`, `LEGACY_SLOT_IDS`). Dynamic LG.com도 구 표.
+  **Product Slot(2026-10-28 보류 해제)**: 유료는 `Product Slot 3_1026`(001, 가로 4칸, 94) + `4_1026`(002, 좌우 2×2, 82)이 176칸을 상호배타로 나눠 `PD_SLOT_PLACEMENT`에. LG.com은 `LG.com — Product Slot_1026`(001) + `(Character)_1026`(002, 이름과 달리 plain KV)이 32칸을 나눠 `lgcomFrames.ts` PRODUCT_SLOT(`A1`/`A2`=사이즈별 아트, `P`=플레이트 z순서) + `SLOT_BOXES`(아트 대비 비율). 아트는 보드 마스터의 **보이는** fill에서 새로 받은 `kv-pd-slot{1,2}(-character)` — 숨은 fill(구 001/Main)과 혼동 금지, PD Slot 2 캐릭터는 CROP fill이라 같은 창으로 잘라 넣음. Dynamic LG.com은 구 표.
   LG.com 다운로드: 전 사이즈 카피·CTA 제외, **디스클레이머·아이콘은 히어로 2사이즈만**. 추출은 읽기 전용 `use_figma`로 다시 뽑을 것.
+
+- **딜타입 5에셋 바탕 톤** (2026-10-28): Deal Type & AD 보드의 마스크·`fade L`(`BoardPlacement.fades`)은 Hot Deal 기준 한 벌이라, 검정 바탕이면 밝은 아트(Time Sale 등)가 시커멓게 보였다. `ASSET_GROUND`(contentTemplateAssets.ts)로 에셋마다 아트 배경 톤을 프레임 바탕·페이드·마스크 바탕에 공통으로 쓴다(유료·LG.com). 값은 3000px 아트의 왼쪽-가운데 띠 평균. Figma 보드는 검정 그대로다.
 
 - **Save 기능** (2026-09-09): 헤더 BF Working Files 와 Download 사이의 Save 버튼(`SaveForLaterButton compact`).
   드래프트 종류 `content-banner`(`contentBannerPayload.ts` v1) — 선택 에셋/채널/사이즈, 카피, 아이콘 설정, 토글,

@@ -39,6 +39,24 @@ let customArtBg: string | null = null;
 export const setCustomArtBg = (hex: string | null) => { customArtBg = hex; };
 export const getCustomArtBg = () => customArtBg;
 
+/**
+ * Per-asset ground (2026-10-28, trial — backup of the all-black state kept in
+ * the session scratchpad). The five Deal Type & AD key visuals share one set of
+ * fades and masks, tuned on Hot Deal; their art backgrounds run a few steps
+ * apart, so a pure-black ground reads too heavy on the lighter ones. Each asset
+ * gets the tone of its own art where the fades sit (left-centre band of the
+ * 3000px cut). Frame fill, fades and the ground the masks reveal all use it.
+ */
+const ASSET_GROUND: Record<string, string> = {
+  'deal-type-hot-deal': '#161616',
+  'deal-type-bundle': '#161614',
+  'deal-type-time-sale': '#222221',
+  'deal-type-gift': '#161616',
+  'ad-joy-ryder': '#000000',
+};
+export const assetGround = (assetId: string | undefined | null): string | null =>
+  (assetId && ASSET_GROUND[assetId]) || null;
+
 /** Perceptual lightness check — light grounds flip the copy to dark ink. */
 export const isLightHex = (hex: string): boolean => {
   const r = parseInt(hex.slice(1, 3), 16);

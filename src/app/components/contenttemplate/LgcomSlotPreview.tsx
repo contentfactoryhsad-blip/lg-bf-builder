@@ -14,7 +14,7 @@
  */
 import React from 'react';
 import { useT } from '../../i18n/LanguageContext';
-import { CUSTOM_ASSET_ID, artUrl, getCustomArtBg, isLightHex, motionUrl, type ContentAsset } from './contentTemplateAssets';
+import { CUSTOM_ASSET_ID, assetGround, artUrl, getCustomArtBg, isLightHex, motionUrl, type ContentAsset } from './contentTemplateAssets';
 import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
 import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
@@ -249,7 +249,7 @@ export function LgcomSlotPreview({
     : null;
   // the custom upload brings its own ground tone; every real asset stays black
   const customBg = asset?.id === CUSTOM_ASSET_ID ? getCustomArtBg() : null;
-  const ground = customBg ?? SLOT_BG;
+  const ground = customBg ?? assetGround(asset?.id) ?? SLOT_BG;
   const ink = customBg && isLightHex(customBg) ? '#111111' : '#FFFFFF';
 
   // Figma stacks headline → subcopy → CTA in a vertical auto-layout. The four
@@ -304,6 +304,41 @@ export function LgcomSlotPreview({
       return h != null && y >= s.y + (s.h ?? 0) - 1 ? acc + ((s.h ?? 0) - h) : acc;
     }, eyebrowSpec && y > eyebrowSpec.y ? eyebrowGap : 0);
 
+  // Product Slot boards put the plates at their own place in the stack (`p`);
+  // everywhere else they ride directly on the art, as before
+  const platesLayered = !!frames?.some(l => l.k === 'p');
+  const plateNode = (
+    <>
+          {!hideArt && art && plates.map((box, i) => {
+            const S = art.size;
+            const product = products?.[i]?.image ?? null;
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: art.x + box.x * S,
+                  top: art.y + box.y * S,
+                  width: box.w * S,
+                  height: box.h * S,
+                  borderRadius: box.r * S,
+                  background: plateColor,
+                  overflow: 'hidden',
+                }}
+              >
+                {product && (
+                  <img
+                    src={product}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', maxWidth: 'none' }}
+                    draggable={false}
+                  />
+                )}
+              </div>
+            );
+          })}
+    </>
+  );
   const artNode = (
     <>
           {/* custom upload: mirror-stretch the art's edges into uncovered frame */}
@@ -379,34 +414,8 @@ export function LgcomSlotPreview({
             );
           })}
 
-          {!hideArt && art && plates.map((box, i) => {
-            const S = art.size;
-            const product = products?.[i]?.image ?? null;
-            return (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left: art.x + box.x * S,
-                  top: art.y + box.y * S,
-                  width: box.w * S,
-                  height: box.h * S,
-                  borderRadius: box.r * S,
-                  background: plateColor,
-                  overflow: 'hidden',
-                }}
-              >
-                {product && (
-                  <img
-                    src={product}
-                    alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', maxWidth: 'none' }}
-                    draggable={false}
-                  />
-                )}
-              </div>
-            );
-          })}
+          {/* plates ride with the art unless the board stacks them elsewhere */}
+          {!platesLayered && plateNode}
 
     </>
   );
@@ -558,6 +567,7 @@ export function LgcomSlotPreview({
                 />
               );
             }
+            if (layer.k === 'p') return hideArt ? null : <React.Fragment key={i}>{plateNode}</React.Fragment>;
             if (layer.k === 'l') return <React.Fragment key={i}>{layoutNode}</React.Fragment>;
             if (layer.k === 't') {
               if (!asset || !showTagline || !hasTagline(asset.id)) return null;
