@@ -232,6 +232,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const exportHost = useRef<HTMLDivElement>(null);
 
   const asset = getAsset(selectedId);
+  const channels = channelsForAsset(asset?.id);
   const channel = channelKey ? CHANNELS.find(c => c.key === channelKey) : undefined;
   const outputKind = outputKindOf(asset);
   const shortsSize = sizeKey ? SHORTS_SIZES.find(s => s.key === sizeKey) : undefined;
@@ -255,6 +256,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
 
   const pick = (next: ContentAsset) => {
     setSelectedId(prev => (prev === next.id ? null : next.id));
+    // Dynamic runs on fewer channels; a channel it doesn't run must not stay picked
+    if (channelKey && channelKey !== 'all' && !channelsForAsset(next.id).some(c => c.key === channelKey)) setChannelKey(null);
     // the two pickers are different lists; a pick from one must not survive
     // into the other, or the canvas would show an output nobody chose
     if (outputKindOf(next) !== outputKind) {
@@ -266,7 +269,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   /** What one channel ships for the chosen asset — 'all' concatenates every channel. */
   function slotsForChannel(chKey: string): (LgcomSlot | PaidSlot)[] {
     if (!asset) return [];
-    if (chKey === 'all') return CHANNELS.flatMap(c => slotsForChannel(c.key));
+    if (chKey === 'all') return channels.flatMap(c => slotsForChannel(c.key));
     if (chKey === 'lgcom') return lgcomSlotsFor(asset.id);
     if (asset.id === 'ad-teasing') return DYNAMIC_PAID_SLOTS[chKey] ?? [];
     return PAID_ASSETS.has(asset.id) ? paidSlotsForAsset(asset.id, chKey) : [];
@@ -732,6 +735,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                   outputKind={outputKind}
                   channelKey={channelKey}
                   onChannel={setChannelKey}
+                channels={channels}
                   sizeKey={sizeKey}
                   onSize={setSizeKey}
                 />
@@ -743,10 +747,11 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 outputKind={outputKind}
                 channelKey={channelKey}
                 onChannel={setChannelKey}
+                channels={channels}
                 sizeKey={sizeKey}
                 onSize={setSizeKey}
               />
-              {(channelKey === 'all' ? CHANNELS.map(c => ({ key: c.key, label: c.label })) : [{ key: channelKey!, label: channel ? channel.label : '' }]).map(ch => (
+              {(channelKey === 'all' ? channels.map(c => ({ key: c.key, label: c.label })) : [{ key: channelKey!, label: channel ? channel.label : '' }]).map(ch => (
                 <ChannelSlots
                   key={ch.key}
                   channelKey={ch.key}
@@ -778,6 +783,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 outputKind={outputKind}
                 channelKey={channelKey}
                 onChannel={setChannelKey}
+                channels={channels}
                 sizeKey={sizeKey}
                 onSize={setSizeKey}
               />
@@ -1142,16 +1148,28 @@ function StepIndicator({ active, kind = 'channel' }: { active: number; kind?: 'c
  * they moved out of the palette footer (2026-09-01) so the choice sits with the
  * image it applies to. Same pill styling the palette used.
  */
+/**
+ * The channels an asset runs on. Dynamic keeps the line-up its board shipped
+ * with — LG.com plus the paid buys in DYNAMIC_PAID_SLOTS — and never picks up
+ * the media Banner Template 3 added for the stills.
+ */
+function channelsForAsset(assetId: string | undefined): typeof CHANNELS {
+  if (assetId !== 'ad-teasing') return CHANNELS;
+  return CHANNELS.filter(c => c.key === 'lgcom' || c.key in DYNAMIC_PAID_SLOTS);
+}
+
 function OutputPicker({
   outputKind,
   channelKey,
   onChannel,
   sizeKey,
   onSize,
+  channels,
 }: {
   outputKind: 'channel' | 'size';
   channelKey: string | null;
   onChannel: (next: string | null) => void;
+  channels: typeof CHANNELS;
   sizeKey: string | null;
   onSize: (next: string | null) => void;
 }) {
@@ -1180,7 +1198,7 @@ function OutputPicker({
         // main buys on top, the affiliate networks underneath
         ([1, 2] as const).map(row => (
           <div key={row} className="flex flex-wrap justify-center gap-2">
-            {[...(row === 1 ? [{ key: 'all', label: 'ALL' }] : []), ...CHANNELS.filter(c => c.row === row)].map(c => (
+            {[...(row === 1 ? [{ key: 'all', label: 'ALL' }] : []), ...channels.filter(c => c.row === row)].map(c => (
               <button key={c.key} type="button" onClick={() => onChannel(channelKey === c.key ? null : c.key)} className={pill(channelKey === c.key)}>
                 {c.key === 'all' ? t('ALL') : c.label}
               </button>
