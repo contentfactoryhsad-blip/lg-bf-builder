@@ -220,9 +220,8 @@ export function LgcomSlotPreview({
   const artMask = maskLayer && maskLayer.k === 'mask' ? maskLayer : undefined;
   // the motion cut is the same square frame as the still, so it takes the same box
   // a live tagline means the clean cut, exactly as for the still
-  const motion = asset && (slot.hero || slot.id === 'PR0001-pc-960x600')
-    ? motionUrl(asset, hasTagline(asset.id))
-    : null;
+  // only Dynamic carries one, and it runs only the MP4-capable sizes
+  const motion = asset ? motionUrl(asset, hasTagline(asset.id)) : null;
   // the scrim is tuned per asset too — deal-type objects need a wider one
   const grad = asset ? gradFor(asset.id, slot.id) : undefined;
   // the plates live in the artwork, so they ride the same square as the art does
@@ -556,7 +555,9 @@ export function LgcomSlotPreview({
               ) : <React.Fragment key={i}>{artNode}</React.Fragment>;
             }
             if (layer.k === 'g') {
-              if (hideArt || customBg) return null;
+              // the mp4 overlay keeps the fades that sit over the art — the
+              // video under them needs the same edge — and drops the ones under it
+              if (customBg || (hideArt && i < frames.findIndex(l => l.k === 'a'))) return null;
               return (
                 <div
                   key={i}

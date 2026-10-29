@@ -47,8 +47,12 @@ Dynamic의 유료매체는 표준 41종이 아니라 **자기 보드의 영상 �
 (`motionSrc` prop), **전부 mp4로 익스포트**된다(짝수 픽셀 ✓) — 카피 레이어는 `hideArt` 모드의
 PaidSlotPreview를 투명 배경으로 래스터해 컷 위에 합성(`renderPaidOverlaySlot` 호스트).
 배치 5벌: 16:9=-22,-825,2730 · 1:1=-360,-157,1810 · 3:4=-694,-295,2478 · 9:16=-1006,-400,3130 · 4:5=-614,-254,2318.
-Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlotsFor(assetId)`가 `hero` 플래그로 거르고,
-`LG.com — Dynamic` 보드(`6210:73073`, 구 Teasing Content)도 그 4칸을 숨겨놨다. 캔버스·ZIP 둘 다 이 필터를 탄다.)
+**2026-10-29 New Dynamic**: 유료는 `…_Key Visual_New Dynamic_1023`(`7077:101211`) 기준 18칸 — 위 12칸 +
+Criteo 640×360·360×640(리테일미디어 Commerce Video) + META 1920×1080·1200×1200·1440×1800·1440×2560.
+LG.com은 GP1 가이드상 **이미지 칸에 MP4가 되는 10칸만**(`DYNAMIC_LGCOM`, 보드 `LG.com — New Dynamic` `7077:100010`):
+ST0001 6칸(1920×720·720×960 선두) + PD0041 464×550·464×600 + PR0015 403×500·572×800. PR0001 960×600은 JPG/PNG 전용이라 빠짐.
+레이어는 Main 1026 스택 그대로(`framesFor`가 kv-main 반환), mp4 오버레이에 태그라인·아트 위 페이드까지 굽는다.
+홀수 사이즈(403×500)는 H.264 제약으로 **404×500**으로 나간다(마지막 열 복제).)
 - `components/contenttemplate/` — `ContentTemplateBuilder.tsx`(옆 빌더와 같은 4분할 셸)가
   `contentTemplateAssets.ts`(에셋·채널 레지스트리)를 물고 있다. **모듈을 쌓는 빌더가 아니다** —
   팔레트가 담는 건 페이지 모듈이 아니라 **소재(에셋) 소스**고, 캔버스는 드롭존이 아니라 **결과 미리보기**다.
@@ -130,7 +134,7 @@ Dynamic은 영상이라 **LG.com에서 히어로 2칸만 돈다** — `lgcomSlot
   ECRM 1200×1200 두 번째 아트 전용판은 `ecrm-1200x1200-2`). Hero Product / Deal & AD / AD Benefit 배치는 `paidBoards.ts`의 `B(...)` 표,
   Dynamic 유료 12사이즈도 새 레이아웃(`D_16_9` 등). LG.com은 32사이즈(`LGCOM_SLOTS`) + 키비주얼×사이즈 **레이어 스택**
   `lgcomFrames.ts`(`A`아트·`G`페이드·`MK`마스크·`L`레이아웃·`T`태그라인, Figma z-order 그대로 — 아트가 카피 위인 사이즈도 있음).
-  **Product Slot(2026-10-28 보류 해제)**: 유료는 `Product Slot 3_1026`(001, 가로 4칸, 94) + `4_1026`(002, 좌우 2×2, 82)이 176칸을 상호배타로 나눠 `PD_SLOT_PLACEMENT`에. LG.com은 `LG.com — Product Slot_1026`(001) + `(Character)_1026`(002, 이름과 달리 plain KV)이 32칸을 나눠 `lgcomFrames.ts` PRODUCT_SLOT(`A1`/`A2`=사이즈별 아트, `P`=플레이트 z순서) + `SLOT_BOXES`(아트 대비 비율). 아트는 보드 마스터의 **보이는** fill에서 새로 받은 `kv-pd-slot{1,2}(-character)` — 숨은 fill(구 001/Main)과 혼동 금지, PD Slot 2 캐릭터는 CROP fill이라 같은 창으로 잘라 넣음. Dynamic LG.com은 구 표.
+  **Product Slot(2026-10-28 보류 해제)**: 유료는 `Product Slot 3_1026`(001, 가로 4칸, 94) + `4_1026`(002, 좌우 2×2, 82)이 176칸을 상호배타로 나눠 `PD_SLOT_PLACEMENT`에. LG.com은 `LG.com — Product Slot_1026`(001) + `(Character)_1026`(002, 이름과 달리 plain KV)이 32칸을 나눠 `lgcomFrames.ts` PRODUCT_SLOT(`A1`/`A2`=사이즈별 아트, `P`=플레이트 z순서) + `SLOT_BOXES`(아트 대비 비율). 아트는 보드 마스터의 **보이는** fill에서 새로 받은 `kv-pd-slot{1,2}(-character)` — 숨은 fill(구 001/Main)과 혼동 금지, PD Slot 2 캐릭터는 CROP fill이라 같은 창으로 잘라 넣음. Dynamic LG.com은 Main 스택(위 New Dynamic 참고).
   LG.com 다운로드: 전 사이즈 카피·CTA 제외, **디스클레이머·아이콘은 히어로 2사이즈만**. 추출은 읽기 전용 `use_figma`로 다시 뽑을 것.
 
 - **딜타입 5에셋 바탕 톤** (2026-10-28): Deal Type & AD 보드의 마스크·`fade L`(`BoardPlacement.fades`)은 Hot Deal 기준 한 벌이라, 검정 바탕이면 밝은 아트(Time Sale 등)가 시커멓게 보였다. `ASSET_GROUND`(contentTemplateAssets.ts)로 에셋마다 아트 배경 톤을 프레임 바탕·페이드·마스크 바탕에 공통으로 쓴다(유료·LG.com). 값은 3000px 아트의 왼쪽-가운데 띠 평균. Figma 보드는 검정 그대로다.

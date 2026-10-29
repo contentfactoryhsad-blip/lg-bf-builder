@@ -434,6 +434,12 @@ export function artFor(assetId: string, slot: SlotId): Placement {
   return framing;
 }
 
+/** The art box height where the 1026 board stretches it out of square. */
+export function artHeightFor(assetId: string, slot: SlotId): number | undefined {
+  const a = framesFor(assetId, slot)?.find(l => l.k === 'a');
+  return a && a.k === 'a' && a.h !== a.w ? a.h : undefined;
+}
+
 /**
  * Left-edge scrim on the two wide PC sizes: black, opaque to `stop`, then out
  * by `end` (default the rect's right edge). Fractions of `w`.
@@ -936,23 +942,34 @@ export const MEDIA_DISCLAIMER_MAX = 24;
 export const bareOnExport = (slotId: string) => LGCOM_SLOTS.some(s => s.id === slotId);
 
 /**
+ * The LG.com sizes whose image slot takes an MP4 per the GP1 Content Creation
+ * Guideline v1.5.5 — ST0001 (p.326/332/339), PD0041 (p.270) and PR0015
+ * (p.537–538). The `LG.com — New Dynamic` board (`7077:100010`) keeps exactly
+ * these, the two heroes first; every other size takes JPG/PNG only.
+ */
+const DYNAMIC_LGCOM: SlotId[] = [
+  'ST0001-pc-1920x720', 'ST0001-mo-720x960', 'ST0001-mo-720x830', 'ST0001-mo-720x750',
+  'ST0001-pc-1600x400', 'ST0001-pc-1600x320',
+  'PD0041-pc-mo-464x550', 'PD0041-pc-mo-464x600', 'PR0015-pc-403x500', 'PR0015-mo-572x800',
+];
+
+/**
  * Which LG.com sizes an asset runs at all. The Dynamic (motion) asset ships
- * video: the two hero placements plus the art-only 960×600 — everything else
- * on the `LG.com — Dynamic` board (`6210:73073`) stays hidden. Every other
- * asset runs the full set.
+ * video, so only the MP4-capable sizes above; every other asset runs the full set.
  */
 export const lgcomSlotsFor = (assetId: string): LgcomSlot[] =>
   assetId === 'ad-teasing'
-    ? LGCOM_SLOTS.filter(s => s.hero || s.id === 'PR0001-pc-960x600')
+    ? DYNAMIC_LGCOM.map(id => LGCOM_SLOTS.find(s => s.id === id)!).filter(Boolean)
     : LGCOM_SLOTS;
 
 /**
- * The 1026 board's layer stack for this asset at this size — or undefined for
- * the assets still on the older tables (Dynamic, Product Slot). The custom
- * upload rides Main's framing, as it does everywhere else.
+ * The 1026 board's layer stack for this asset at this size. Dynamic's New
+ * Dynamic frames are Main's own (same KV — Main framing, fades and tagline), so
+ * it plays the motion cut in Main's stack. The custom upload rides Main's
+ * framing, as it does everywhere else.
  */
 export function framesFor(assetId: string, slot: SlotId): FrameLayer[] | undefined {
-  if (assetId === 'ad-teasing') return undefined;
+  if (assetId === 'ad-teasing') return LG_FRAMES['kv-main'][slot];
   return LG_FRAMES[assetId]?.[slot] ?? LG_FRAMES['kv-main'][slot];
 }
 

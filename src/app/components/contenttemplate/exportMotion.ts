@@ -32,8 +32,9 @@ import {
 export interface MotionCut {
   w: number;
   h: number;
-  /** Where the artwork square sits in the frame — the still's own placement. */
-  art: { x: number; y: number; size: number };
+  /** Where the artwork square sits in the frame — the still's own placement.
+   *  `h` when the board stretches it out of square (two LG.com Main frames). */
+  art: { x: number; y: number; size: number; h?: number };
   /** Benefit icons burned over the video, when the operator has them on. */
   iconRow?: { url: string; x: number; y: number; w: number; h: number };
 }
@@ -61,7 +62,10 @@ export async function renderMotionCutLive(motionUrl: string, cut: MotionCut): Pr
   if (!track) throw new Error('no video track');
   const frameRate = (await track.computePacketStats(50)).averagePacketRate || 24;
 
-  const canvas = new OffscreenCanvas(w, h);
+  // H.264 4:2:0 needs even sides, so an odd size (LG.com PR0015 403×500)
+  // encodes one pixel wider/taller, the last column/row repeated into it
+  const ew = w + (w % 2), eh = h + (h % 2);
+  const canvas = new OffscreenCanvas(ew, eh);
   const ctx = canvas.getContext('2d')!;
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
   const source = new CanvasSource(canvas, { codec: 'avc', bitrate: QUALITY_HIGH });
@@ -71,9 +75,11 @@ export async function renderMotionCutLive(motionUrl: string, cut: MotionCut): Pr
   const sink = new VideoSampleSink(track);
   for await (const sample of sink.samples()) {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, w, h);
-    sample.draw(ctx, art.x, art.y, art.size, art.size);
+    ctx.fillRect(0, 0, ew, eh);
+    sample.draw(ctx, art.x, art.y, art.size, art.h ?? art.size);
     if (icon && iconRow) ctx.drawImage(icon, iconRow.x, iconRow.y, iconRow.w, iconRow.h);
+    if (ew > w) ctx.drawImage(canvas, w - 1, 0, 1, h, w, 0, 1, h);
+    if (eh > h) ctx.drawImage(canvas, 0, h - 1, ew, 1, 0, h, ew, 1);
     await source.add(sample.timestamp, sample.duration);
     sample.close();
   }

@@ -83,7 +83,7 @@ import type { DraftRecord } from '../../utils/draftStore';
 import { LgcomSlotPreview } from './LgcomSlotPreview';
 import { PaidSlotPreview } from './PaidSlotPreview';
 import { type PaidSlot } from './paidSlots';
-import { artFor, bareOnExport, hasTagline, lgcomSlotsFor, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
+import { artFor, artHeightFor, bareOnExport, hasTagline, lgcomSlotsFor, productSlotCount, type IconRowStyle, type LgcomSlot } from './lgcomSlots';
 import { DYNAMIC_PAID_SLOTS, PD_PLATE_FILL, isPdSlotAsset, paidHasTagline, paidSlotsForAsset } from './paidBoards';
 import { buildZip, captureBox, dateTag, type ZipEntry } from './exportSlots';
 import { acquireSaveTarget } from '../../utils/fileSaver';
@@ -341,7 +341,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         // let React paint the freshly mounted size before photographing it
         await new Promise(r => setTimeout(r, 220));
         // video goes out wherever the asset has a motion cut and the frame is
-        // bare: LG.com's two hero placements, and every Dynamic paid size
+        // bare: Dynamic's MP4-capable LG.com sizes and every Dynamic paid size
         const dynamicPaid = !('id' in slot) && asset.id === 'ad-teasing';
         // paid slot keys already carry their channel; LG.com sizes name it
         const fileStem = 'id' in slot
@@ -371,9 +371,10 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               const ovBlob = host ? await captureBox(host, slot.w, slot.h) : null;
               setRenderPaidOverlaySlot(null);
               if (ovBlob) { overlayUrl = URL.createObjectURL(ovBlob); overlayBox = { x: 0, y: 0, w: slot.w, h: slot.h }; }
-            } else if (lg && (iconOn || showDisclaimer)) {
-              // full-frame overlay: icon row + disclaimer, transparent ground —
-              // the disclaimer ships burned into the hero video (2026-09-03)
+            } else if (lg) {
+              // full-frame overlay on a transparent ground: icon row, disclaimer,
+              // the live tagline and the fades that sit over the art — all
+              // burned into the video (disclaimer since 2026-09-03)
               setRenderIconRowSlot(lg);
               await new Promise(r => setTimeout(r, 220));
               const host = exportHost.current;
@@ -385,7 +386,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
               const blob = await renderMotionCutLive(src, {
                 w: slot.w,
                 h: slot.h,
-                art: { x: art.x, y: art.y, size: art.size },
+                art: { x: art.x, y: art.y, size: art.size, h: lg ? artHeightFor(asset.id, lg.id) : undefined },
                 iconRow: overlayUrl && overlayBox ? { url: overlayUrl, ...overlayBox } : undefined,
               });
               entries.push({ name: `${fileStem}.mp4`, blob });
