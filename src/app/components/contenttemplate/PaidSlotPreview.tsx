@@ -218,7 +218,7 @@ export function PaidSlotPreview({
       {/* Outer box reserves the scaled footprint; the inner box is full size. */}
       <div
         data-export-box
-        className="relative overflow-hidden rounded"
+        className="relative overflow-hidden"
         style={{ width: slot.w * scale, height: slot.h * scale, background: hideArt ? 'transparent' : ground }}
       >
         <div
