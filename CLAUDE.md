@@ -53,6 +53,9 @@ LG.com은 GP1 가이드상 **이미지 칸에 MP4가 되는 10칸만**(`DYNAMIC_
 ST0001 6칸(1920×720·720×960 선두) + PD0041 464×550·464×600 + PR0015 403×500·572×800. PR0001 960×600은 JPG/PNG 전용이라 빠짐.
 레이어는 Main 1026 스택 그대로(`framesFor`가 kv-main 반환), mp4 오버레이에 태그라인·아트 위 페이드까지 굽는다.
 홀수 사이즈(403×500)는 H.264 제약으로 **404×500**으로 나간다(마지막 열 복제).)
+**2026-11-02 카피 없는 4사이즈**: taiwanaffiliate-1500x1000 · telushealth-1000x1000 · telushealth-1080x720 · pinapenezenka-330x135는
+전 에셋에서 로고·카피·CTA·고지문 없이 나간다(`paidSlots.ts` `COPYLESS`, 세일즈 빌더와 동일). Figma 6보드도 레이아웃 인스턴스 숨김.
+아트 위치는 사용자가 재배치한 값(그라데이션·fade L도 일부 끔). PD Slot은 1000x1000이 3(v1), 1080x720이 4(v2)로 넘어감.
 - `components/contenttemplate/` — `ContentTemplateBuilder.tsx`(옆 빌더와 같은 4분할 셸)가
   `contentTemplateAssets.ts`(에셋·채널 레지스트리)를 물고 있다. **모듈을 쌓는 빌더가 아니다** —
   팔레트가 담는 건 페이지 모듈이 아니라 **소재(에셋) 소스**고, 캔버스는 드롭존이 아니라 **결과 미리보기**다.
