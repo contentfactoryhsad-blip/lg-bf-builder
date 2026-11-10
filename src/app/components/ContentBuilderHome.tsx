@@ -36,7 +36,7 @@ export function ContentBuilderHome({ onSelectContentTemplate, onSelectPromotionP
 
   return (
     <div className="min-h-screen bg-[#f8f7f5] flex flex-col">
-      <AppHeader title={t('LG Black Friday')} />
+      <AppHeader title={t('LG Black Friday')} showCountry />
 
       {/* Content */}
       <div className="flex-1 flex min-h-0">
