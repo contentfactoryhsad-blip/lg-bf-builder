@@ -241,6 +241,8 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   /** A Dynamic paid size whose copy layers render art-less for the mp4 overlay. */
   const [renderPaidOverlaySlot, setRenderPaidOverlaySlot] = useState<PaidSlot | null>(null);
   const [exportedCount, setExportedCount] = useState<number | null>(null);
+  // files in the running export — META sizes count twice (logo + no-logo)
+  const [exportTotal, setExportTotal] = useState(0);
   const exportHost = useRef<HTMLDivElement>(null);
 
   const asset = getAsset(selectedId);
@@ -333,8 +335,19 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
     }
 
     if (!channelKey) return;
-    const list = slotsForChannel(channelKey);
+    // META goes out twice per size — with the logo and a `-no-logo` twin, the
+    // Sales Banner Builder's rule (the channel's policy wants a logo-free cut).
+    // With the logo switched off the one file is already the logo-free cut.
+    const noLogo = new Set<LgcomSlot | PaidSlot>();
+    const list = slotsForChannel(channelKey).flatMap(slot => {
+      if ('id' in slot || !slot.key.startsWith('meta-') || !slot.logo) return [slot];
+      if (!showLogo) { noLogo.add(slot); return [slot]; }
+      const twin = { ...slot, logo: undefined };
+      noLogo.add(twin);
+      return [slot, twin];
+    });
     if (list.length === 0) return;
+    setExportTotal(list.length);
 
     // ask for the save location first, while the click still counts as a user
     // gesture — asking after the export made the picker fail and the browser
@@ -358,7 +371,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
         // paid slot keys already carry their channel; LG.com sizes name it
         const fileStem = 'id' in slot
           ? `${exportStem(asset.id)}-lgcom-${slot.w}x${slot.h}`
-          : `${exportStem(asset.id)}-${(slot as PaidSlot).key}`;
+          : `${exportStem(asset.id)}-${(slot as PaidSlot).key}${noLogo.has(slot) ? '-no-logo' : ''}`;
         const asMotion = !!asset.motion && (dynamicPaid || ('id' in slot && bareOnExport(slot.id)));
         if (asMotion) {
           const lg = dynamicPaid ? null : (slot as LgcomSlot);
@@ -515,7 +528,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 />
               </svg>
               {exporting
-                ? `${exportedCount} / ${asset?.video ? 1 : slotsForChannel(channelKey ?? '').length}`
+                ? `${exportedCount} / ${asset?.video ? 1 : exportTotal}`
                 : t(asset?.video ? 'Download MP4' : 'Download ZIP')}
             </button>
           </>
