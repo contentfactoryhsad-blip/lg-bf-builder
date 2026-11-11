@@ -15,7 +15,7 @@
 import React from 'react';
 import { useT } from '../../i18n/LanguageContext';
 import { CUSTOM_ASSET_ID, assetGround, artUrl, getCustomArtBg, isLightHex, motionUrl, type ContentAsset } from './contentTemplateAssets';
-import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
+import { shownCopy, type SlotCopy } from './SlotCopyEditor';
 import type { ProductSlots } from './ProductSlotsEditor';
 import { PD_PLATE_FILL } from './paidBoards';
 import { IconRowInline } from './icons/IconRowInline';
@@ -230,11 +230,13 @@ export function LgcomSlotPreview({
   // kept on through `hideArt`: that pass is the overlay composited onto the
   // exported mp4, whose video is the clean cut — see PaidSlotPreview
   const onlyAt = asset && showTagline ? onlyAtFor(asset.id, slot.id) : undefined;
-  // empty falls back to the placeholder, the same rule the other copy fields use
+  // a cleared run is simply left out, the same rule the other copy fields use
   // a trailing newline is the operator's own break, so only spaces are trimmed
   // off the ends — `\n` survives into the render
-  const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '') || COPY_PLACEHOLDER.taglineLead;
-  const taglineBrand = (copy.taglineBrand ?? '').trim() || COPY_PLACEHOLDER.taglineBrand;
+  const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '');
+  const taglineBrand = (copy.taglineBrand ?? '').trim();
+  // the round PD0001 button is an arrow, not a label — it ignores this
+  const ctaLabel = shownCopy(copy.cta, 'cta', t(slot.cta?.label ?? ''));
   // this size may call for the asset's other artwork — see Placement.src
   // The tagline is live text here, so the artwork must be the cut WITHOUT it
   // burnt in. Resolved from the stem rather than recorded in `ART`, so the
@@ -278,21 +280,26 @@ export function LgcomSlotPreview({
     for (const el of Object.values(flowRef.current)) if (el) ro.observe(el);
     return () => ro.disconnect();
   });
+  // a line cleared in the panel leaves the stack exactly as a switched-off one
+  const eyebrowOn = showEyebrow && !!copy.eyebrow.trim();
+  const lineOff = (role: string) =>
+    (role === 'subcopy' && !showSubcopy) ||
+    ((role === 'headline' || role === 'subcopy') && !copy[role].trim());
   const flowSpecs = slot.text.filter(
     s => (s.role === 'headline' || s.role === 'subcopy') && s.h != null && s.vAlign !== 'bottom',
   );
   // The eyebrow carries no box height; switched off, everything under it rises
   // to where it started — i.e. by the distance to the next line in the stack.
-  const eyebrowSpec = !showEyebrow ? slot.text.find(s => s.role === 'eyebrow') : undefined;
+  const eyebrowSpec = !eyebrowOn ? slot.text.find(s => s.role === 'eyebrow') : undefined;
   const eyebrowNext = eyebrowSpec
     ? slot.text.filter(s => s.role !== 'disclaimer' && s.y > eyebrowSpec.y).reduce((m, s) => Math.min(m, s.y), Infinity)
     : Infinity;
   const eyebrowGap = eyebrowSpec && eyebrowNext !== Infinity ? eyebrowNext - eyebrowSpec.y : 0;
   const pullUp = (y: number) =>
     flowSpecs.reduce((acc, s) => {
-      // a switched-off subcopy leaves the stack: the layers under it rise by
-      // its box plus the gap above it
-      if (s.role === 'subcopy' && !showSubcopy) {
+      // a switched-off (or cleared) line leaves the stack: the layers under it
+      // rise by its box plus the gap above it
+      if (lineOff(s.role)) {
         const above = slot.text.reduce(
           (m, p) => (p !== s && p.role !== 'disclaimer' && p.h != null && p.y + p.h <= s.y + 1 ? Math.max(m, p.y + p.h) : m),
           s.y,
@@ -450,16 +457,16 @@ export function LgcomSlotPreview({
             // size ships with no disclaimer at all)
             if (bare && (spec.role !== 'disclaimer' || !slot.hero)) return null;
             if (spec.role === 'disclaimer' && !showDisclaimer) return null;
-            if (spec.role === 'eyebrow' && !showEyebrow) return null;
-            if (spec.role === 'subcopy' && !showSubcopy) return null;
-            // small sizes lock the disclaimer to the short version
-            const typed = copy[spec.role].trim();
+            if (spec.role === 'eyebrow' && !eyebrowOn) return null;
+            if (lineOff(spec.role)) return null;
+            const text = shownCopy(copy[spec.role], spec.role, spec.text);
+            if (!text) return null;
             const flows = flowSpecs.some(fs => fs.role === spec.role);
             return (
               <SlotLine
                 key={spec.role}
                 spec={spec}
-                text={typed || spec.text || COPY_PLACEHOLDER[spec.role]}
+                text={text}
                 slotH={slot.h}
                 ink={ink}
                 dy={pullUp(spec.y)}
@@ -468,7 +475,7 @@ export function LgcomSlotPreview({
             );
           })}
 
-          {!bare && showCta && slot.cta && (
+          {!bare && showCta && slot.cta && (slot.cta.arrow || ctaLabel) && (
             <div
               style={{
                 position: 'absolute',
@@ -496,7 +503,7 @@ export function LgcomSlotPreview({
                 whiteSpace: 'nowrap',
               }}
             >
-              {slot.cta.arrow ? <ArrowGlyph size={slot.cta.h} ink={ink} /> : copy.cta.trim() || t(slot.cta.label)}
+              {slot.cta.arrow ? <ArrowGlyph size={slot.cta.h} ink={ink} /> : ctaLabel}
             </div>
           )}
 

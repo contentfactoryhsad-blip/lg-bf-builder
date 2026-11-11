@@ -9,7 +9,7 @@
  */
 import React from 'react';
 import { CUSTOM_ASSET_ID, assetGround, artUrl, getCustomArtBg, isLightHex, type ContentAsset } from './contentTemplateAssets';
-import { COPY_PLACEHOLDER, type SlotCopy } from './SlotCopyEditor';
+import { shownCopy, type SlotCopy } from './SlotCopyEditor';
 import { CTA_COLOR, MEDIA_DISCLAIMER_MAX, SLOT_BG } from './lgcomSlots';
 import { PAID_PLACEHOLDER, paidSlotLabel, type PaidMask, type PaidSlot, type PaidText } from './paidSlots';
 import { AD_BENEFIT_BOXES, PD_PLATE_FILL, paidPlacementFor, paidTaglineRatios } from './paidBoards';
@@ -156,13 +156,14 @@ export function PaidSlotPreview({
   // gets composited onto the exported mp4, and the video underneath is the
   // CLEAN cut — so the line has to come from here or it is lost on download.
   const tagline = showTagline && taglineRatios && !noArt ? taglineSpec(art, taglineRatios) : null;
-  const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '') || COPY_PLACEHOLDER.taglineLead;
-  const taglineBrand = (copy.taglineBrand ?? '').trim() || COPY_PLACEHOLDER.taglineBrand;
+  // a cleared run is simply left out, like every other copy field
+  const taglineLead = (copy.taglineLead ?? '').replace(/^[ \t]+|[ \t]+$/g, '');
+  const taglineBrand = (copy.taglineBrand ?? '').trim();
   // the custom upload brings its own ground tone; every real asset stays black
   const customBg = asset?.id === CUSTOM_ASSET_ID ? getCustomArtBg() : null;
   const ground = customBg ?? assetGround(asset?.id) ?? SLOT_BG;
   const ink = customBg && isLightHex(customBg) ? '#111111' : '#FFFFFF';
-  const ctaLabel = copy.cta.trim() || PAID_PLACEHOLDER.cta;
+  const ctaLabel = shownCopy(copy.cta, 'cta', PAID_PLACEHOLDER.cta);
   const ctaSpec = slot.text.find(s => s.role === 'cta');
 
   // Figma stacks headline → (subcopy) → CTA in a vertical auto-layout, so when
@@ -194,8 +195,18 @@ export function PaidSlotPreview({
     return () => ro.disconnect();
   });
   const flowSpecs = slot.text.filter(s => s.role === 'eyebrow' || s.role === 'headline' || s.role === 'subcopy');
+  // a line cleared in the panel leaves the stack exactly as a switched-off one
+  const lineText = (spec: PaidText) => {
+    const fallback = spec.placeholder || PAID_PLACEHOLDER[spec.role];
+    // the media disclaimer is its own field — LG.com's runs uncapped and would
+    // not fit these frames
+    return spec.role === 'disclaimer'
+      ? shownCopy((copy.disclaimerMedia ?? '').trim().slice(0, MEDIA_DISCLAIMER_MAX), 'disclaimerMedia', fallback)
+      : shownCopy(copy[spec.role], spec.role, fallback);
+  };
   const off = (role: PaidText['role']) =>
-    (role === 'eyebrow' && !showEyebrow) || (role === 'subcopy' && !showSubcopy);
+    (role === 'eyebrow' && !showEyebrow) || (role === 'subcopy' && !showSubcopy) ||
+    ((role === 'eyebrow' || role === 'headline' || role === 'subcopy') && !copy[role].trim());
   const pullUp = (y: number) =>
     flowSpecs.reduce((acc, s) => {
       // a switched-off line leaves the stack entirely: the layers under it rise
@@ -355,18 +366,14 @@ export function PaidSlotPreview({
             .map(spec => {
               if (spec.role === 'disclaimer' && !showDisclaimer) return null;
               if (off(spec.role)) return null;
-              // the media disclaimer is its own field — LG.com's runs uncapped
-              // and would not fit these frames
-              let typed = (spec.role === 'disclaimer'
-                ? (copy.disclaimerMedia ?? '')
-                : copy[spec.role]).trim();
-              if (spec.role === 'disclaimer') typed = typed.slice(0, MEDIA_DISCLAIMER_MAX);
+              const text = lineText(spec);
+              if (!text) return null;
               const flows = flowSpecs.includes(spec);
               return (
                 <Line
                   key={spec.role}
                   spec={spec}
-                  text={typed || spec.placeholder || PAID_PLACEHOLDER[spec.role]}
+                  text={text}
                   slotH={slot.h}
                   ink={ink}
                   dy={pullUp(spec.y)}
@@ -375,7 +382,7 @@ export function PaidSlotPreview({
               );
             })}
 
-          {showCta && slot.cta && (
+          {showCta && slot.cta && ctaLabel && (
             /* The pill hugs its label past the design width. Centred layouts
                grow from the middle (the design box's centre), left layouts from
                their left edge — matching how the copy above them is anchored. */

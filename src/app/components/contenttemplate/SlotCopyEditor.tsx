@@ -3,8 +3,9 @@
  *
  * One copy set drives every size in the chosen channel — the Figma layouts share
  * the same roles, and each size renders whichever of them it carries (ST0044 has
- * only a headline and CTA, for instance). Empty fields fall back to the Figma
- * placeholder so a slot never renders blank while you are still filling it in.
+ * only a headline and CTA, for instance). The fields start filled with the Figma
+ * copy as real, editable text; a field cleared to nothing drops that line from
+ * every preview (2026-11-11 — it used to fall back to a grey placeholder).
  */
 import { useT } from '../../i18n/LanguageContext';
 import { useRef } from 'react';
@@ -36,18 +37,7 @@ export interface SlotCopy {
   taglineBrand: string;
 }
 
-export const EMPTY_COPY: SlotCopy = {
-  eyebrow: '',
-  headline: '',
-  subcopy: '',
-  cta: '',
-  disclaimer: '',
-  disclaimerMedia: '',
-  taglineLead: '',
-  taglineBrand: '',
-};
-
-/** Figma's own placeholder strings, shown until the field is filled. */
+/** Figma's own copy — the fields' starting value and what Reset restores. */
 export const COPY_PLACEHOLDER: SlotCopy = {
   eyebrow: 'Lorem ipsumdolor sit amet',
   headline: 'Lorem ipsum dolor sit ametap consectetur',
@@ -58,6 +48,17 @@ export const COPY_PLACEHOLDER: SlotCopy = {
   taglineLead: 'Only at',
   taglineBrand: 'LG.com',
 };
+
+/**
+ * What a preview draws for one field. Cleared → nothing. Still the untouched
+ * default → the frame's own Figma placeholder, which is longer on many boards
+ * and so keeps each size wrapping the way Figma does. Anything typed → itself.
+ */
+export function shownCopy(typed: string, key: keyof SlotCopy, framePlaceholder?: string): string {
+  const v = typed.trim();
+  if (!v) return '';
+  return v === COPY_PLACEHOLDER[key] && framePlaceholder ? framePlaceholder : v;
+}
 
 const FIELDS: {
   key: keyof SlotCopy;
@@ -211,7 +212,7 @@ export function SlotCopyEditor({
   showIconRowToggle: boolean;
 }) {
   const t = useT();
-  const touched = Object.values(copy).some(v => (v ?? '').trim() !== '');
+  const touched = (Object.keys(COPY_PLACEHOLDER) as (keyof SlotCopy)[]).some(k => (copy[k] ?? '') !== COPY_PLACEHOLDER[k]);
   /** What the Icons checkbox re-enables — the kind in use before it went off. */
   const lastIconKind = useRef<'solid' | 'line'>(iconKind === 'line' ? 'line' : 'solid');
   if (iconKind !== 'none') lastIconKind.current = iconKind;
@@ -273,7 +274,6 @@ export function SlotCopyEditor({
             <textarea
               value={copy[f.key]}
               onChange={e => field(f.key, e.target.value)}
-              placeholder={COPY_PLACEHOLDER[f.key]}
               rows={f.rows ?? 2}
               disabled={off}
               className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 resize-y focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40 disabled:bg-gray-50"
@@ -283,7 +283,6 @@ export function SlotCopyEditor({
               type="text"
               value={copy[f.key]}
               onChange={e => field(f.key, e.target.value)}
-              placeholder={COPY_PLACEHOLDER[f.key]}
               maxLength={f.maxLength}
               disabled={(f.key === 'disclaimer' && !showDisclaimer) || off}
               className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40 disabled:bg-gray-50"
@@ -320,7 +319,6 @@ export function SlotCopyEditor({
               type="text"
               value={copy[d.key] ?? ''}
               onChange={e => field(d.key, e.target.value)}
-              placeholder={COPY_PLACEHOLDER[d.key]}
               maxLength={d.max}
               disabled={!showDisclaimer || !d.on}
               className="w-full text-sm text-gray-800 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300 disabled:opacity-40 disabled:bg-gray-50"
@@ -536,7 +534,6 @@ export function SlotCopyEditor({
                   if (v.split('\n').length > 2) return;
                   onChange({ ...copy, taglineLead: v });
                 }}
-                placeholder={COPY_PLACEHOLDER.taglineLead}
                 // starts at the Bold box's height and grows by exactly one line
                 // on the break: 9+9 padding + 2 border + 16 per line
                 style={{ height: TAG_ROW_H + (leadLines - 1) * TAG_LINE_H, lineHeight: `${TAG_LINE_H}px` }}
@@ -549,7 +546,6 @@ export function SlotCopyEditor({
                 type="text"
                 value={copy.taglineBrand ?? ''}
                 onChange={e => onChange({ ...copy, taglineBrand: e.target.value })}
-                placeholder={COPY_PLACEHOLDER.taglineBrand}
                 style={{ height: TAG_ROW_H }}
                 className="w-full text-xs text-gray-800 bg-white border border-gray-200 rounded-lg px-3 focus:outline-none focus:border-[#FD312E] placeholder:text-gray-300"
               />

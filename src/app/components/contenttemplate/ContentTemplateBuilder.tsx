@@ -92,7 +92,7 @@ import { SaveForLaterButton } from '../SaveForLaterButton';
 import type { ContentBannerPayloadV1 } from '../../drafts/contentBannerPayload';
 import { renderMotionCutLive, stripAudioTrack } from './exportMotion';
 import { logUsage, makeThumb, newOutputId, thumbName, uploadOutput, type OutputThumb } from '../../utils/usageClient';
-import { EMPTY_COPY, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
+import { COPY_PLACEHOLDER, SlotCopyEditor, type SlotCopy } from './SlotCopyEditor';
 import { ProductSlotsEditor, emptyProductSlots, type ProductSlots } from './ProductSlotsEditor';
 import { BenefitSlotsEditor, emptyBenefitSlots, type BenefitSlots } from './BenefitSlotsEditor';
 import { CUSTOM_ASSET_ID, hasCustomArt, setCustomArt, setCustomArtBg, sampleEdgeColor,
@@ -137,9 +137,21 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
   const [shortsPlaying, setShortsPlaying] = useState(true);
   const shortsVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // a draft saved before the disclaimer split has no `disclaimerMedia`; spread
-  // over EMPTY_COPY so the state always has the full shape
-  const [copy, setCopy] = useState<SlotCopy>(seed?.copy ? { ...EMPTY_COPY, ...seed.copy } : EMPTY_COPY);
+  // The fields start filled with the Figma copy; cleared means "drop the line".
+  // Drafts saved before that (no `copyPrefilled`) stored '' for "use the
+  // placeholder", so their blanks restore as the default text. Spread over the
+  // defaults either way so a draft from before the disclaimer split still has
+  // the full shape.
+  const [copy, setCopy] = useState<SlotCopy>(() => {
+    if (!seed?.copy) return COPY_PLACEHOLDER;
+    if (seed.copyPrefilled) return { ...COPY_PLACEHOLDER, ...seed.copy };
+    const restored = { ...COPY_PLACEHOLDER };
+    for (const k of Object.keys(restored) as (keyof SlotCopy)[]) {
+      const v = seed.copy[k];
+      if (v && v.trim()) restored[k] = v;
+    }
+    return restored;
+  });
   /**
    * Icon row settings, ported from promotion-banner-variation: None / Solid /
    * Line, a colour, how many groups, and which benefit each group shows —
@@ -436,7 +448,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
 
   // ── Save for Later — same flow as the Promotion Page Builder ──
   const draftState = useMemo<ContentBannerPayloadV1>(() => ({
-    selectedId, channelKey, sizeKey, copy,
+    selectedId, channelKey, sizeKey, copy, copyPrefilled: true,
     iconKind, iconColor, iconCount,
     solidIconIds, lineIconIds, solidIconLabels, lineIconLabels,
     showDisclaimer, showEyebrow, showSubcopy, showCta, showLogo, logoId, showIndicator, showTagline, plateColor,
@@ -855,7 +867,7 @@ export function ContentTemplateBuilder({ onBack, railActive, onRailNavigate, onO
                 channelLabel={channel ? channel.label : ''}
                 copy={copy}
                 onChange={setCopy}
-                onReset={() => setCopy(EMPTY_COPY)}
+                onReset={() => setCopy(COPY_PLACEHOLDER)}
                 iconKind={iconKind}
                 onIconKind={setIconKind}
                 iconColor={iconColor}

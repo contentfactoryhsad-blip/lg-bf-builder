@@ -19,6 +19,12 @@ export interface ContentBannerPayloadV1 {
   channelKey: string | null;
   sizeKey: string | null;
   copy: SlotCopy;
+  /**
+   * Added 2026-11-11 — the copy fields now start filled and '' means "drop the
+   * line". Older drafts have no key; their '' meant "show the placeholder", so
+   * they restore blanks as the default text.
+   */
+  copyPrefilled?: boolean;
   iconKind: 'none' | 'solid' | 'line';
   iconColor: 'black' | 'white';
   iconCount: 1 | 2 | 3;
