@@ -663,7 +663,7 @@ export const PD_CENTRIC_PLACEMENT: Record<string, BoardPlacement> = {
   'quantcast-728x90': B(56, -81, 251.47),
   'quantcast-468x60': B(34, -54, 167.65),
   'quantcast-320x50': B(-5, -44, 135.71),
-  'quantcast-300x50': B(140, -44, 135.71),
+  'quantcast-300x50': B(23, -44, 135.71),
   'ecrm-1200x1200': B(-352, -120, 1905.71),
   'ecrm-1200x1200-2': B(-909, -909, 3018),
   'ecrm-1200x520': B(-104, -444, 1407.79, M(90, [[0,0],[0.1083,0],[0.2843,1],[1,1]])),
